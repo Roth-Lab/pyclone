@@ -209,8 +209,8 @@ if __name__ == "__main__":
     collapsed_sampler = CollapsedSampler()
     semi_collapsed_sampler = SemiCollapsedSampler()
     
-    collapsed_results = collapsed_sampler.run(data_point, max_iters=10000, thin=10, burnin=1000)
-    semi_collapsed_results = semi_collapsed_sampler.run(data_point, max_iters=10000, thin=10, burnin=1000)
+    collapsed_results = collapsed_sampler.run(data_point, max_iters=100000, thin=100, burnin=50000)
+    semi_collapsed_results = semi_collapsed_sampler.run(data_point, max_iters=100000, thin=100, burnin=50000)
     
     from math import exp
     
@@ -222,12 +222,17 @@ if __name__ == "__main__":
     x = []
     y = []
     
+    norm_const = 0
+    
     for i in range(1, n):
         x.append(i / n)
         y.append(exp(likelihood.compute_log_likelihood(x[-1])))
         
+        norm_const += 1 / n * y[-1]
+    
+    y = [y_i / norm_const for y_i in y]
     
     plot.plot(x, y)
-    plot.hist(collapsed_results['phi'], normed=True, bins=100)
-    plot.hist(semi_collapsed_results['phi'], normed=True, bins=100)
+    plot.hist(collapsed_results['phi'], normed=True, bins=100, alpha=0.5)
+    plot.hist(semi_collapsed_results['phi'], normed=True, bins=100, alpha=0.5)
     plot.show()
