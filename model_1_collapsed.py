@@ -5,6 +5,8 @@ from random import random
 
 from utils import log_sum_exp, log_binomial_pdf
 
+import multiprocessing
+
 def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000000):
     x = DataPoint(a, d, pi_r, pi_v, mu)
     
@@ -60,35 +62,46 @@ class DataPoint(object):
             self._mu_v.append(mu[g_v])
             
             print mu[g_v]
+    
+        self._init_ll_cache()
         
+    def _init_ll_cache(self):
         self._ll_cache = {}
+        
+        args = []
+        
+        for d_v in range(self.d + 1):
+            args.append(d_v)
+        
+        p = multiprocessing.Pool()
+        result = p.map(self._compute_log_likelihood, args)
+        
+        for d_v in range(self.d + 1):
+            self._ll_cache[d_v] = result[d_v]        
     
     def compute_log_likelihood(self, phi):
         temp = []
         
-        for d_v in range(self.d):
-            temp.append(self._compute_log_likelihood(d_v, phi))
+        for d_v in range(self.d + 1):
+            ll = self._ll_cache[d_v]
+            ll += log_binomial_pdf(d_v, self.d, phi)
             
-            print d_v
-        
+            temp.append(ll)
+            
         return log_sum_exp(temp)
     
-    def _compute_log_likelihood(self, d_v, phi):        
-        if d_v not in self._ll_cache:
-            d_r = self.d - d_v
-            
-            temp = []
-            
-            for mu_r, log_pi_r in zip(self._mu_r, self._log_pi_r):
-                for mu_v, log_pi_v in zip(self._mu_v, self._log_pi_v): 
-                    temp.append(log_pi_r + log_pi_v + self._compute_latent_term(d_r, d_v, mu_r, mu_v))
-                
-            self._ll_cache[d_v] = log_sum_exp(temp)
+    def _compute_log_likelihood(self, d_v):
+        print d_v
+
+        d_r = self.d - d_v
         
-        ll = self._ll_cache[d_v]
-        ll += log_binomial_pdf(d_v, self.d, phi)
+        temp = []
         
-        return ll          
+        for mu_r, log_pi_r in zip(self._mu_r, self._log_pi_r):
+            for mu_v, log_pi_v in zip(self._mu_v, self._log_pi_v): 
+                temp.append(log_pi_r + log_pi_v + self._compute_latent_term(d_r, d_v, mu_r, mu_v))
+            
+        return log_sum_exp(temp)    
         
     def _compute_latent_term(self, d_r, d_v, mu_r, mu_v):
         ll = []
@@ -152,8 +165,8 @@ if __name__ == "__main__":
     pi_r = get_pi_r()
     pi_v = get_pi_v()
     
-    a = 500
-    d = 10000
+    a = 300
+    d = 1000
     
     cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
     
