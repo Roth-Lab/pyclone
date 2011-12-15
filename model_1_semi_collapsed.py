@@ -57,19 +57,6 @@ def update_phi(data_point, d_v, old_phi):
     new_phi = beta(a, b)
     
     return new_phi
-    
-#    numerator = data_point.compute_log_likelihood(d_v, new_phi) + log_beta_pdf(new_phi, a, b)
-#    
-#    denominator = data_point.compute_log_likelihood(d_v, old_phi) + log_beta_pdf(old_phi, a, b)
-#    
-#    ratio = exp(numerator - denominator)
-#    
-#    u = random()
-#    
-#    if ratio >= u:
-#        return new_phi
-#    else:
-#        return old_phi
 
 class DataPoint(object):
     def __init__(self, a, d, pi_r, pi_v, mu):
@@ -146,7 +133,7 @@ if __name__ == "__main__":
     a = 60
     d = 100
     
-    results = cellular_frequency_sampler(a, d, pi_r, pi_v, mu, burnin=50000, thin=10, max_iters=100000)
+    results = cellular_frequency_sampler(a, d, pi_r, pi_v, mu, burnin=50000, thin=100, max_iters=1000000)
     
     from model_1_collapsed import DataPoint as CollapsedDataPoint 
     import matplotlib.pyplot as plot

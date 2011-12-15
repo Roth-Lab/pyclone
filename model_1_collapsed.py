@@ -3,7 +3,7 @@ from __future__ import division
 from math import log
 from random import random
 
-from utils import log_sum_exp, log_binomial_pdf
+from utils import log_sum_exp, log_binomial_pdf, log_beta
 
 def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=100000, thin=1, burnin=0):
     results = {'phi' : []}
