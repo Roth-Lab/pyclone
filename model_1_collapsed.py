@@ -5,9 +5,7 @@ from random import random
 
 from utils import log_sum_exp, log_binomial_pdf
 
-import multiprocessing
-
-def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000000):
+def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000):
     x = DataPoint(a, d, pi_r, pi_v, mu)
     
     phi = random()
@@ -15,8 +13,8 @@ def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000000):
     for i in range(max_iters):
         phi = update_phi(x, phi)
         
-        if i % 1000 == 0:
-            print i, phi, phi * 0.33 * d, phi * 0.66 * d
+        if i % 100 == 0:
+            print i, phi
 
 def update_phi(data_point, old_phi):   
     new_phi = random()
@@ -68,16 +66,8 @@ class DataPoint(object):
     def _init_ll_cache(self):
         self._ll_cache = {}
         
-        args = []
-        
         for d_v in range(self.d + 1):
-            args.append(d_v)
-        
-        p = multiprocessing.Pool()
-        result = p.map(self._compute_log_likelihood, args)
-        
-        for d_v in range(self.d + 1):
-            self._ll_cache[d_v] = result[d_v]        
+            self._ll_cache[d_v] = self._compute_partial_log_likelihood(d_v)       
     
     def compute_log_likelihood(self, phi):
         temp = []
@@ -90,9 +80,7 @@ class DataPoint(object):
             
         return log_sum_exp(temp)
     
-    def _compute_log_likelihood(self, d_v):
-        print d_v
-
+    def _compute_partial_log_likelihood(self, d_v):
         d_r = self.d - d_v
         
         temp = []
@@ -114,64 +102,13 @@ class DataPoint(object):
                     ll.append(log_binomial_pdf(a_r, d_r, mu_r) + log_binomial_pdf(a_v, d_v, mu_v))
 
         return log_sum_exp(ll)
-        
-def get_mu():
-    eps = 0.001
-    
-    mu = []
-    
-    for c in range(1, 7):
-        for a in range(0, c + 1):
-            m = a / c
             
-            if a == 0:
-                m = eps
-            elif a == c:
-                m = 1 - eps
-            
-            mu.append(m)
-
-    return mu
-
-def get_pi_v():
-#    pi_v = []
-#    
-#    for c in range(1, 7):
-#        for a in range(0, c + 1):
-#            if 0 < a < c:
-#                pi_v.append(1)
-#            else:
-#                pi_v.append(0)
-#            
-#    return [x / sum(pi_v) for x in pi_v]
-
-    pi_v = [0.] * 27
-    
-    pi_v[2] = 0.5
-    pi_v[3] = 0.5
-    
-    return pi_v
-
-def get_pi_r():
-    pi_r = [0.] * 27
-    
-    pi_r[4] = 1.
-    
-    return pi_r
-            
-
 if __name__ == "__main__":
-    mu = get_mu()
-    pi_r = get_pi_r()
-    pi_v = get_pi_v()
+    mu = [0.01, 0.5, 0.99]
+    pi_r = [0, 0, 1]
+    pi_v = [0.5, 0.5, 1]
     
-    a = 70000
-    d = 100000
+    a = 100
+    d = 200
     
     cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
-    
-#    x = DataPoint(a, d, pi_r, pi_v, mu)
-#    
-#    for i in range(1, d):
-#        print x.compute_log_likelihood(1000, i / d)
-#    print x.compute_log_likelihood(500, 0.99)
