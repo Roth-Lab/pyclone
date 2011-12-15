@@ -1,23 +1,30 @@
 from __future__ import division
-from math import exp, log
-from numpy.random import binomial, beta
-from random import random
-from utils import log_binomial_coefficient, log_sum_exp, binomial_pdf, log_binomial_pdf, log_beta_pdf
 
-def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000000):
+from math import exp, log
+from random import random
+
+from numpy.random import binomial, beta
+
+from utils import log_sum_exp, log_binomial_pdf
+
+def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=100000, thin=1, burnin=0):
+    results = {'phi' : [], 'd_v' : []}
+    
     x = DataPoint(a, d, pi_r, pi_v, mu)
     
-#    phi = random()
-    phi = 0.99
-    
+    phi = random()
     d_v = binomial(x.d, phi)
     
     for i in range(max_iters):
         d_v = update_d_v(x, d_v, phi)
         phi = update_phi(x, d_v, phi)
         
-#        if i % 100 == 0:
-        print i, d_v, phi
+        if i % thin == 0 and i >= burnin:
+            results['phi'].append(phi)
+            results['d_v'].append(d_v)
+            print i, d_v, phi
+        
+    return results
 
 def update_d_v(data_point, old_d_v, phi):
     d = data_point.d
@@ -130,63 +137,35 @@ class DataPoint(object):
         self._ll_cache[key] = log_sum_exp(ll)
         
         return self._ll_cache[key]
-                
-        
-
-def get_mu():
-    eps = 0.001
-    
-    mu = []
-    
-    for c in range(1, 7):
-        for a in range(0, c + 1):
-            m = a / c
-            
-            if a == 0:
-                m = eps
-            elif a == c:
-                m = 1 - eps
-            
-            mu.append(m)
-
-    return mu
-
-def get_pi_v():
-#    pi_v = []
-#    
-#    for c in range(1, 7):
-#        for a in range(0, c + 1):
-#            if 0 < a < c:
-#                pi_v.append(1)
-#            else:
-#                pi_v.append(0)
-#            
-#    return [x / sum(pi_v) for x in pi_v]
-
-    pi_v = [0.] * 27
-    
-    pi_v[3] = 0.5
-    pi_v[2] = 0.5
-    
-    return pi_v
-
-def get_pi_r():
-    pi_r = [0.] * 27
-    
-    pi_r[4] = 1.
-    
-    return pi_r
-            
 
 if __name__ == "__main__":
-    mu = get_mu()
-    pi_r = get_pi_r()
-    pi_v = get_pi_v()
+    mu = [0.01, 0.5, 0.99]
+    pi_r = [0, 0, 1]
+    pi_v = [0.2, 0.8, 0]
     
-    a = 1000
-    d = 1000
+    a = 60
+    d = 100
     
-    cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
+    results = cellular_frequency_sampler(a, d, pi_r, pi_v, mu, burnin=50000, thin=10, max_iters=100000)
+    
+    from model_1_collapsed import DataPoint as CollapsedDataPoint 
+    import matplotlib.pyplot as plot
+    
+    n = 1000
+    data_point = CollapsedDataPoint(a, d, pi_r, pi_v, mu)
+    
+    x = []
+    y = []
+    
+    for i in range(1, n):
+        x.append(i / n)
+        y.append(exp(data_point.compute_log_likelihood(x[-1])))
+        
+    
+    plot.plot(x, y)
+    plot.hist(results['phi'], normed=True, bins=100)
+    plot.show()
+    
     
 #    x = DataPoint(a, d, pi_r, pi_v, mu)
 #    

@@ -5,7 +5,9 @@ from random import random
 
 from utils import log_sum_exp, log_binomial_pdf
 
-def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000):
+def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=100000, thin=1, burnin=0):
+    results = {'phi' : []}
+    
     x = DataPoint(a, d, pi_r, pi_v, mu)
     
     phi = random()
@@ -13,8 +15,11 @@ def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000):
     for i in range(max_iters):
         phi = update_phi(x, phi)
         
-        if i % 100 == 0:
+        if i % thin == 0 and i >= burnin:
+            results['phi'].append(phi)
             print i, phi
+        
+    return results
 
 def update_phi(data_point, old_phi):   
     new_phi = random()
@@ -106,9 +111,28 @@ class DataPoint(object):
 if __name__ == "__main__":
     mu = [0.01, 0.5, 0.99]
     pi_r = [0, 0, 1]
-    pi_v = [0.5, 0.5, 1]
+    pi_v = [0.2, 0.8, 0]
     
-    a = 100
-    d = 200
+    a = 60
+    d = 100
     
-    cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
+    results = cellular_frequency_sampler(a, d, pi_r, pi_v, mu, burnin=50000, thin=10, max_iters=100000)
+    
+    from math import exp
+    
+    import matplotlib.pyplot as plot
+    
+    n = 1000
+    data_point = DataPoint(a, d, pi_r, pi_v, mu)
+    
+    x = []
+    y = []
+    
+    for i in range(1, n):
+        x.append(i / n)
+        y.append(exp(data_point.compute_log_likelihood(x[-1])))
+        
+    
+    plot.plot(x, y)
+    plot.hist(results['phi'], normed=True, bins=100)
+    plot.show()
