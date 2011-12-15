@@ -6,6 +6,7 @@ from random import random
 from utils import log_sum_exp, log_binomial_pdf
 
 import multiprocessing
+import numpy as np
 
 def cellular_frequency_sampler(a, d, pi_r, pi_v, mu, max_iters=10000000):
     x = DataPoint(a, d, pi_r, pi_v, mu)
@@ -68,16 +69,8 @@ class DataPoint(object):
     def _init_ll_cache(self):
         self._ll_cache = {}
         
-        args = []
-        
         for d_v in range(self.d + 1):
-            args.append(d_v)
-        
-        p = multiprocessing.Pool()
-        result = p.map(self._compute_log_likelihood, args)
-        
-        for d_v in range(self.d + 1):
-            self._ll_cache[d_v] = result[d_v]        
+            self._ll_cache[d_v] = self._compute_log_likelihood(d_v)        
     
     def compute_log_likelihood(self, phi):
         temp = []
@@ -103,17 +96,29 @@ class DataPoint(object):
             
         return log_sum_exp(temp)    
         
-    def _compute_latent_term(self, d_r, d_v, mu_r, mu_v):
-        ll = []
+    def _compute_latent_term(self, d_r, d_v, mu_r, mu_v, n=1000000):
+        if d_r == 0:
+            a_r = np.zeros(n)
+        else:
+            a_r = np.random.binomial(d_r, mu_r, size=n)
         
-        for a_r in range(d_r + 1):
-            for a_v in range(d_v + 1):
-                if a_r + a_v != self.a:
-                    continue
-                else:
-                    ll.append(log_binomial_pdf(a_r, d_r, mu_r) + log_binomial_pdf(a_v, d_v, mu_v))
-
-        return log_sum_exp(ll)
+        if d_v == 0:
+            a_v = np.zeros(n)
+        else:
+            a_v = np.random.binomial(d_v, mu_v, size=n)
+        
+        a = a_r + a_v
+        
+        x = np.zeros(n)
+        
+        x[a == self.a] = 1
+        
+        e_a = 1 / n * x.sum()
+        
+        if e_a != 0:
+            return log(e_a)
+        else:
+            return float('-inf')
         
 def get_mu():
     eps = 0.001
@@ -165,8 +170,8 @@ if __name__ == "__main__":
     pi_r = get_pi_r()
     pi_v = get_pi_v()
     
-    a = 70000
-    d = 100000
+    a = 0
+    d = 1000
     
     cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
     
