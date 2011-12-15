@@ -25,9 +25,9 @@ def update_phi(data_point, old_phi):
     
     log_ratio = numerator - denominator
     
-    u = log(random())
+    u = random()
     
-    if log_ratio >= u:
+    if log_ratio >= log(u):
         return new_phi
     else:
         return old_phi
@@ -68,6 +68,8 @@ class DataPoint(object):
         
         for d_v in range(self.d):
             temp.append(self._compute_log_likelihood(d_v, phi))
+            
+            print d_v
         
         return log_sum_exp(temp)
     
@@ -94,7 +96,7 @@ class DataPoint(object):
         for a_r in range(d_r + 1):
             for a_v in range(d_v + 1):
                 if a_r + a_v != self.a:
-                    ll.append(float('-inf'))
+                    continue
                 else:
                     ll.append(log_binomial_pdf(a_r, d_r, mu_r) + log_binomial_pdf(a_v, d_v, mu_v))
 
@@ -132,8 +134,8 @@ def get_pi_v():
 
     pi_v = [0.] * 27
     
-    pi_v[6] = 0.5
-    pi_v[7] = 0.5
+    pi_v[2] = 0.5
+    pi_v[3] = 0.5
     
     return pi_v
 
@@ -150,8 +152,8 @@ if __name__ == "__main__":
     pi_r = get_pi_r()
     pi_v = get_pi_v()
     
-    a = 0
-    d = 100
+    a = 500
+    d = 10000
     
     cellular_frequency_sampler(a, d, pi_r, pi_v, mu)
     
