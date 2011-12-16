@@ -8,61 +8,60 @@ from __future__ import division
 from math import log
 from random import random
 
-from numpy.random import binomial, beta
+#from numpy.random import binomial, beta
 
 from utils import log_sum_exp, log_binomial_pdf
     
-class SemiCollapsedSampler(object):
-    def run(self, data_point, max_iters=100000, thin=1, burnin=0):
-        results = {'phi' : [], 'd_v' : []}
-        
-        likelihood = SemiCollapsedLikelihood(data_point)
-        
-        phi = random()
-        d_v = binomial(data_point.d, phi)
-        
-        for i in range(max_iters):
-            d_v = self._update_d_v(likelihood, d_v, phi)
-            phi = self._update_phi(likelihood, d_v, phi)
-            
-            if i % thin == 0 and i >= burnin:
-                results['phi'].append(phi)
-                results['d_v'].append(d_v)
-        
-                print i, d_v, phi
-        
-        return results
-    
-    def _update_d_v(self, likelihood, old_d_v, phi):
-        d = data_point.d
-        
-        new_d_v = binomial(d, phi)
-        
-        numerator = likelihood.compute_log_likelihood(new_d_v, phi) + log_binomial_pdf(old_d_v, d, phi)
-        
-        denominator = likelihood.compute_log_likelihood(old_d_v, phi) + log_binomial_pdf(new_d_v, d, phi)
-        
-        log_ratio = numerator - denominator
-        
-        u = random()
-        
-        if log_ratio >= log(u):
-            return new_d_v
-        else:
-            return old_d_v
-    
-    def _update_phi(self, likelihood, d_v, old_phi):
-        d = likelihood.d
-        
-        d_r = d - d_v
-        
-        a = d_v + 1
-        b = d_r + 1
-        
-        new_phi = beta(a, b)
-        
-        return new_phi    
-            
+#class SemiCollapsedSampler(object):
+#    def run(self, data_point, max_iters=100000, thin=1, burnin=0):
+#        results = {'phi' : [], 'd_v' : []}
+#        
+#        likelihood = SemiCollapsedLikelihood(data_point)
+#        
+#        phi = random()
+#        d_v = binomial(data_point.d, phi)
+#        
+#        for i in range(max_iters):
+#            d_v = self._update_d_v(likelihood, d_v, phi)
+#            phi = self._update_phi(likelihood, d_v, phi)
+#            
+#            if i % thin == 0 and i >= burnin:
+#                results['phi'].append(phi)
+#                results['d_v'].append(d_v)
+#        
+#                print i, d_v, phi
+#        
+#        return results
+#    
+#    def _update_d_v(self, likelihood, old_d_v, phi):
+#        d = data_point.d
+#        
+#        new_d_v = binomial(d, phi)
+#        
+#        numerator = likelihood.compute_log_likelihood(new_d_v, phi) + log_binomial_pdf(old_d_v, d, phi)
+#        
+#        denominator = likelihood.compute_log_likelihood(old_d_v, phi) + log_binomial_pdf(new_d_v, d, phi)
+#        
+#        log_ratio = numerator - denominator
+#        
+#        u = random()
+#        
+#        if log_ratio >= log(u):
+#            return new_d_v
+#        else:
+#            return old_d_v
+#    
+#    def _update_phi(self, likelihood, d_v, old_phi):
+#        d = likelihood.d
+#        
+#        d_r = d - d_v
+#        
+#        a = d_v + 1
+#        b = d_r + 1
+#        
+#        new_phi = beta(a, b)
+#        
+#        return new_phi    
 
 class CollapsedSampler(object):
     def run(self, data_point, max_iters=100000, thin=1, burnin=0):
@@ -118,7 +117,7 @@ class Likelihood(object):
             self._log_pi_r.append(log(p_r))
             self._mu_r.append(data_point.mu[g_r])
         
-            print mu[g_r]
+            print data_point.mu[g_r]
             
         for g_v, p_v in enumerate(data_point.pi_v):
             if p_v == 0:
@@ -127,7 +126,7 @@ class Likelihood(object):
             self._log_pi_v.append(log(p_v))
             self._mu_v.append(data_point.mu[g_v])
             
-            print mu[g_v]
+            print data_point.mu[g_v]
     
         self._ll_cache = {}
 
@@ -168,7 +167,7 @@ class CollapsedLikelihood(Likelihood):
     def __init__(self, data_point):
         Likelihood.__init__(self, data_point)
         
-        for d_v in range(d + 1):
+        for d_v in range(data_point.d + 1):
             self._update_ll_cache(d_v)
             
     def compute_log_likelihood(self, phi):
@@ -201,8 +200,8 @@ if __name__ == "__main__":
     pi_r = [0, 0, 1]
     pi_v = [0.2, 0.8, 0]
     
-    a = 60
-    d = 100
+    a = 600
+    d = 1000
     
     data_point = DataPoint(a, d, pi_r, pi_v, mu)
     
@@ -210,7 +209,7 @@ if __name__ == "__main__":
     semi_collapsed_sampler = SemiCollapsedSampler()
     
     collapsed_results = collapsed_sampler.run(data_point, max_iters=100000, thin=100, burnin=50000)
-    semi_collapsed_results = semi_collapsed_sampler.run(data_point, max_iters=100000, thin=100, burnin=50000)
+    semi_collapsed_results = semi_collapsed_sampler.run(data_point, max_iters=1000000, thin=100, burnin=50000)
     
     from math import exp
     

@@ -1,3 +1,6 @@
+import bisect
+import random
+
 from math import exp, log, lgamma as log_gamma
 
 def log_factorial(n):
@@ -24,6 +27,16 @@ def log_sum_exp(log_X):
     
     return log(total) + max_exp
 
+def log_space_normalise(log_X):
+    normalised_log_X = []
+    
+    log_norm_const = log_sum_exp(log_X)
+    
+    for x in log_X:
+        normalised_log_X.append(x - log_norm_const)
+    
+    return normalised_log_X
+
 def binomial_pdf(x, n, mu):
     return exp(log_binomial_coefficient(n, x)) * (mu ** x) * (1 - mu) ** (n - x)
 
@@ -35,3 +48,23 @@ def log_beta(a, b):
 
 def log_beta_pdf(x, a, b):
     return log_beta(a, b) + (a - 1) * log(x) + (b - 1) * log(1 - x)
+
+def discrete_rvs(p):
+    choices = range(len(p))
+    
+    cum_dist = [p[0]]
+    
+    for i in range(1, len(p)):
+        cum_dist.append(cum_dist[i - 1] + p[i])
+    
+    x = random.random() * cum_dist[-1]
+    
+    return choices[bisect.bisect(cum_dist, x)]
+
+def bernoulli_rvs(p):
+    u = random.random()
+    
+    if u <= p:
+        return 1
+    else:
+        return 0
