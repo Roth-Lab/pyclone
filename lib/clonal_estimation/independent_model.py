@@ -7,6 +7,7 @@ from __future__ import division
 
 from math import log
 from random import random
+from collections import OrderedDict
 
 #from numpy.random import binomial, beta
 
@@ -128,7 +129,9 @@ class Likelihood(object):
             
             print data_point.mu[g_v]
     
-        self._ll_cache = {}
+        self._partial_ll_cache = {}
+        
+        self._ll_cache = OrderedDict()
 
     def compute_log_likelihood(self, *args):
         pass
@@ -142,7 +145,7 @@ class Likelihood(object):
             for mu_v, log_pi_v in zip(self._mu_v, self._log_pi_v): 
                 temp.append(log_pi_r + log_pi_v + self._compute_latent_term(d_r, d_v, mu_r, mu_v))
             
-        self._ll_cache[d_v] = log_sum_exp(temp)    
+        self._partial_ll_cache[d_v] = log_sum_exp(temp)    
         
     def _compute_latent_term(self, d_r, d_v, mu_r, mu_v):
         ll = []
@@ -158,10 +161,10 @@ class Likelihood(object):
 
 class SemiCollapsedLikelihood(Likelihood):
     def compute_log_likelihood(self, d_v, phi):
-        if d_v not in self._ll_cache:
+        if d_v not in self._partial_ll_cache:
             self._update_ll_cache(d_v)
 
-        return log_binomial_pdf(d_v, self.d, phi) + self._ll_cache[d_v]    
+        return log_binomial_pdf(d_v, self.d, phi) + self._partial_ll_cache[d_v]    
 
 class CollapsedLikelihood(Likelihood):
     def __init__(self, data_point):
@@ -171,15 +174,25 @@ class CollapsedLikelihood(Likelihood):
             self._update_ll_cache(d_v)
             
     def compute_log_likelihood(self, phi):
-        temp = []
+        if phi in self._ll_cache:
+            ll = self._ll_cache[phi]
+        else:  
+            temp = []
+            
+            for d_v in range(self.d + 1):
+                partial_ll = self._partial_ll_cache[d_v]
+                partial_ll += log_binomial_pdf(d_v, self.d, phi)
+                
+                temp.append(partial_ll)
+            
+            ll = log_sum_exp(temp)
+            
+            self._ll_cache[phi] = ll
+            
+            if len(self._ll_cache) > 1000:
+                self._ll_cache.popitem(last=False)
         
-        for d_v in range(self.d + 1):
-            ll = self._ll_cache[d_v]
-            ll += log_binomial_pdf(d_v, self.d, phi)
-            
-            temp.append(ll)
-            
-        return log_sum_exp(temp)
+        return ll
 
 #=======================================================================================================================
 # Data Point
