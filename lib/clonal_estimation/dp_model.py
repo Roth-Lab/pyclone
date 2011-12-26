@@ -30,6 +30,8 @@ class DirichletProcessSampler(object):
     def sample(self, num_iters=1000, burnin=0, thin=1):
         print self._clusters.num_members
         
+        results = {'alpha' : [], 'labels' : [], 'phi' : []}
+        
         for i in range(num_iters):
             self._update_phi()
             self._update_labels()
@@ -39,8 +41,12 @@ class DirichletProcessSampler(object):
             
             if i % thin == 0 and i >= burnin:
                 print i, self._clusters, self._seat_sampler.concentration_parameter
-                       
-                print sorted(self._clusters.values)
+                
+                results['alpha'].append(self._seat_sampler.concentration_parameter)
+                results['labels'].append(self._clusters.labels)
+                results['phi'].append(self._clusters.values)
+        
+        return results
     
     def  _update_phi(self):
         self._dish_sampler.update_clusters(self._clusters)
@@ -53,7 +59,7 @@ class DirichletProcessSampler(object):
                                                       self._clusters.num_clusters,
                                                       self._clusters.num_members)
         
-        self._seat_sampler.set_concentration_parameter(conc_param)
+        self._seat_sampler.concentration_parameter = conc_param
 
 class LabelUpdater(object):
     '''
@@ -237,7 +243,7 @@ class Clusters(object):
     def labels(self):
         labels = [-1] * self.num_members
         
-        for k, table in enumerate(self._tables):
+        for k, table in enumerate(self.tables):
             for member in table:
                 labels[member] = k
         
@@ -278,8 +284,7 @@ class Clusters(object):
             return 0
         else:
             return 1
-    
-    
+        
     def get_cluster_data_points(self, cluster_id):
         return [self.data[i] for i in self.tables[cluster_id]]
     
