@@ -191,7 +191,8 @@ class ConcentrationUpdater(object):
         
         pi = self._get_pi(eta, k, n)
         
-        alpha = self._get_alpha(eta, pi, k)
+        # Add a small positive number to avoid errors
+        alpha = self._get_alpha(eta, pi, k) + 1e-10
         
         return alpha
         
