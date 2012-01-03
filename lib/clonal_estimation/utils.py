@@ -40,6 +40,9 @@ def log_space_normalise(log_X):
 def binomial_pdf(x, n, mu):
     return exp(log_binomial_coefficient(n, x)) * (mu ** x) * (1 - mu) ** (n - x)
 
+def log_binomial_likelihood(x, n, mu):
+    return x * log(mu) + (n - x) * log(1 - mu)
+
 def log_binomial_pdf(x, n, mu):
     return log_binomial_coefficient(n, x) + x * log(mu) + (n - x) * log(1 - mu)
 

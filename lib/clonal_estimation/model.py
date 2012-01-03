@@ -8,7 +8,7 @@ from __future__ import division
 from collections import OrderedDict
 from math import log
 
-from clonal_estimation.utils import log_sum_exp, log_binomial_pdf
+from clonal_estimation.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
 
 class DataPoint(object):
     def __init__(self, a, d, mu_r, mu_v, pi_r, pi_v):
@@ -37,6 +37,8 @@ class BinomialLikelihood(object):
         
         self._ll_cache = OrderedDict()
         
+        self._log_binomial_norm_const = log_binomial_coefficient(self.d, self.a)
+        
     def compute_log_likelihood(self, phi):
         if phi not in self._ll_cache:
             self._ll_cache[phi] = self._log_likelihood(phi)
@@ -60,4 +62,4 @@ class BinomialLikelihood(object):
     def _log_complete_likelihood(self, phi, mu_r, mu_v):
         p = (1 - phi) * mu_r + phi * mu_v
         
-        return log_binomial_pdf(self.a, self.d, p)
+        return self._log_binomial_norm_const + log_binomial_likelihood(self.a, self.d, p)
