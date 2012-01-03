@@ -1,0 +1,7 @@
+
+syntax: regexp
+^\.settings$
+syntax: regexp
+\.pdf$
+syntax: regexp
+\.tsv$
