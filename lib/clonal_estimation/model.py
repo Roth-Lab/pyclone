@@ -8,7 +8,7 @@ from __future__ import division
 from collections import OrderedDict
 from math import log
 
-from clonal_estimation.utils import log_sum_exp, log_factorial
+from clonal_estimation.utils import log_sum_exp, log_factorial, log_binomial_pdf
 
 class DataPoint(object):
     def __init__(self, a, d, mu_r, mu_v, pi_r, pi_v):
@@ -21,6 +21,9 @@ class DataPoint(object):
         self.mu_r = mu_r
         self.mu_v = mu_v
 
+#=======================================================================================================================
+# Latent model
+#=======================================================================================================================
 class Likelihood(object):
     def __init__(self, data_point):
         self.a = data_point.a
@@ -40,9 +43,7 @@ class Likelihood(object):
             
             self._log_pi_r.append(log(p_r))
             self._log_mu_r.append((log(m_r), log(1 - m_r)))
-        
-            
-            
+
         for m_v, p_v in zip(data_point.mu_v, data_point.pi_v):
             print m_v, p_v
             
@@ -134,3 +135,44 @@ class CollapsedLikelihood(Likelihood):
                 self._ll_cache.popitem(last=False)
         
         return ll
+
+#=======================================================================================================================
+# Binomial model
+#=======================================================================================================================
+class BinomialLikelihood(object):
+    def __init__(self, data_point):
+        self.a = data_point.a
+        self.d = data_point.d
+        
+        self.mu_r = data_point.mu_r
+        self.mu_v = data_point.mu_v
+        
+        self.pi_r = data_point.pi_r
+        self.pi_v = data_point.pi_v
+        
+        self._ll_cache = OrderedDict()
+        
+    def compute_log_likelihood(self, phi):
+        if phi not in self._ll_cache:
+            self._ll_cache[phi] = self._log_likelihood(phi)
+            
+            if len(self._ll_cache) > 1000:
+                self._ll_cache.popitem(last=False)
+        
+        return self._ll_cache[phi]
+    
+    def _log_likelihood(self, phi):    
+        ll = []
+        
+        for mu_r, pi_r in zip(self.mu_r, self.pi_r):
+            for mu_v, pi_v in zip(self.mu_v, self.pi_v):
+                temp = log(pi_r) + log(pi_v) + self._log_complete_likelihood(phi, mu_r, mu_v)
+                
+                ll.append(temp)
+        
+        return log_sum_exp(ll)
+    
+    def _log_complete_likelihood(self, phi, mu_r, mu_v):
+        p = (1 - phi) * mu_r + phi * mu_v
+        
+        return log_binomial_pdf(self.a, self.d, p)
