@@ -8,7 +8,7 @@ from __future__ import division
 from math import exp, log
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, random
 
-from clonal_estimation.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
+from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
     def __init__(self, data, m=2, concentration=None):

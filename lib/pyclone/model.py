@@ -8,7 +8,7 @@ from __future__ import division
 from collections import OrderedDict
 from math import log
 
-from clonal_estimation.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
+from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
 
 class DataPoint(object):
     def __init__(self, a, d, mu_r, mu_v, pi_r, pi_v):
