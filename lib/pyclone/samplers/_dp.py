@@ -12,11 +12,16 @@ from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
     def __init__(self, data, m=2, concentration=None):
+        # Initialise cellularity in [0.5, 1)
+        cellularity = 0.5 * random() + 0.5
+        
         self._clusters = Clusters(data)
                                                 
-        self._seat_sampler = LabelUpdater(m)            
+        self._seat_sampler = LabelUpdater(m, cellularity=cellularity)            
         
-        self._dish_sampler = FrequencyUpdater()
+        self._dish_sampler = FrequencyUpdater(cellularity=cellularity)
+        
+        self._cellularity_sampler = CellularityUpdater()
         
         if concentration is None:
             self._concentration_sampler = ConcentrationUpdater(1e-3, 1e-3)
@@ -30,7 +35,7 @@ class DirichletProcessSampler(object):
     def sample(self, num_iters=1000, burnin=0, thin=1):
         print self._clusters.num_members
         
-        results = {'alpha' : [], 'labels' : [], 'phi' : []}
+        results = {'alpha' : [], 'labels' : [], 'phi' : [], 'cellularity' : []}
         
         for i in range(num_iters):
             self._update_phi()
@@ -39,12 +44,15 @@ class DirichletProcessSampler(object):
             if self._update_concentration:
                 self._update_concentration_parameters()
             
+            self._update_cellularity()
+            
             if i % thin == 0 and i >= burnin:
-                print i, self._clusters, self._seat_sampler.concentration_parameter
+                print i, self._clusters, self._seat_sampler.concentration_parameter, self._seat_sampler.cellularity
                 
                 results['alpha'].append(self._seat_sampler.concentration_parameter)
                 results['labels'].append(self._clusters.labels)
                 results['phi'].append(self._clusters.values)
+                results['cellularity'].append(self._seat_sampler.cellularity)
         
         return results
     
@@ -60,13 +68,22 @@ class DirichletProcessSampler(object):
                                                       self._clusters.num_members)
         
         self._seat_sampler.concentration_parameter = conc_param
+    
+    def _update_cellularity(self):
+        cellularity = self._cellularity_sampler.draw(self._dish_sampler.cellularity,
+                                                     self._clusters)
+        
+        self._dish_sampler.cellularity = cellularity
+        self._seat_sampler.cellularity = cellularity
 
 class LabelUpdater(object):
     '''
     Chinese restaurant process sampling using algorithm 8 from Neal.
     '''
-    def __init__(self, m, concentration_parameter=1):
+    def __init__(self, m, concentration_parameter=1, cellularity=1):
         self.m = m
+        
+        self.cellularity = cellularity
         
         self.concentration_parameter = concentration_parameter
 
@@ -127,7 +144,7 @@ class LabelUpdater(object):
         log_p = []
         
         for k in range(h):
-            log_p.append(log(counts[k]) + data.compute_log_likelihood(values[k]))
+            log_p.append(log(counts[k]) + data.compute_log_likelihood(values[k], self.cellularity))
 
         log_space_normalise(log_p)
         
@@ -139,13 +156,23 @@ class FrequencyUpdater(object):
     '''
     Class for sampling the clonal frequencies (dishes) using metropolis step.
     '''
+    def __init__(self, cellularity=1):
+        self.cellularity = cellularity
+    
     def update_clusters(self, clusters):
         old_values = clusters.values
         
         new_values = []
+
+        precision = 8 
     
         for k, old_phi in enumerate(old_values):            
-            new_phi = random()
+#            new_phi = random()
+#            
+            a = old_phi * precision + 1
+            b = (1 - old_phi) * precision + 1
+        
+            new_phi = beta_rvs(a, b)   
             
             cluster_data_points = clusters.get_cluster_data_points(k)
             
@@ -165,9 +192,9 @@ class FrequencyUpdater(object):
         denominator = 0.
     
         for data_point in cluster_data:
-            numerator += data_point.compute_log_likelihood(new_phi)
+            numerator += data_point.compute_log_likelihood(new_phi, self.cellularity)
        
-            denominator += data_point.compute_log_likelihood(old_phi)
+            denominator += data_point.compute_log_likelihood(old_phi, self.cellularity)
             
         log_ratio = numerator - denominator
 
@@ -177,6 +204,39 @@ class FrequencyUpdater(object):
             return True
         else:
             return False
+        
+class CellularityUpdater(object):
+    '''
+    Class for sampling the frequency of tumour cells (cellularity) using metropolis step.
+    '''
+    def draw(self, old_s, clusters):       
+        numerator = 0
+        
+        denominator = 0
+        
+        precision = 8
+        
+        a = old_s * precision + 1
+        b = (1 - old_s) * precision + 1
+        
+        new_s = beta_rvs(a, b)
+    
+        for phi, table in zip(clusters.values, clusters.tables):
+            for member in table:
+                likelihood = clusters.data[member]
+                
+                numerator += likelihood.compute_log_likelihood(phi, new_s)
+           
+                denominator += likelihood.compute_log_likelihood(phi, old_s)
+            
+        log_ratio = numerator - denominator
+
+        u = random()
+        
+        if log_ratio >= log(u):
+            return new_s
+        else:
+            return old_s
 
 class ConcentrationUpdater(object):
     '''
@@ -300,4 +360,4 @@ class Clusters(object):
         self.tables.pop(index)
         self.values.pop(index)
         
-        self.num_clusters = len(self.tables)    
+        self.num_clusters = len(self.tables)
