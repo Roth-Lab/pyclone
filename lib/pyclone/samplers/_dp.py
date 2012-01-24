@@ -11,17 +11,23 @@ from random import betavariate as beta_rvs, gammavariate as gamma_rvs, random
 from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
-    def __init__(self, data, m=2, concentration=None):
-        # Initialise cellularity in [0.5, 1)
-        cellularity = 0.5 * random() + 0.5
+    def __init__(self, data, m=2, concentration=None, cellularity=None):
+        
+        if cellularity is None:
+            self._update_cellularity = True
+            
+            # Initialise cellularity in [0.5, 1)    
+            cellularity = 0.5 * random() + 0.5
+            
+            self._cellularity_sampler = CellularityUpdater()
+        else:
+            self._update_cellularity = False
         
         self._clusters = Clusters(data)
                                                 
         self._seat_sampler = LabelUpdater(m, cellularity=cellularity)            
         
         self._dish_sampler = FrequencyUpdater(cellularity=cellularity)
-        
-        self._cellularity_sampler = CellularityUpdater()
         
         if concentration is None:
             self._concentration_sampler = ConcentrationUpdater(1e-3, 1e-3)
@@ -44,7 +50,8 @@ class DirichletProcessSampler(object):
             if self._update_concentration:
                 self._update_concentration_parameters()
             
-            self._update_cellularity()
+            if self._update_cellularity:
+                self._update_cellularity_parameter()
             
             if i % thin == 0 and i >= burnin:
                 print i, self._clusters, self._seat_sampler.concentration_parameter, self._seat_sampler.cellularity
@@ -69,10 +76,10 @@ class DirichletProcessSampler(object):
         
         self._seat_sampler.concentration_parameter = conc_param
     
-    def _update_cellularity(self):
+    def _update_cellularity_parameter(self):
         cellularity = self._cellularity_sampler.draw(self._dish_sampler.cellularity,
                                                      self._clusters)
-        
+
         self._dish_sampler.cellularity = cellularity
         self._seat_sampler.cellularity = cellularity
 
@@ -133,7 +140,7 @@ class LabelUpdater(object):
     
     def _get_label(self, data, counts, values):
         p = self._get_crp_probs(data, counts, values)
-        
+
         label = discrete_rvs(p)
         
         return label
@@ -163,16 +170,9 @@ class FrequencyUpdater(object):
         old_values = clusters.values
         
         new_values = []
-
-        precision = 8 
     
         for k, old_phi in enumerate(old_values):            
-#            new_phi = random()
-#            
-            a = old_phi * precision + 1
-            b = (1 - old_phi) * precision + 1
-        
-            new_phi = beta_rvs(a, b)   
+            new_phi = random()
             
             cluster_data_points = clusters.get_cluster_data_points(k)
             
@@ -213,13 +213,8 @@ class CellularityUpdater(object):
         numerator = 0
         
         denominator = 0
-        
-        precision = 8
-        
-        a = old_s * precision + 1
-        b = (1 - old_s) * precision + 1
-        
-        new_s = beta_rvs(a, b)
+
+        new_s = random()
     
         for phi, table in zip(clusters.values, clusters.tables):
             for member in table:
