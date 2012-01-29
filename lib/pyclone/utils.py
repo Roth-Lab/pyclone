@@ -77,3 +77,23 @@ def bernoulli_rvs(p):
         return 1
     else:
         return 0
+
+def binomial_rvs(mu, d):
+    a = 0
+    
+    for _ in range(d):
+        a += bernoulli_rvs(mu)
+    
+    return a
+
+def poisson_rvs(expected_value):
+    L = exp(-expected_value)
+    k = 0
+    p = 1
+    
+    while p > L:
+        k += 1
+
+        p *= random.random()
+    
+    return k - 1    
