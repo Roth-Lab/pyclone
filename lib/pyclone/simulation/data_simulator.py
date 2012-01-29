@@ -30,7 +30,7 @@ class ClonalDataSimulator(object):
         
         a = binomial_rvs(mu, d)
         
-        return a, d, cn, genotype
+        return a, d, cn, genotype, clone_freq
 
 class ClonalDataSimulatorParamters(object):
     def __init__(self, num_clones, max_cn, mean_depth):
@@ -66,4 +66,5 @@ if __name__ == "__main__":
     params = ClonalDataSimulatorParamters(10, 8, 1000)
     simulator = ClonalDataSimulator(params)
     
-    print simulator.draw_data_point()
+    for i in range(100):
+        print simulator.draw_data_point()
