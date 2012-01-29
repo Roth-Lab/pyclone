@@ -79,6 +79,9 @@ def bernoulli_rvs(p):
         return 0
 
 def binomial_rvs(mu, d):
+    '''
+    Naive method based on representation of binomial as sum of Bernoulli variables.
+    '''
     a = 0
     
     for _ in range(d):
@@ -87,13 +90,27 @@ def binomial_rvs(mu, d):
     return a
 
 def poisson_rvs(expected_value):
-    L = exp(-expected_value)
-    k = 0
-    p = 1
+    '''
+    Inverse transform method from "Simulation" by S. Ross pg 51. Computation done in log space to avoid numerical
+    issues.
+    '''
+    i = 0
+    log_p = -expected_value 
+    log_F = log_p
     
-    while p > L:
-        k += 1
-
-        p *= random.random()
+    log_lambda = log(expected_value)
     
-    return k - 1    
+    U = random.random()
+    
+    if U != 0:
+        log_U = log(U)
+    else:
+        log_U = float('-inf')
+    
+    while log_F <= log_U:
+        log_p = log_lambda + log_p - log(i + 1)
+        log_F = log_sum_exp((log_F, log_p))
+        
+        i += 1
+    
+    return i    
