@@ -7,7 +7,9 @@ from __future__ import division
 
 from collections import defaultdict
 
-from pyclone.utils import discrete_rvs, binomial_rvs, poisson_rvs
+from pyclone.utils import discrete_rvs
+
+from scipy.stats import binom as binomial, poisson
 
 import random
 
@@ -34,18 +36,18 @@ class ClonalDataSimulator(object):
         self.mu_ref = mu_ref
 
     def draw_data_point(self):       
-        d = poisson_rvs(self.mean_depth)
+        d = poisson.rvs(self.mean_depth)
         
         clone_freq = self._clone_simulator.draw_clonal_frequency()
                 
-        d_var = binomial_rvs(clone_freq, d)
+        d_var = binomial.rvs(d, clone_freq)
         d_ref = d - d_var
         
         mu_ref = self.mu_ref
-        a_ref = binomial_rvs(mu_ref, d_ref)
+        a_ref = binomial.rvs(d_ref, mu_ref)
         
         mu_var, genotype = self._genotype_simulator.draw_mu()
-        a_var = binomial_rvs(mu_var, d_var)
+        a_var = binomial.rvs(d_var, mu_var)
         
         a = a_var + a_ref
         
@@ -146,6 +148,7 @@ class GenotypeSimulator(object):
         return self.mu[cn][genotype], (cn, genotype)
                              
 if __name__ == "__main__":
-    sim = SimulatorFactory.get_simple_simulator(2, 2, 10, 1000)
+    sim = SimulatorFactory.get_simple_simulator(2, 2, 1, 1000)
     
-    print sim.draw_data_point()
+    for i in range(100):
+        print sim.draw_data_point()

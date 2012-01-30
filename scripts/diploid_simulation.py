@@ -7,7 +7,7 @@ from pyclone.simulation.data_simulator import SimulatorFactory
 
 import matplotlib.pyplot as plot
 
-simulator = SimulatorFactory.get_simple_simulator(2, 2, 1, 10000)
+simulator = SimulatorFactory.get_simple_simulator(2, 2, 1, 1000)
 
 simulator.clone_frequencies = [0.75, ]
 
