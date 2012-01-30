@@ -11,43 +11,70 @@ from pyclone.utils import discrete_rvs, binomial_rvs, poisson_rvs
 
 import random
 
-class ClonalDataSimulator(object):
-    def __init__(self,
-                 num_clones,
-                 min_cn,
-                 max_cn,
-                 mean_depth,
-                 random_cn_mix_weights=False,
-                 random_genotype_mix_weights=False):
+class SimulatorFactory(object):
+    @staticmethod
+    def get_simple_simulator(min_cn, max_cn, num_clones, mean_depth):
+        cn_sim = CopyNumberSimulator(min_cn, max_cn)
         
-        self._cn_simulator = CopyNumberSimulator(min_cn, max_cn, random_cn_mix_weights)
-        self._genotype_simulator = GenotypeSimulator(min_cn, max_cn, random_genotype_mix_weights)
+        genotype_sim = GenotypeSimulator(cn_sim)
+        
+        clone_sim = CloneSimulator(num_clones)
+        
+        sim = ClonalDataSimulator(clone_sim, genotype_sim, mean_depth)
+        
+        return sim
+        
+class ClonalDataSimulator(object):
+    def __init__(self, clone_simulator, genotype_simulator, mean_depth, mu_ref=0.999):        
+        self._clone_simulator = clone_simulator
+        self._genotype_simulator = genotype_simulator
          
         self.mean_depth = mean_depth
         
-        self.mu_ref = 0.999
-        
-        self.clone_mix_weights = [1 / num_clones] * num_clones
-        self.clone_frequencies = [random.random() for _ in range(num_clones)]
-    
-    def draw_data_point(self):
-        clone_label = discrete_rvs(self.clone_mix_weights)
-        
-        clone_freq = self.clone_frequencies[clone_label]
-        
-        cn = self._cn_simulator.draw_cn()
-        
-        genotype = self._genotype_simulator.draw_genotype(cn)
-        
-        mu_var = self._genotype_simulator.get_reference_frequency(cn, genotype)
-        
-        mu = (1 - clone_freq) * self.mu_ref + clone_freq * mu_var
-        
+        self.mu_ref = mu_ref
+
+    def draw_data_point(self):       
         d = poisson_rvs(self.mean_depth)
         
-        a = binomial_rvs(mu, d)
+        clone_freq = self._clone_simulator.draw_clonal_frequency()
+                
+        d_var = binomial_rvs(clone_freq, d)
+        d_ref = d - d_var
         
-        return a, d, cn, genotype, clone_freq
+        mu_ref = self.mu_ref
+        a_ref = binomial_rvs(mu_ref, d_ref)
+        
+        mu_var, genotype = self._genotype_simulator.draw_mu()
+        a_var = binomial_rvs(mu_var, d_var)
+        
+        a = a_var + a_ref
+        
+        return a, d, genotype, clone_freq
+    
+    @property
+    def clone_frequencies(self):
+        return self._clone_simulator.frequencies
+    
+    @clone_frequencies.setter
+    def clone_frequencies(self, value):
+        self._clone_simulator.frequencies = value
+
+class CloneSimulator(object):
+    def __init__(self, num_clones, random_mix_weights=False):
+        self.num_clones = num_clones
+        
+        if random_mix_weights:
+            self.mix_weights = [random.random() for _ in range(self.num_clones)]
+            self.mix_weights = [x / sum(self.mix_weights) for x in self.mix_weights]
+        else:
+            self.mix_weights = [1 / self.num_clones] * self.num_clones
+        
+        self.frequencies = [random.random() for _ in range(num_clones)]
+    
+    def draw_clonal_frequency(self):
+        population_id = discrete_rvs(self.mix_weights)
+        
+        return self.frequencies[population_id]
 
 class CopyNumberSimulator(object):
     def __init__(self, min_cn, max_cn, random_mix_weights=False):
@@ -72,11 +99,13 @@ class CopyNumberSimulator(object):
         return cn
 
 class GenotypeSimulator(object):
-    def __init__(self, min_cn, max_cn, random_mix_weights=False):
-        self.min_cn = min_cn
-        self.max_cn = max_cn
+    def __init__(self, cn_simulator, random_mix_weights=False, error_rate=0.001):
+        self._cn_simulator = cn_simulator
         
-        self.num_cn_classes = max_cn - min_cn + 1
+        self.min_cn = cn_simulator.min_cn
+        self.max_cn = cn_simulator.max_cn
+        
+        self.error_rate = error_rate
         
         self._init_mix_weights(random_mix_weights)
         
@@ -100,23 +129,23 @@ class GenotypeSimulator(object):
             self.mix_weights[cn] = [ x / sum(self.mix_weights[cn]) for x in self.mix_weights[cn]]
     
     def _init_reference_allele_frequencies(self):
-        self.reference_allele_frequencies = defaultdict(list)
+        self.mu = defaultdict(list)
         
         for cn in range(self.min_cn, self.max_cn + 1):
             num_genotypes = cn + 1
             
-            self.reference_allele_frequencies[cn] = [x / cn for x in range(num_genotypes)]
+            self.mu[cn] = [x / cn for x in range(num_genotypes)]
+            self.mu[cn][0] = self.error_rate
+            self.mu[cn][-1] = 1 - self.error_rate
     
-    def draw_genotype(self, cn):
+    def draw_mu(self):
+        cn = self._cn_simulator.draw_cn()    
+        
         genotype = discrete_rvs(self.mix_weights[cn])
         
-        return genotype
-    
-    def get_reference_frequency(self, cn, genotype):
-        return self.reference_allele_frequencies[cn][genotype]
+        return self.mu[cn][genotype], (cn, genotype)
                              
 if __name__ == "__main__":
-    simulator = ClonalDataSimulator(10, 2, 2, 1000)
+    sim = SimulatorFactory.get_simple_simulator(2, 2, 10, 1000)
     
-    for i in range(100):
-        print simulator.draw_data_point()
+    print sim.draw_data_point()
