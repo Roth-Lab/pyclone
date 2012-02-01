@@ -153,7 +153,7 @@ class LabelUpdater(object):
         for k in range(h):
             log_p.append(log(counts[k]) + data.compute_log_likelihood(values[k], self.cellularity))
 
-        log_space_normalise(log_p)
+        log_p = log_space_normalise(log_p)
         
         p = [exp(x) for x in log_p]
         
