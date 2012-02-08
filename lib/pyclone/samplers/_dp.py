@@ -166,9 +166,9 @@ class FrequencyUpdater(object):
         denominator = 0.
     
         for data_point in cluster_data:
-            numerator += data_point.compute_log_likelihood(new_phi, self.cellularity)
+            numerator += data_point.compute_log_likelihood(new_phi)
        
-            denominator += data_point.compute_log_likelihood(old_phi, self.cellularity)
+            denominator += data_point.compute_log_likelihood(old_phi)
             
         log_ratio = numerator - denominator
 
