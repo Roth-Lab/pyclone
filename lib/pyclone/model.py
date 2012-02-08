@@ -6,20 +6,20 @@ Created on 2011-12-29
 from __future__ import division
 
 from collections import OrderedDict
-from math import log
+from math import lgamma as log_gamma
 
 from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
 
 class DataPoint(object):
-    def __init__(self, a, d, mu_r, mu_v, log_pi_r, log_pi_v):
+    def __init__(self, a, d, mu_r, mu_v, delta_r, delta_v):
         self.a = a
         self.d = d
-        
-        self.log_pi_r = log_pi_r
-        self.log_pi_v = log_pi_v
-        
+               
         self.mu_r = mu_r
         self.mu_v = mu_v
+        
+        self.delta_r = delta_r
+        self.delta_v = delta_v        
 
 #=======================================================================================================================
 # Likelihood
@@ -32,8 +32,8 @@ class BinomialLikelihood(object):
         self.mu_r = data_point.mu_r
         self.mu_v = data_point.mu_v
         
-        self.log_pi_r = data_point.log_pi_r
-        self.log_pi_v = data_point.log_pi_v
+        self.log_pi_r = self._get_log_mix_weights(data_point.delta_r)
+        self.log_pi_v = self._get_log_mix_weights(data_point.delta_v) 
         
         self._ll_cache = OrderedDict()
         
@@ -48,6 +48,22 @@ class BinomialLikelihood(object):
         
         return self._ll_cache[phi]
     
+    def _get_log_mix_weights(self, delta):
+        log_denominator = log_gamma(sum(delta) + 1)
+        
+        log_mix_weights = []
+        
+        for i, d_i in enumerate(delta):
+            log_numerator = log_gamma(d_i + 1)
+            
+            for j, d_j in enumerate(delta):
+                if i != j:
+                    log_numerator += log_gamma(d_j)
+            
+            log_mix_weights.append(log_numerator - log_denominator)
+        
+        return log_mix_weights
+        
     def _log_likelihood(self, phi):    
         ll = []
         
