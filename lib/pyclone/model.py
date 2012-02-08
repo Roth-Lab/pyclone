@@ -18,7 +18,6 @@ class DataPoint(object):
         self.log_pi_r = log_pi_r
         self.log_pi_v = log_pi_v
         
-        self.mu_n = mu_n
         self.mu_r = mu_r
         self.mu_v = mu_v
 
@@ -30,10 +29,9 @@ class BinomialLikelihood(object):
         self.a = data_point.a
         self.d = data_point.d
         
-        self.mu_n = data_point.mu_n
         self.mu_r = data_point.mu_r
         self.mu_v = data_point.mu_v
-                
+        
         self.log_pi_r = data_point.log_pi_r
         self.log_pi_v = data_point.log_pi_v
         
