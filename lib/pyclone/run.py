@@ -23,10 +23,10 @@ def run_dp_model(args):
         d = int(row['d'])
         
         mu_r = [float(x) for x in row['mu_r'].split(',')]
-        delta_r = [float(x) for x in row['pi_r'].split(',')]
+        delta_r = [float(x) for x in row['delta_r'].split(',')]
         
         mu_v = [float(x) for x in row['mu_v'].split(',')]
-        delta_v = [float(x) for x in row['pi_v'].split(',')]
+        delta_v = [float(x) for x in row['delta_v'].split(',')]
         
         data_point = DataPoint(a, d, mu_r, mu_v, delta_r, delta_v)
 
@@ -41,7 +41,7 @@ def run_dp_model(args):
     db['a'] = [x.a for x in likelihoods]
     db['d'] = [x.d for x in likelihoods]
     
-    sampler = DirichletProcessSampler(likelihoods, cellularity=1)
+    sampler = DirichletProcessSampler(likelihoods)
     
     sampler_results = sampler.sample(num_iters=args.num_iters, burnin=0, thin=1)
     
