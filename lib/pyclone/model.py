@@ -11,7 +11,7 @@ from math import log
 from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
 
 class DataPoint(object):
-    def __init__(self, a, d, mu_n, mu_r, mu_v, log_pi_r, log_pi_v):
+    def __init__(self, a, d, mu_r, mu_v, log_pi_r, log_pi_v):
         self.a = a
         self.d = d
         
@@ -41,31 +41,27 @@ class BinomialLikelihood(object):
         
         self._log_binomial_norm_const = log_binomial_coefficient(self.d, self.a)
         
-    def compute_log_likelihood(self, phi, s):
-        key = (phi, s)
-        
-        if key not in self._ll_cache:
-            self._ll_cache[key] = self._log_likelihood(phi, s)
+    def compute_log_likelihood(self, phi):        
+        if phi not in self._ll_cache:
+            self._ll_cache[phi] = self._log_likelihood(phi)
             
             if len(self._ll_cache) > 1000:
                 self._ll_cache.popitem(last=False)
         
-        return self._ll_cache[key]
+        return self._ll_cache[phi]
     
-    def _log_likelihood(self, phi, s):    
+    def _log_likelihood(self, phi):    
         ll = []
         
         for mu_r, log_pi_r in zip(self.mu_r, self.log_pi_r):
             for mu_v, log_pi_v in zip(self.mu_v, self.log_pi_v):
-                temp = log_pi_r + log_pi_v + self._log_complete_likelihood(phi, s, mu_r, mu_v)
+                temp = log_pi_r + log_pi_v + self._log_complete_likelihood(phi, mu_r, mu_v)
                 
                 ll.append(temp)
         
         return log_sum_exp(ll)
     
-    def _log_complete_likelihood(self, phi, s, mu_r, mu_v):
-        mu_t = (1 - phi) * mu_r + phi * mu_v
-        
-        mu = (1 - s) * self.mu_n + s * mu_t
+    def _log_complete_likelihood(self, phi, mu_r, mu_v):
+        mu = (1 - phi) * mu_r + phi * mu_v
         
         return self._log_binomial_norm_const + log_binomial_likelihood(self.a, self.d, mu)
