@@ -45,7 +45,7 @@ def run_dp_model(args):
     
     sampler = DirichletProcessSampler(likelihoods)
     
-    sampler_results = sampler.sample(num_iters=args.num_iters, burnin=0, thin=1)
+    sampler_results = sampler.sample(num_iters=args.num_iters, burnin=args.burnin, thin=args.thin)
     
     db['results'] = sampler_results
     
