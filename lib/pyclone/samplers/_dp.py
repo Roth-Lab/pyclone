@@ -276,6 +276,9 @@ class Clusters(object):
                 
                 break
         
+        if value == -1:
+            raise Exception('Clusters.pop_member : Member {0} not found.'.format(member))
+        
         return value
     
     def push_member(self, member, cluster_id):
