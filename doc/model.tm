@@ -197,7 +197,7 @@
     <tformat|<table|<row|<cell|\<bbb-P\><around*|(|\<phi\><rsup|i>,G<rsup|i>=g,\<b-pi\><rsup|i>\|a<rsup|i>,d<rsup|i>,\<phi\><rsup|i>,\<mu\><rsub|r>,\<b-mu\><rsub|v>,\<b-delta\><rsup|i>|)>>|<cell|\<propto\>>|<cell|\<bbb-P\><around*|(|a<rsup|i>\|d<rsup|i>,G<rsup|i>=g,\<phi\><rsup|i>,\<mu\><rsub|r>,\<b-mu\><rsub|v>|)>\<bbb-P\><around*|(|G<rsup|i>\|\<b-pi\><rsup|i>|)>\<bbb-P\><around*|(|\<phi\><rsup|i>|)>\<bbb-P\><around*|(|\<b-pi\><rsup|i>\|\<b-delta\><rsup|i>|)>>>>>
   </eqnarray>
 
-  Again we can margianlise the nuisance parameter <math|G<rsup|i>>, and now
+  Again we can marginalise the nuisance parameter <math|G<rsup|i>>, and now
   <math|\<b-pi\><rsup|i>>. The final form of the posterior after
   mariganalisation is
 
@@ -213,17 +213,17 @@
 
   <subsection|Sharing Statistical Strength Across Samples>
 
-  In the above formulation piror uncertainty about variant population
+  In the above formulation prior uncertainty about variant population
   genotypes, will be translated into posterior uncertainty about
   <math|\<phi\><rsup|i>>. In particular, if we believe several genotypes are
   equally probable, then there will be equal number of modes of the same
-  heigh in the posterior for <math|\<phi\><rsup|i>> corresponding to each
+  height in the posterior for <math|\<phi\><rsup|i>> corresponding to each
   genotype. Without further assumptions we have no reason to believe any of
   these modes are more probable than the others.
 
   If we consider the set of all mutations in a sample together, this no
   longer need be true. By utilising a shared prior for the cellular
-  frequencies <math|\<phi\><rsup|i>>, across all positions in the sample we
+  frequencies <math|\<phi\><rsup|i>> across all positions in the sample, we
   can impose extra constraints to resolve ambiguities in genotypes. The
   choice of such a prior distribution will have a dramatic effect on
   inference, and should be considered carefully. In particular, the
@@ -246,12 +246,6 @@
   information is not generally available. We can avoid this difficulty by
   using a semi-parameteric Dirichlet process prior (DPP) over
   <math|\<phi\><rsup|i>>.
-
-  \;
-
-  \;
-
-  \;
 </body>
 
 <\initial>
@@ -288,21 +282,37 @@
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-2>>
 
-      <with|par-left|<quote|3fn>|Sequencing Error
+      <with|par-left|<quote|1.5fn>|Sequencing Error
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-3>>
 
-      <with|par-left|<quote|3fn>|Heterogeneity
+      <with|par-left|<quote|1.5fn>|Heterogeneity
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4>>
 
-      <with|par-left|<quote|3fn>|Assumptions
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|Model>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-5>>
+      <no-break><pageref|auto-5><vspace|0.5fn>
 
-      <with|par-left|<quote|3fn>|Accomodating Genotype Uncertainty
+      <with|par-left|<quote|1.5fn>|Assumptions
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-6>>
+
+      <with|par-left|<quote|1.5fn>|Accomodating Genotype Uncertainty
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-7>>
+
+      <with|par-left|<quote|1.5fn>|Hierachical Modelling Of Genotype
+      Uncertainty <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-8>>
+
+      <with|par-left|<quote|1.5fn>|Sharing Statistical Strength Across
+      Samples <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-9>>
+
+      <with|par-left|<quote|3fn>|Dirichlet Process Prior
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-10>>
     </associate>
   </collection>
 </auxiliary>
