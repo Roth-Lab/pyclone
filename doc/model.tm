@@ -4,9 +4,46 @@
 
 <\body>
   <doc-data|<doc-title|PyClone : Software For Inferring Cellular Frequencies
-  From Allellic Count Data>|<doc-author-data|<author-name|Andrew Roth>>>
+  From Allelic Count Data>|<doc-author-data|<author-name|Andrew
+  Roth>|<\author-address>
+    <math|<rsup|1>>Graduate Program in Bioinformatics, University Of British
+    Columbia\ 
+
+    <math|<rsup|2>>Shah Lab, Department of Molecular Oncology, British
+    Columbia Cancer Agency
+
+    e-mail: andrewjlroth@gmail.com
+  </author-address>>>
 
   <section|Introduction>
+
+  The problem to be addressed here is that of inferring the fraction of cells
+  in the population containing a mutation, which I will refer to as the
+  <em|cellular frequency>. I will assume we are given information about the
+  frequency of variant of B-alleles in the bulk population, and also some
+  possibly incorrect information about the genotype of cells with the
+  mutation. The key challenge is to go from the observed allelic frequency to
+  the cellular frequency. Note that cellular frequency and genotype of a
+  mutation both contribute to the observed allelic frequency.\ 
+
+  The PyClone software implements a probabilistic model to estimate the
+  frequency at which mutations occur in a population of cells. PyClone works
+  by first converting next generation sequence data allelic abundance data.
+  Next information about copy number (CN) and loss of heterozygosity (LOH) at
+  the mutation are used to elicit prior beliefs about the genotype of cells
+  with the mutation. Using the allelic abundance data and prior information a
+  probabilistic model is applied to infer the <em|cellular frequency> of the
+  mutation, that is the fraction of cells in the population containing the
+  mutation.\ 
+
+  When multiple mutations are present in a single sample, PyClone analyses
+  them jointly under the assumption mutations tend to co-occur in cells.
+  Given this assumption there should be groups of mutations at the same
+  cellular frequency. Thus another output given by the PyClone software is
+  the probability a pair of genes co-occur in the same mutated cell (more
+  accurately co-occur at the same cellular frequency, however the most
+  parsimonious way for this to occur is if the mutations are in the same
+  cell).
 
   <subsection|Notation>
 
@@ -27,7 +64,7 @@
   at each position. Cancer genomes are not strictly diploid, so we need to
   consider an extended set of possible genotypes. For each position the
   genotype can be fully specified by two value. The number of copies of that
-  position, <math|c<rsup|i>>, and the number reference allelels in the
+  position, <math|c<rsup|i>>, and the number reference alleles in the
   genotype <math|r<rsup|i>>. For example the genotype
   <math|<with|mode|text|AAAB>> would have <math|c<rsup|i>=4> and
   <math|r<rsup|i>=3>.
@@ -35,7 +72,7 @@
   In the absence of any other confounding factors, the frequency of reference
   alleles we observe at a given position should be
   <math|f<rsup|i>=<frac|r<rsup|i>|c<rsup|i>>>. Due to sampling and sequencing
-  error the observed reference alleleic frequency <math|<wide|f|^><rsup|i>>
+  error the observed reference allelic frequency <math|<wide|f|^><rsup|i>>
   will generally not be exactly equal to <math|f<rsup|i>>. However, as depth
   of coverage increases <math|<wide|f|^><rsup|i>> should converge to
   <math|f<rsup|i>>.
@@ -49,10 +86,9 @@
   effect should not be noticeable. However, in the two exceptional cases
   where <math|r<rsup|i>=0> or <math|r<rsup|i>=c<rsup|i>> we assume there will
   be a small random deviation, <math|\<varepsilon\>\<ll\>1>, in observed
-  frequency assosciated with the error rate of the sequencing technology.
-  That is when <math|r<rsup|i>=0> we should expect
-  <math|f<rsup|i>=\<varepsilon\>> and when <math|r<rsup|i>=c<rsup|i>> then
-  <math|f<rsup|i>=1-\<varepsilon\>>.
+  frequency associated with the error rate of the sequencing technology. That
+  is when <math|r<rsup|i>=0> we should expect <math|f<rsup|i>=\<varepsilon\>>
+  and when <math|r<rsup|i>=c<rsup|i>> then <math|f<rsup|i>=1-\<varepsilon\>>.
 
   <subsection|Heterogeneity>
 
@@ -96,14 +132,14 @@
 
   To simplify the subsequent analysis we make a simplifying assumption that
   there are two populations of cells at a given position <math|i>. One
-  population consits of cells for which <math|r<rsup|i><rsub|j>=c<rsub|j><rsup|i>>,
+  population consists of cells for which <math|r<rsup|i><rsub|j>=c<rsub|j><rsup|i>>,
   which we refer to as the <em|reference> population. This includes both
   normal cells, and tumour cells with copy number variations. The common
   factor in this group is that the genotypes contain no variant alleles. As
-  discussed above, using allele frequencies we cannot deconvolute the
-  fraction of normal cells, and tumour cells with no mutations. We assign the
-  variable <math|f<rsub|r><rsup|i>=1-\<varepsilon\>> to the reference allele
-  frequency for this population.
+  discussed above, using allele frequencies we cannot deconvolve the fraction
+  of normal cells, and tumour cells with no mutations. We assign the variable
+  <math|f<rsub|r><rsup|i>=1-\<varepsilon\>> to the reference allele frequency
+  for this population.
 
   The second population which we refer to as the <em|variant> population will
   have <math|r<rsub|j><rsup|i>\<less\>c<rsub|j><rsup|i>>, that is at least
@@ -132,15 +168,15 @@
 
   The discussion above implies that we can model the number of reference
   allele counts observed at position <math|i>, as a binomial distribution
-  with paramters <math|n=d<rsup|i>=a<rsup|i>+b<rsup|i>>, and
+  with parameters <math|n=d<rsup|i>=a<rsup|i>+b<rsup|i>>, and
   <math|p=<around*|(|1-\<phi\><rsup|i>|)>f<rsub|r><rsup|i>+\<phi\><rsup|i>
-  f<rsub|v><rsup|i>>. However, the unceratainty in genotype means in
+  f<rsub|v><rsup|i>>. However, the uncertainty in genotype means in
   <math|f<rsub|v><rsup|i>> is unknown.\ 
 
   At this point it is useful to switch notation slightly. We will let
   <math|\<mu\><rsub|r>=1-\<varepsilon\>> be the probability of sampling a
-  reference allele from the reference population. To reiteratre,
-  <math|\<varepsilon\>\<ll\>1> is a value assosciated with the error rate of
+  reference allele from the reference population. To reiterate,
+  <math|\<varepsilon\>\<ll\>1> is a value associated with the error rate of
   the sequencing technology.
 
   We will also introduce an infinite vector
@@ -158,7 +194,7 @@
   Finally we introduce a variable <math|G<rsup|i>>, which indicates which
   genotype the variant population has.
 
-  We can the create a hierachical bayesian model of the data as follows.
+  We can the create a hierarchical Bayesian model of the data as follows.
 
   <\eqnarray>
     <tformat|<table|<row|<cell|\<phi\><rsup|i>>|<cell|\<sim\>>|<cell|<with|mode|text|Uniform><around*|(|0,1|)>>>|<row|<cell|G<rsup|i>>|<cell|\<sim\>>|<cell|<with|mode|text|Discrete><around*|(|\<b-pi\><rsup|i>|)>>>|<row|<cell|a<rsup|i>\|d<rsup|i>,G<rsup|i>=g,\<phi\><rsup|i>,\<mu\><rsub|r>,\<b-mu\><rsub|v>>|<cell|\<sim\>>|<cell|<with|mode|text|Binomial><around*|(|d<rsup|i>,<around*|(|1-\<phi\><rsup|i>|)>\<mu\><rsub|r>+\<phi\><rsup|i>
@@ -174,15 +210,15 @@
   We can then marginalise out <math|G<rsup|i>> to obtain a posterior
   distribution over <math|\<phi\><rsup|i>>.
 
-  <subsection|Hierachical Modelling Of Genotype Uncertainty>
+  <subsection|Hierarchical Modeling Of Genotype Uncertainty>
 
   Eliciting prior information about <math|\<b-pi\><rsup|i>> will be
-  difficult. It is beneficial to add another level to the hierachy of the
-  model by placing a Dirichle prior over <math|\<b-pi\><rsup|i>>. This frees
-  us from having to directly input prior probabilities about genotypes, and
-  instead allows us to work with the simpler pseudo-count parameters of the
-  Dirichlet distribution. In addition, depeening the hierachy will provide
-  some measure of protection against inaccurate prior specification for
+  difficult. It is beneficial to add another level to the model by placing a
+  Dirichlet prior over <math|\<b-pi\><rsup|i>>. This frees us from having to
+  directly input prior probabilities about genotypes, and instead allows us
+  to work with the simpler pseudo-count parameters of the Dirichlet
+  distribution. In addition, deepening the model hierarchy will provide some
+  measure of protection against inaccurate prior specification for
   <math|\<b-pi\>>.
 
   Formally we have
@@ -199,7 +235,7 @@
 
   Again we can marginalise the nuisance parameter <math|G<rsup|i>>, and now
   <math|\<b-pi\><rsup|i>>. The final form of the posterior after
-  mariganalisation is
+  marginalization is
 
   <\eqnarray>
     <tformat|<table|<row|<cell|\<bbb-P\><around*|(|\<phi\><rsup|i>\|a<rsup|i>,d<rsup|i>,\<phi\><rsup|i>,\<mu\><rsub|r>,\<b-mu\><rsub|v>,\<b-delta\><rsup|i>|)>>|<cell|\<propto\>>|<cell|<big|sum><rsub|g><around*|[|<frac|<big|prod><rsub|g<rprime|'>\<neq\>g>
@@ -209,7 +245,7 @@
 
   Since <math|\<phi\><rsup|i>> is a one dimensional parameter with support in
   the interval <math|<around*|[|0,1|]>> it is trivial to compute the
-  normalisation constant using numerical integration techniques.
+  normalization constant using numerical integration techniques.
 
   <subsection|Sharing Statistical Strength Across Samples>
 
@@ -222,7 +258,7 @@
   these modes are more probable than the others.
 
   If we consider the set of all mutations in a sample together, this no
-  longer need be true. By utilising a shared prior for the cellular
+  longer need be true. By utilizing a shared prior for the cellular
   frequencies <math|\<phi\><rsup|i>> across all positions in the sample, we
   can impose extra constraints to resolve ambiguities in genotypes. The
   choice of such a prior distribution will have a dramatic effect on
@@ -237,15 +273,14 @@
   assuming there are groups of mutations, which tend to occur at the same
   frequency.\ 
 
-  We can explictily incorporate such an assumption into the model, if we
+  We can explicitly incorporate such an assumption into the model, if we
   change the prior distribution of <math|\<phi\><rsup|i>> to be shared across
-  all positions in a sample. In particular we can use a distribution over a
-  discrete set of atom for all <math|\<phi\><rsup|i>> in the sample. Using
-  simple discrete distribution, and adjusting the location of the atoms would
-  entail selecting the number of groups of mutation in advance. Again, this
-  information is not generally available. We can avoid this difficulty by
-  using a semi-parameteric Dirichlet process prior (DPP) over
-  <math|\<phi\><rsup|i>>.
+  all positions in a sample. In particular we can use a shared discrete
+  distribution <math|\<phi\><rsup|i>> to \ yield a traditional clustering
+  model. However, using a discrete distribution would entail selecting the
+  number of clusters of mutations in advance. Since this information is not
+  generally available we use a semi-parametric Dirichlet process prior (DPP)
+  over <math|\<phi\><rsup|i>>.
 </body>
 
 <\initial>
@@ -256,16 +291,16 @@
 
 <\references>
   <\collection>
-    <associate|auto-1|<tuple|1|?>>
-    <associate|auto-10|<tuple|2.4.1|?>>
-    <associate|auto-2|<tuple|1.1|?>>
-    <associate|auto-3|<tuple|1.2|?>>
-    <associate|auto-4|<tuple|1.3|?>>
-    <associate|auto-5|<tuple|2|?>>
-    <associate|auto-6|<tuple|2.1|?>>
-    <associate|auto-7|<tuple|2.2|?>>
-    <associate|auto-8|<tuple|2.3|?>>
-    <associate|auto-9|<tuple|2.4|?>>
+    <associate|auto-1|<tuple|1|1>>
+    <associate|auto-10|<tuple|2.4.1|4>>
+    <associate|auto-2|<tuple|1.1|1>>
+    <associate|auto-3|<tuple|1.2|1>>
+    <associate|auto-4|<tuple|1.3|2>>
+    <associate|auto-5|<tuple|2|2>>
+    <associate|auto-6|<tuple|2.1|2>>
+    <associate|auto-7|<tuple|2.2|2>>
+    <associate|auto-8|<tuple|2.3|3>>
+    <associate|auto-9|<tuple|2.4|3>>
     <associate|footnote-1|<tuple|1|?>>
     <associate|footnr-1|<tuple|1|?>>
   </collection>
@@ -302,7 +337,7 @@
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-7>>
 
-      <with|par-left|<quote|1.5fn>|Hierachical Modelling Of Genotype
+      <with|par-left|<quote|1.5fn>|Hierarchical Modeling Of Genotype
       Uncertainty <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-8>>
 
