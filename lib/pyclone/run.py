@@ -90,8 +90,13 @@ def write_results(db, out_dir, save_trace):
     for gene in post_processor.genes:
         gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
         
-        writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
+        fh = open(gene_file, 'w')
+        
+        writer = csv.writer(fh, delimiter='\t')
+        
         writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
+        
+        fh.close()
     
     # Save similarity matrix
     sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
