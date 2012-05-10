@@ -28,11 +28,9 @@ class DirichletProcessSampler(object):
             
             self._seat_sampler.concentration_parameter = concentration
         
-    def sample(self, num_iters=1000, burnin=0, thin=1):
+    def sample(self, results_db, num_iters=1000, burnin=0, thin=1, print_freq=100):
         print self._clusters.num_members
-        
-        results = {'alpha' : [], 'labels' : [], 'phi' : []}
-        
+
         for i in range(num_iters):
             self._update_phi()
             self._update_labels()
@@ -41,13 +39,10 @@ class DirichletProcessSampler(object):
                 self._update_concentration_parameters()
             
             if i % thin == 0 and i >= burnin:
+                results_db.update_trace(self.state)
+            
+            if i % print_freq == 0:
                 print i, self._clusters, self._seat_sampler.concentration_parameter
-                
-                results['alpha'].append(self._seat_sampler.concentration_parameter)
-                results['labels'].append(self._clusters.labels)
-                results['phi'].append(self._clusters.values)
-        
-        return results
     
     def  _update_phi(self):
         self._dish_sampler.update_clusters(self._clusters)
@@ -61,6 +56,14 @@ class DirichletProcessSampler(object):
                                                       self._clusters.num_members)
         
         self._seat_sampler.concentration_parameter = conc_param
+    
+    @property
+    def state(self):
+        return {
+                'alpha' : self._seat_sampler.concentration_parameter,
+                'labels' : self._clusters.labels,
+                'phi' : self._clusters.values                
+                }
 
 class LabelUpdater(object):
     '''
