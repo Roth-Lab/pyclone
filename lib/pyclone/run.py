@@ -15,6 +15,9 @@ import os
 from pyclone.results import SamplerResults
 
 def run_dp_model(args):
+    if not os.path.exists(args.out_dir):
+        os.makedirs(args.out_dir)
+    
     data = load_data(args.in_file_name)
 
     likelihoods = [BinomialLikelihood(data_point) for data_point in data]
@@ -37,11 +40,14 @@ def run_dp_model(args):
     
     results['sampler'] = sampler
     
+    write_results(results, args.out_dir)
+    
     results.close()
-            
-#    write_results(db, args.out_dir, args.save_trace)
 
 def load_data(input_file_name):
+    '''
+    Load data from PyClone formatted input file.
+    '''
     data = OrderedDict()
     
     reader = csv.DictReader(open(input_file_name), delimiter='\t')
@@ -63,18 +69,11 @@ def load_data(input_file_name):
 
     return data
         
-def write_results(db, out_dir, save_trace):
+def write_results(results_db, out_dir):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     
-    if save_trace:
-        
-        
-        fh = open(trace_file, 'wb')
-        cPickle.dump(db, fh)
-        fh.close()
-    
-    post_processor = DpSamplerPostProcessor(db)
+    post_processor = DpSamplerPostProcessor(results_db)
     
     # Save genes
     gene_file = os.path.join(out_dir, "genes.tsv")
