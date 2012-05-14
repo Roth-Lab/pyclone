@@ -25,9 +25,6 @@ parser.add_argument('--burnin', default=0, type=int,
 parser.add_argument('--thin', default=1, type=int,
                     help='''How many samples to skip before saving one sample into the trace. Default 1.''')
 
-parser.add_argument('--save_trace', action='store_true', default=False,
-                    help='''If set a python pickle file containing complete trace of analysis will be created.''')
-
 parser.set_defaults(func=run_dp_model)
 
 args = parser.parse_args()
