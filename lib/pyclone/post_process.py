@@ -9,7 +9,7 @@ class DpSamplerPostProcessor(object):
     def __init__(self, data):       
         self.genes = data['genes']
         
-        self._results = data['results']
+        self._results = data['trace']
         
     @property
     def alpha(self):
