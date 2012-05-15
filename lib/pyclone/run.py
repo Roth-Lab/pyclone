@@ -7,39 +7,53 @@ from collections import OrderedDict
 
 from pyclone.model import DataPoint, BinomialLikelihood
 from pyclone.post_process import DpSamplerPostProcessor
+from pyclone.results import SamplerResults
 from pyclone.samplers import DirichletProcessSampler
 
 import csv
 import os
-from pyclone.results import SamplerResults
 
 def run_dp_model(args):
+    '''
+    Run a fresh instance of the DP model.
+    '''
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
     
     data = load_data(args.in_file_name)
-
-    likelihoods = [BinomialLikelihood(data_point) for data_point in data]
     
-    results_file_name = os.path.join(args.out_dir, "results.db")
+    results_file_prefix = os.path.join(args.out_dir, "results")
     
-    results = SamplerResults(results_file_name, mode='w')
+    results = SamplerResults(results_file_prefix)
     
     results['input_file'] = args.in_file_name
     
     results['genes'] = data.keys()
     
-    results['likelihoods'] = likelihoods
+    likelihoods = [BinomialLikelihood(data_point) for data_point in data]
     
-    results.sync()    
+    sampler = DirichletProcessSampler(likelihoods, burnin=args.burnin, thin=args.thin)
     
-    sampler = DirichletProcessSampler(likelihoods)
-    
-    sampler.sample(results, num_iters=args.num_iters, burnin=args.burnin, thin=args.thin)
+    sampler.sample(results, num_iters=args.num_iters)
     
     results['sampler'] = sampler
     
-    write_results(results, args.out_dir)
+    results.close()
+
+def restart_dp_model(args):
+    '''
+    Restart an existing analysis.
+    '''
+    if not os.path.exists(args.out_dir):
+        raise Exception("{0} does not exist.".format(args.out_dir))
+    
+    results_file_prefix = os.path.join(args.out_dir, "results")
+    
+    results = SamplerResults(results_file_prefix)
+    
+    sampler = results['sampler']
+    
+    sampler.restart(results, num_iters=args.num_iters)
     
     results.close()
 

@@ -9,3 +9,5 @@ syntax: regexp
 ^MANIFEST$
 syntax: regexp
 ^dist$
+syntax: regexp
+^build$

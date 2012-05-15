@@ -11,8 +11,7 @@ from random import betavariate as beta_rvs, gammavariate as gamma_rvs, random, s
 from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
-    def __init__(self, data, m=2, concentration=None):
-               
+    def __init__(self, data, m=2, concentration=None):               
         self._clusters = Clusters(data)
                                                 
         self._seat_sampler = LabelUpdater(m)            
@@ -20,9 +19,9 @@ class DirichletProcessSampler(object):
         self._dish_sampler = FrequencyUpdater()
         
         if concentration is None:
-            self._concentration_sampler = ConcentrationUpdater(1e-3, 1e-3)
-        
             self._update_concentration = True
+            
+            self._concentration_sampler = ConcentrationUpdater(1e-3, 1e-3)
         else:
             self._update_concentration = False
             

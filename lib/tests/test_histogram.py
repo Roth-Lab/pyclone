@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
     def test_values_less_than_max(self):
         values = [1.01, ]
         
-        counts = histogram(values, num_bins=2, min_value= 0, max_value=1)
+        counts = h`istogram(values, num_bins=2, min_value= 0, max_value=1)
         
         self.assertEqual(counts, [0, 0])
     
