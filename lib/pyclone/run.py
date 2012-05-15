@@ -9,7 +9,6 @@ from pyclone.model import DataPoint, BinomialLikelihood
 from pyclone.post_process import DpSamplerPostProcessor
 from pyclone.samplers import DirichletProcessSampler
 
-import cPickle
 import csv
 import os
 from pyclone.results import SamplerResults
