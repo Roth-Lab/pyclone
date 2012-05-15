@@ -14,8 +14,6 @@ class SamplerResults(object):
             
             self._db.sync()
             
-        self._trace = self._db['trace']
-            
         self._cache_size = 0
             
         self._max_cache_size = max_cache_size
@@ -27,8 +25,8 @@ class SamplerResults(object):
         self._db[key] = value 
         
     def update_trace(self, state):
-        for parameter in self._trace:
-            self._trace[parameter].append(state[parameter])
+        for parameter in self._db['trace']:
+            self._db['trace'][parameter].append(state[parameter])
         
         self._cache_size += 1
         
