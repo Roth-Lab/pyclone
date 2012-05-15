@@ -1,3 +1,5 @@
+from __future__ import division
+
 import bisect
 import random
 
@@ -77,3 +79,52 @@ def bernoulli_rvs(p):
         return 1
     else:
         return 0
+
+def histogram(values, num_bins=100, min_value=0, max_value=1, normalise=False):
+    '''
+    Simple histogram implementation. Intervals are evenly spaced half open and left inclusive.
+    
+    For example 0 would be in bin [0, 0.1) and 0.1 would be in bin [0.1,0.2).
+    
+    The right end-point is an exception so that if max_value=1 then the last bin is [0.9, 1].
+    
+    Args:
+        values : (list) Values to create histogram from.
+    
+    Kwargs:
+        num_bins : (int) Number of bins to use.
+        min_value : (int) Left endpoint of histogram.
+        max_value : (int) Right endpoint of histogram.
+        normalise : (bool) If False then the integer counts of items in each bins is returned. 
+                           If True returns the normalised histogram such that the integral sums to 1.
+    '''     
+    counts = [0 for _ in range(num_bins)]
+    
+    bin_width = (max_value - min_value) / num_bins
+    
+    num_endpoints = num_bins + 1
+    
+    endpoints = [(x * bin_width + min_value) for x in range(num_endpoints)]
+    
+    for x in values:
+        bin_index = bisect.bisect_right(endpoints, x) - 1 
+        
+        # Corner case at right end-point
+        if x == endpoints[-1]:
+            counts[-1] += 1
+        # Corner case when values outside endpoints. 
+        elif x < endpoints[0] or x > endpoints[-1]:
+            continue
+        else:
+            counts[bin_index] += 1
+    
+    if normalise == True:
+        total = sum(counts)
+        
+        denom = bin_width * total
+        
+        hist = [x / denom for x in counts]
+    else:
+        hist = counts
+    
+    return hist    
