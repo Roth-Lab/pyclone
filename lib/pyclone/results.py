@@ -3,8 +3,6 @@ Created on 2012-05-10
 
 @author: Andrew
 '''
-import os
-import platform
 import shelve
 
 class AnalysisDB(object):
@@ -18,16 +16,8 @@ class AnalysisDB(object):
     def _load_db(self, file_prefix):
         '''
         Load the shelve db object if it exists, otherwise initialise.
-        ''' 
-        file_name = file_prefix
-        
-#        # Workaround for PyPY shelve implementation adding .db and Cpython not
-#        if platform.python_implementation() == "PyPy":
-#            file_name = file_prefix
-#        else:
-#            file_name = file_prefix + ".db"
-        
-        self._db = shelve.open(file_name, writeback=True)
+        '''
+        self._db = shelve.open(file_prefix, writeback=True)
         
         # Check if file exists, if not initialise
         if 'trace' not in self._db:                
