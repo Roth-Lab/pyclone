@@ -8,11 +8,14 @@ from __future__ import division
 from math import exp, log
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, random, shuffle
 
+from pyclone.model import BinomialLikelihood
 from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
-    def __init__(self, data, m=2, concentration=None):               
-        self._clusters = Clusters(data)
+    def __init__(self, data, m=2, burnin=0, thin=1, concentration=None):
+        likelihoods = [BinomialLikelihood(data_point) for data_point in data]
+                    
+        self._clusters = Clusters(likelihoods)
                                                 
         self._seat_sampler = LabelUpdater(m)            
         
@@ -27,21 +30,27 @@ class DirichletProcessSampler(object):
             
             self._seat_sampler.concentration_parameter = concentration
         
-    def sample(self, results_db, num_iters=1000, burnin=0, thin=1, print_freq=100):
+        self.burnin = burnin
+        self.thin = thin
+        self.num_iters = 0
+        
+    def sample(self, results_db, num_iters=1000, print_freq=100):        
         print self._clusters.num_members
 
-        for i in range(num_iters):
+        for _ in range(num_iters):
+            self.num_iters += 1
+            
             self._update_phi()
             self._update_labels()
             
             if self._update_concentration:
                 self._update_concentration_parameters()
             
-            if i % thin == 0 and i >= burnin:
+            if self.num_iters % self.thin == 0 and self.num_iters >= self.burnin:
                 results_db.update_trace(self.state)
             
-            if i % print_freq == 0:
-                print i, self._clusters, self._seat_sampler.concentration_parameter
+            if self.num_iters % print_freq == 0:
+                print self.num_iters, self._clusters, self._seat_sampler.concentration_parameter
     
     def  _update_phi(self):
         self._dish_sampler.update_clusters(self._clusters)

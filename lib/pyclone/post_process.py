@@ -4,6 +4,9 @@ Created on 2012-02-08
 @author: Andrew Roth
 '''
 from collections import defaultdict
+from math import ceil, floor
+
+from pyclone.utils import histogram
 
 class DpSamplerPostProcessor(object):
     def __init__(self, data):       
@@ -66,6 +69,42 @@ class DpSamplerPostProcessor(object):
         
         return sim_mat
 
+    def get_alpha_posteriors(self, num_bins=100):        
+        alpha = self.alpha
+        
+        min_value = floor(min(alpha))
+        max_value = ceil(max(alpha))
+        
+        return histogram(alpha, num_bins, min_value=min_value, max_value=max_value, normalise=True)
+
+    def get_cellular_frequency_posteriors(self, num_bins=100):
+        posteriors = {}
+        
+        cellular_frequencies = self.cellular_frequencies
+        
+        for gene in cellular_frequencies:
+            posteriors[gene] = histogram(cellular_frequencies[gene], num_bins, min_value=0, max_value=1, normalise=True)
+        
+        return posteriors
+    
+    def get_num_component_posteriors(self):
+        num_components = self.num_components
+        
+        min_value = floor(min(num_components))        
+        max_value = ceil(max(num_components))
+        
+        num_bins = int(max_value - min_value)
+                
+        return histogram(num_components, num_bins, min_value=min_value, max_value=max_value, normalise=True)        
+    
+    def get_similarity_posteriors(self):
+        sim_mat = self.similarity_matrix
+        
+        for i, row in enumerate(sim_mat):
+            sim_mat[i] = [x / max(row) for x in row]
+        
+        return sim_mat
+        
     def _get_labels_by_gene(self):
         '''
         Returns a dict with keys genes, and values the class label of the genes for each MCMC sample.
@@ -88,7 +127,7 @@ class DpSamplerPostProcessor(object):
             if l1 == l2:
                 similarity += 1
         
-        return similarity
+        return similarity    
 
 if __name__ == "__main__":
     post_processor = DpSamplerPostProcessor("../../examples/test.pickle")

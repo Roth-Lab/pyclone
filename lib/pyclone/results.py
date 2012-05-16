@@ -7,7 +7,7 @@ import os
 import platform
 import shelve
 
-class SamplerResults(object):
+class AnalysisDB(object):
     def __init__(self, file_prefix, max_cache_size=1000):
         self._load_db(file_prefix)
 
@@ -23,7 +23,7 @@ class SamplerResults(object):
         if platform.python_implementation() == "PyPy":
             file_name = file_prefix 
         else:
-            file_name += ".db"
+            file_name = file_prefix + ".db"
         
         self._db = shelve.open(file_name, writeback=True)
         
@@ -35,7 +35,7 @@ class SamplerResults(object):
         else:
             # If file exists and trace is not in db raise error.
             if 'trace' not in self._db:
-                raise Exception('{0} exists but does not appear to be a valid PyClone SamplerResults object.'.format(file_name))
+                raise Exception('{0} exists but does not appear to be a valid PyClone AnalysisDB object.'.format(file_name))
                 
     def __getitem__(self, key):
         return self._db[key]

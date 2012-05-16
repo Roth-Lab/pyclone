@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 from pyclone.model import DataPoint, BinomialLikelihood
 from pyclone.post_process import DpSamplerPostProcessor
-from pyclone.results import SamplerResults
+from pyclone.results import AnalysisDB
 from pyclone.samplers import DirichletProcessSampler
 
 import csv
@@ -17,45 +17,37 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    if not os.path.exists(args.out_dir):
-        os.makedirs(args.out_dir)
+    data_set = load_data(args.in_file)
     
-    data = load_data(args.in_file_name)
+    analysis_db = AnalysisDB(args.out_prefix)
     
-    results_file_prefix = os.path.join(args.out_dir, "results")
+    analysis_db['input_file'] = open(args.in_file).readlines()
     
-    results = SamplerResults(results_file_prefix)
+    analysis_db['genes'] = data_set.keys()
     
-    results['input_file'] = args.in_file_name
+    analysis_db['data'] = data_set.values()
     
-    results['genes'] = data.keys()
+    sampler = DirichletProcessSampler(data_set.values(), burnin=args.burnin, thin=args.thin)
     
-    likelihoods = [BinomialLikelihood(data_point) for data_point in data]
+    sampler.sample(analysis_db, num_iters=args.num_iters)
     
-    sampler = DirichletProcessSampler(likelihoods, burnin=args.burnin, thin=args.thin)
+    analysis_db['sampler'] = sampler
     
-    sampler.sample(results, num_iters=args.num_iters)
-    
-    results['sampler'] = sampler
-    
-    results.close()
+    analysis_db.close()
 
-def restart_dp_model(args):
+def resume_dp_model(args):
     '''
     Restart an existing analysis.
-    '''
-    if not os.path.exists(args.out_dir):
-        raise Exception("{0} does not exist.".format(args.out_dir))
+    '''    
+    analysis_db = AnalysisDB(args.out_prefix)
     
-    results_file_prefix = os.path.join(args.out_dir, "results")
+    sampler = analysis_db['sampler']
     
-    results = SamplerResults(results_file_prefix)
+    sampler.sample(analysis_db, num_iters=args.num_iters)
     
-    sampler = results['sampler']
+    analysis_db['sampler'] = sampler
     
-    sampler.restart(results, num_iters=args.num_iters)
-    
-    results.close()
+    analysis_db.close()
 
 def load_data(input_file_name):
     '''
@@ -82,50 +74,114 @@ def load_data(input_file_name):
 
     return data
         
-def write_results(results_db, out_dir):
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    
-    post_processor = DpSamplerPostProcessor(results_db)
-    
-    # Save genes
-    gene_file = os.path.join(out_dir, "genes.tsv")
-    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
-    writer.writerows(list_to_csv_rows(post_processor.genes))
-    
-    # Save alpha
-    alpha_file = os.path.join(out_dir, 'alpha.tsv')
-    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
-    writer.writerows(list_to_csv_rows(post_processor.alpha))
-    
-    # Save num components
-    components_file = os.path.join(out_dir, 'components.tsv')
-    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
-    writer.writerows(list_to_csv_rows(post_processor.num_components))
-    
-    # Save cellular frequencies.
-    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
-    
-    if not os.path.exists(cellular_freq_dir):
-        os.makedirs(cellular_freq_dir)
-    
-    cellular_freqs = post_processor.cellular_frequencies
-    
-    for gene in post_processor.genes:
-        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
-        
-        fh = open(gene_file, 'w')
-        
-        writer = csv.writer(fh, delimiter='\t')
-        
-        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
-        
-        fh.close()
-    
-    # Save similarity matrix
-    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
-    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-    writer.writerows(post_processor.similarity_matrix)
-    
-def list_to_csv_rows(x):
-    return [[x_i, ] for x_i in x]
+#def post_process_results(args):    
+#    analysis_db = AnalysisDB(args.db_prefix)
+#    
+#    post_processor = DpSamplerPostProcessor(analysis_db)
+#    
+#    if args.raw_data:
+#        raw_dir = os.path.join(args.out_dir, 'raw_data')
+#        
+#        safe_makedirs(raw_dir)
+#        
+#        write_raw_data(post_processor, raw_dir)
+#    
+#    if args.independent:
+#        write_independent_posteriors(post_processor, args.out_dir)
+#    
+#    posteriors_dir = os.path.join(args.out_dir, 'posteriors')
+#    
+#    safe_makedirs(posteriors_dir)
+#    
+#    write_posteriors(post_processor, posteriors_dir)
+#
+#def write_raw_data(post_processor, out_dir):
+#    # Save genes
+#    gene_file = os.path.join(out_dir, "genes.tsv")
+#    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.genes))
+#    
+#    # Save alpha
+#    alpha_file = os.path.join(out_dir, 'alpha.tsv')
+#    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.alpha))
+#    
+#    # Save num components
+#    components_file = os.path.join(out_dir, 'components.tsv')
+#    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.num_components))
+#    
+#    # Save cellular frequencies.
+#    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
+#    
+#    if not os.path.exists(cellular_freq_dir):
+#        os.makedirs(cellular_freq_dir)
+#    
+#    cellular_freqs = post_processor.cellular_frequencies
+#    
+#    for gene in post_processor.genes:
+#        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
+#        
+#        fh = open(gene_file, 'w')
+#        
+#        writer = csv.writer(fh, delimiter='\t')
+#        
+#        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
+#        
+#        fh.close()
+#    
+#    # Save similarity matrix
+#    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
+#    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
+#    writer.writerows(post_processor.similarity_matrix)
+#
+#def write_independent_posteriors(post_processor, out_dir):
+#    pass
+#
+#def write_posteriors(post_processor, num_bins, out_dir):
+#    # Save genes
+#    gene_file = os.path.join(out_dir, "genes.tsv")
+#    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.genes))
+#    
+#    # Save alpha
+#    alpha_file = os.path.join(out_dir, 'alpha.tsv')
+#    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.get_alpha_posteriors(num_bins)))
+#    
+#    # Save num components
+#    components_file = os.path.join(out_dir, 'components.tsv')
+#    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
+#    writer.writerows(list_to_csv_rows(post_processor.get_num_component_posteriors()))
+#    
+#    # Save cellular frequencies.
+#    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
+#    
+#    if not os.path.exists(cellular_freq_dir):
+#        os.makedirs(cellular_freq_dir)
+#    
+#    cellular_freqs = post_processor.cellular_frequencies
+#    
+#    for gene in post_processor.genes:
+#        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
+#        
+#        fh = open(gene_file, 'w')
+#        
+#        writer = csv.writer(fh, delimiter='\t')
+#        
+#        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
+#        
+#        fh.close()
+#    
+#    # Save similarity matrix
+#    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
+#    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
+#    writer.writerows(post_processor.similarity_matrix)
+#
+#def list_to_csv_rows(x):
+#    return [[x_i, ] for x_i in x]
+#
+#def safe_makedirs(dir):
+#    if not os.path.exists(dir):
+#        os.makedirs(dir)    
+#    
