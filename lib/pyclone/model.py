@@ -6,7 +6,7 @@ Created on 2011-12-29
 from __future__ import division
 
 from collections import OrderedDict
-from math import lgamma as log_gamma
+from math import lgamma as log_gamma, log, exp
 
 from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood
 
@@ -79,3 +79,28 @@ class BinomialLikelihood(object):
         mu = (1 - phi) * mu_r + phi * mu_v
         
         return self._log_binomial_norm_const + log_binomial_likelihood(self.a, self.d, mu)
+
+def get_independent_posterior(data_point, num_bins):
+    likelihood = BinomialLikelihood(data_point)
+    
+    bin_width = 1 / num_bins
+    
+    num_endpoints = num_bins + 1
+    
+    endpoints = [(x * bin_width) for x in range(num_endpoints)]
+    
+    bin_centres = []
+    
+    for left, right in zip(endpoints[:-1], endpoints[1:]):
+        bin_centres.append((left + right) / 2)
+    
+    ll = []
+    
+    for phi in bin_centres:
+        ll.append(likelihood.compute_log_likelihood(phi))
+    
+    norm_const = log_sum_exp([x + log(bin_width) for x in ll])
+    
+    pdf = [exp(x - norm_const) for x in ll]
+    
+    return zip(bin_centres, pdf) 

@@ -5,7 +5,7 @@ Created on 2012-02-08
 '''
 from collections import OrderedDict
 
-from pyclone.model import DataPoint, BinomialLikelihood
+from pyclone.model import DataPoint, get_independent_posterior
 from pyclone.post_process import DpSamplerPostProcessor
 from pyclone.results import AnalysisDB
 from pyclone.samplers import DirichletProcessSampler
@@ -79,65 +79,80 @@ def post_process_results(args):
     
     post_processor = DpSamplerPostProcessor(analysis_db)
     
-#    if args.raw_data:
-#        raw_dir = os.path.join(args.out_dir, 'raw_data')
-#        
-#        safe_makedirs(raw_dir)
-#        
-#        write_raw_data(post_processor, raw_dir)
-#    
-#    if args.independent:
-#        write_independent_posteriors(post_processor, args.out_dir)
+    if args.output_raw_data:
+        raw_dir = os.path.join(args.out_dir, 'raw_data')
+        
+        safe_makedirs(raw_dir)
+        
+        write_raw_data(post_processor, raw_dir)
+    
+    if args.independent:
+        independent_dir = os.path.join(args.out_dir, "independent")
+        
+        safe_makedirs(independent_dir)
+        
+        write_independent_posteriors(analysis_db['genes'], analysis_db['data'], args.num_bins, independent_dir)
     
     posteriors_dir = os.path.join(args.out_dir, 'posteriors')
     
     safe_makedirs(posteriors_dir)
     
     write_posteriors(post_processor, args.num_bins, posteriors_dir)
-#
-#def write_raw_data(post_processor, out_dir):
-#    # Save genes
-#    gene_file = os.path.join(out_dir, "genes.tsv")
-#    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
-#    writer.writerows(list_to_csv_rows(post_processor.genes))
-#    
-#    # Save alpha
-#    alpha_file = os.path.join(out_dir, 'alpha.tsv')
-#    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
-#    writer.writerows(list_to_csv_rows(post_processor.alpha))
-#    
-#    # Save num components
-#    components_file = os.path.join(out_dir, 'components.tsv')
-#    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
-#    writer.writerows(list_to_csv_rows(post_processor.num_components))
-#    
-#    # Save cellular frequencies.
-#    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
-#    
-#    if not os.path.exists(cellular_freq_dir):
-#        os.makedirs(cellular_freq_dir)
-#    
-#    cellular_freqs = post_processor.cellular_frequencies
-#    
-#    for gene in post_processor.genes:
-#        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
-#        
-#        fh = open(gene_file, 'w')
-#        
-#        writer = csv.writer(fh, delimiter='\t')
-#        
-#        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
-#        
-#        fh.close()
-#    
-#    # Save similarity matrix
-#    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
-#    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-#    writer.writerows(post_processor.similarity_matrix)
-#
-#def write_independent_posteriors(post_processor, out_dir):
-#    pass
-#
+    
+    analysis_db.close()
+
+def write_raw_data(post_processor, out_dir):
+    # Save genes
+    gene_file = os.path.join(out_dir, "genes.tsv")
+    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
+    writer.writerows(list_to_csv_rows(post_processor.genes))
+    
+    # Save alpha
+    alpha_file = os.path.join(out_dir, 'alpha.tsv')
+    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
+    writer.writerows(list_to_csv_rows(post_processor.alpha))
+    
+    # Save num components
+    components_file = os.path.join(out_dir, 'components.tsv')
+    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
+    writer.writerows(list_to_csv_rows(post_processor.num_components))
+    
+    # Save cellular frequencies.
+    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
+    
+    if not os.path.exists(cellular_freq_dir):
+        os.makedirs(cellular_freq_dir)
+    
+    cellular_freqs = post_processor.cellular_frequencies
+    
+    for gene in post_processor.genes:
+        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
+        
+        fh = open(gene_file, 'w')
+        
+        writer = csv.writer(fh, delimiter='\t')
+        
+        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
+        
+        fh.close()
+    
+    # Save similarity matrix
+    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
+    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
+    writer.writerows(post_processor.similarity_matrix)
+
+def write_independent_posteriors(genes, data, num_bins, out_dir):
+    for gene, data_point in zip(genes, data):
+        gene_file = os.path.join(out_dir, "{0}.tsv".format(gene))
+        
+        fh = open(gene_file, 'w')
+        
+        writer = csv.writer(fh, delimiter='\t')
+                
+        writer.writerows(get_independent_posterior(data_point, num_bins))
+        
+        fh.close()
+
 def write_posteriors(post_processor, num_bins, out_dir):
     # Save genes
     gene_file = os.path.join(out_dir, "genes.tsv")

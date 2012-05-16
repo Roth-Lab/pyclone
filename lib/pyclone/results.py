@@ -19,11 +19,13 @@ class AnalysisDB(object):
         '''
         Load the shelve db object if it exists, otherwise initialise.
         ''' 
-        # Workaround for PyPY shelve implementation adding .db and Cpython not
-        if platform.python_implementation() == "PyPy":
-            file_name = file_prefix 
-        else:
-            file_name = file_prefix + ".db"
+        file_name = file_prefix
+        
+#        # Workaround for PyPY shelve implementation adding .db and Cpython not
+#        if platform.python_implementation() == "PyPy":
+#            file_name = file_prefix
+#        else:
+#            file_name = file_prefix + ".db"
         
         self._db = shelve.open(file_name, writeback=True)
         

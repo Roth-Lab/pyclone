@@ -56,6 +56,13 @@ pp_parser.add_argument('--num_bins', default=100, type=int,
                        help='''Number of bins to use when generating posterior histogram for cellular frequencies.
                        Default is 100.''')
 
+pp_parser.add_argument('--output_raw_data', action='store_true', default=False,
+                       help='''If set the raw trace data will be output.''')
+
+pp_parser.add_argument('--independent', action='store_true', default=False,
+                       help='''If set the results of using the independent PyClone model without DP process will be
+                       outputeed.''')
+
 pp_parser.set_defaults(func=post_process_results)
 
 args = parser.parse_args()

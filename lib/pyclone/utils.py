@@ -133,4 +133,4 @@ def histogram(values, num_bins=100, min_value=0, max_value=1, normalise=False):
         bin_centres.append((left + right) / 2)
          
     
-    return bin_centres, hist    
+    return bin_centres, hist
