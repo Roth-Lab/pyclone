@@ -3,6 +3,8 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
+from __future__ import division
+
 from collections import defaultdict
 from math import ceil, floor
 
@@ -69,11 +71,13 @@ class DpSamplerPostProcessor(object):
         
         return sim_mat
 
-    def get_alpha_posteriors(self, num_bins=100):        
+    def get_alpha_posteriors(self):        
         alpha = self.alpha
         
         min_value = floor(min(alpha))
         max_value = ceil(max(alpha))
+        
+        num_bins = int(max_value - min_value)
         
         return histogram(alpha, num_bins, min_value=min_value, max_value=max_value, normalise=True)
 
@@ -90,8 +94,8 @@ class DpSamplerPostProcessor(object):
     def get_num_component_posteriors(self):
         num_components = self.num_components
         
-        min_value = floor(min(num_components))        
-        max_value = ceil(max(num_components))
+        min_value = floor(min(num_components)) - 0.5       
+        max_value = ceil(max(num_components)) + 0.5
         
         num_bins = int(max_value - min_value)
                 
@@ -127,7 +131,7 @@ class DpSamplerPostProcessor(object):
             if l1 == l2:
                 similarity += 1
         
-        return similarity    
+        return similarity
 
 if __name__ == "__main__":
     post_processor = DpSamplerPostProcessor("../../examples/test.pickle")

@@ -28,14 +28,10 @@ class AnalysisDB(object):
         self._db = shelve.open(file_name, writeback=True)
         
         # Check if file exists, if not initialise
-        if not os.path.exists(file_name):                
+        if 'trace' not in self._db:                
             self._db['trace'] = {'alpha' : [], 'labels' : [], 'phi' : []}
             
             self._db.sync()
-        else:
-            # If file exists and trace is not in db raise error.
-            if 'trace' not in self._db:
-                raise Exception('{0} exists but does not appear to be a valid PyClone AnalysisDB object.'.format(file_name))
                 
     def __getitem__(self, key):
         return self._db[key]
