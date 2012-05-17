@@ -1,5 +1,5 @@
 '''
-Code taken verbatim from zshelve module http://code.google.com/p/zshelve/. Include to simplify dependencies.
+Code taken from zshelve module http://code.google.com/p/zshelve/. Include to simplify dependencies.
 
 @author: Andrew Roth
 '''
@@ -76,11 +76,20 @@ except ImportError:
     from StringIO import StringIO
 
 import UserDict
-import warnings
-import zlib        ## use zlib to compress dbfile
+import zlib
 
-__version__ = "0.0.1"
-__all__ = ["Shelf","BsdDbShelf","DbfilenameShelf","open"]
+__version__ = "0.0.2"
+__all__ = ["Shelf", "BsdDbShelf", "DbfilenameShelf", "open"]
+
+class _ClosedDict(UserDict.DictMixin):
+    'Marker for a closed dict.  Access attempts raise a ValueError.'
+
+    def closed(self, *args):
+        raise ValueError('invalid operation on closed shelf')
+    __getitem__ = __setitem__ = __delitem__ = keys = closed
+
+    def __repr__(self):
+        return '<Closed Dictionary>'
 
 class Shelf(UserDict.DictMixin):
     """Base class for shelf implementations.
@@ -105,13 +114,13 @@ class Shelf(UserDict.DictMixin):
         return len(self.dict)
 
     def has_key(self, key):
-        return self.dict.has_key(key)
+        return key in self.dict
 
     def __contains__(self, key):
-        return self.dict.has_key(key)
+        return key in self.dict
 
     def get(self, key, default=None):
-        if self.dict.has_key(key):
+        if key in self.dict:
             return self[key]
         return default
 
@@ -119,7 +128,8 @@ class Shelf(UserDict.DictMixin):
         try:
             value = self.cache[key]
         except KeyError:
-            f = StringIO(zlib.decompress(self.dict[key]))
+            temp = self.dict[key]
+            f = StringIO(zlib.decompress(temp))
             value = Unpickler(f).load()
             if self.writeback:
                 self.cache[key] = value
@@ -130,8 +140,8 @@ class Shelf(UserDict.DictMixin):
             self.cache[key] = value
         f = StringIO()
         p = Pickler(f, self._protocol)
-        p.dump(value)
-        self.dict[key] = zlib.compress(f.getvalue(), self.compresslevel)
+        p.dump(value)        
+        self.dict[key] = zlib.compress(f.getvalue(), self.compresslevel)        
 
     def __delitem__(self, key):
         del self.dict[key]
@@ -146,7 +156,12 @@ class Shelf(UserDict.DictMixin):
             self.dict.close()
         except AttributeError:
             pass
-        self.dict = 0
+        # Catch errors that may happen when close is called from __del__
+        # because CPython is in interpreter shutdown.
+        try:
+            self.dict = _ClosedDict()
+        except (NameError, TypeError):
+            self.dict = None
 
     def __del__(self):
         if not hasattr(self, 'writeback'):
@@ -163,7 +178,6 @@ class Shelf(UserDict.DictMixin):
             self.cache = {}
         if hasattr(self.dict, 'sync'):
             self.dict.sync()
-
 
 class BsdDbShelf(Shelf):
     """Shelf implementation using the "BSD" db interface.
@@ -208,22 +222,15 @@ class BsdDbShelf(Shelf):
 
 
 class DbfilenameShelf(Shelf):
-    """Shelf implementation using the "BSD" db interface.
+    """Shelf implementation using the "anydbm" generic dbm interface.
 
-    This adds methods first(), next(), previous(), last() and
-    set_location() that have no counterpart in [g]dbm databases.
-
-    The actual database must be opened using one of the "bsddb"
-    modules "open" routines (i.e. bsddb.hashopen, bsddb.btopen or
-    bsddb.rnopen) and passed to the constructor.
-
-    This is initialized with the filename for the bsddb database.
+    This is initialized with the filename for the dbm database.
     See the module's __doc__ string for an overview of the interface.
     """
 
     def __init__(self, filename, flag='c', protocol=None, writeback=False, compresslevel=2):
-        import anydbm
-        Shelf.__init__(self, anydbm.open(filename, flag), protocol, writeback, compresslevel)
+        import semidbm
+        Shelf.__init__(self, semidbm.open(filename, flag), protocol, writeback, compresslevel)
 
 
 def open(filename, flag='c', protocol=None, writeback=False, compresslevel=2):
@@ -240,31 +247,3 @@ def open(filename, flag='c', protocol=None, writeback=False, compresslevel=2):
     """
 
     return DbfilenameShelf(filename, flag, protocol, writeback, compresslevel)
-
-
-class BsdDbfilenameShelf(BsdDbShelf):
-    """Shelf implementation using the "bsddbm" generic dbm interface.
-
-    This is initialized with the filename for the dbm database.
-    See the module's __doc__ string for an overview of the interface.
-    """
-
-    def __init__(self, filename, flag='c', protocol=None, writeback=False, compresslevel=2):
-        import bsddb
-        Shelf.__init__(self, bsddb.btopen(filename, flag), protocol, writeback, compresslevel)
-
-
-def btopen(filename, flag='c', protocol=1, writeback=False, compresslevel=2):
-    """Open a persistent dictionary for reading and writing.
-
-    The filename parameter is the base filename for the underlying
-    database.  As a side-effect, an extension may be added to the
-    filename and more than one file may be created.  The optional flag
-    parameter has the same interpretation as the flag parameter of
-    bsddb.btopen(). The optional protocol parameter specifies the
-    version of the pickle protocol (0, 1, or 2).
-
-    See the module's __doc__ string for an overview of the interface.
-    """
-
-    return BsdDbfilenameShelf(filename, flag, protocol, writeback, compresslevel)
