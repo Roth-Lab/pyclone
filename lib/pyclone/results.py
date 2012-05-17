@@ -3,7 +3,7 @@ Created on 2012-05-10
 
 @author: Andrew
 '''
-import shelve
+import pyclone.zshelve as shelve
 
 class AnalysisDB(object):
     def __init__(self, file_prefix, max_cache_size=1000):
