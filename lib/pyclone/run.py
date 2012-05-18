@@ -97,7 +97,7 @@ def post_process_results(args):
     
     safe_makedirs(posteriors_dir)
     
-    write_posteriors(post_processor, args.num_bins, posteriors_dir)
+    write_posteriors(post_processor, args.num_bins, posteriors_dir, args.no_similarity_matrix, args.burnin, args.thin)
     
     analysis_db.close()
 
@@ -139,7 +139,7 @@ def write_raw_data(post_processor, out_dir):
     # Save similarity matrix
     sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
     writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-    writer.writerows(post_processor.similarity_matrix)
+    writer.writerows(post_processor.get_similarity_matrix())
 
 def write_independent_posteriors(genes, data, num_bins, out_dir):
     for gene, data_point in zip(genes, data):
@@ -153,7 +153,7 @@ def write_independent_posteriors(genes, data, num_bins, out_dir):
         
         fh.close()
 
-def write_posteriors(post_processor, num_bins, out_dir):
+def write_posteriors(post_processor, num_bins, out_dir, no_sim_mat, burnin, thin):
     # Save genes
     gene_file = os.path.join(out_dir, "genes.tsv")
     writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
@@ -162,12 +162,12 @@ def write_posteriors(post_processor, num_bins, out_dir):
     # Save alpha
     alpha_file = os.path.join(out_dir, 'alpha.tsv')
     writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
-    writer.writerows(histogram_to_csv_rows(post_processor.get_alpha_posteriors()))
+    writer.writerows(histogram_to_csv_rows(post_processor.get_alpha_posteriors(burnin=burnin, thin=thin)))
     
     # Save num components
     components_file = os.path.join(out_dir, 'components.tsv')
     writer = csv.writer(open(components_file, 'w'), delimiter='\t')
-    writer.writerows(histogram_to_csv_rows(post_processor.get_num_component_posteriors()))
+    writer.writerows(histogram_to_csv_rows(post_processor.get_num_component_posteriors(burnin=burnin, thin=thin)))
     
     # Save cellular frequencies.
     cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
@@ -175,7 +175,7 @@ def write_posteriors(post_processor, num_bins, out_dir):
     if not os.path.exists(cellular_freq_dir):
         os.makedirs(cellular_freq_dir)
     
-    cellular_freqs = post_processor.get_cellular_frequency_posteriors(num_bins)
+    cellular_freqs = post_processor.get_cellular_frequency_posteriors(num_bins, burnin=burnin, thin=thin)
     
     for gene in post_processor.genes:
         gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
@@ -188,10 +188,11 @@ def write_posteriors(post_processor, num_bins, out_dir):
         
         fh.close()
     
-    # Save similarity matrix
-    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
-    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-    writer.writerows(post_processor.get_similarity_posteriors())
+    if not no_sim_mat:
+        # Save similarity matrix
+        sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
+        writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
+        writer.writerows(post_processor.get_similarity_posteriors())
 
 def list_to_csv_rows(x):
     return [[x_i, ] for x_i in x]

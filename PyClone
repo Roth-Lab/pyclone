@@ -63,6 +63,16 @@ pp_parser.add_argument('--independent', action='store_true', default=False,
                        help='''If set the results of using the independent PyClone model without DP process will be
                        outputeed.''')
 
+pp_parser.add_argument('--no_similarity_matrix', action='store_true', default=False,
+                       help='''If set the results the posterior similarity matrix will not produced. Used to save the
+                       O(n^2) computation.''')
+
+pp_parser.add_argument('--burnin', default=0, type=int,
+                        help='''How many samples from the start of the MCMC chain to discard as burnin. Default 0.''')
+
+pp_parser.add_argument('--thin', default=1, type=int,
+                        help='''How many samples to thin by when computing posteriors. Default 1.''')
+
 pp_parser.set_defaults(func=post_process_results)
 
 args = parser.parse_args()

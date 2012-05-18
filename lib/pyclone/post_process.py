@@ -49,8 +49,7 @@ class DpSamplerPostProcessor(object):
         
         return num_components
 
-    @property
-    def similarity_matrix(self):
+    def get_similarity_matrix(self, burnin=0, thin=1):
         '''
         Gets the posterior similarity matrix. The i,j entry is the number of times gene i and j where in the same
         cluster.
@@ -66,13 +65,13 @@ class DpSamplerPostProcessor(object):
                 gene_1 = self.genes[i]
                 gene_2 = self.genes[j]
                 
-                sim_mat[i][j] = self._get_gene_similarity(labels[gene_1], labels[gene_2])
-                sim_mat[j][i] = sim_mat[i][j] 
+                sim_mat[i][j] = self._get_gene_similarity(labels[gene_1][burnin::thin], labels[gene_2][burnin::thin])
+                sim_mat[j][i] = sim_mat[i][j]
         
         return sim_mat
 
-    def get_alpha_posteriors(self):        
-        alpha = self.alpha
+    def get_alpha_posteriors(self, burnin=0, thin=1):        
+        alpha = self.alpha[burnin::thin]
         
         min_value = floor(min(alpha))
         max_value = ceil(max(alpha))
@@ -81,18 +80,22 @@ class DpSamplerPostProcessor(object):
         
         return histogram(alpha, num_bins, min_value=min_value, max_value=max_value, normalise=True)
 
-    def get_cellular_frequency_posteriors(self, num_bins=100):
+    def get_cellular_frequency_posteriors(self, num_bins=100, burnin=0, thin=1):
         posteriors = {}
         
         cellular_frequencies = self.cellular_frequencies
         
         for gene in cellular_frequencies:
-            posteriors[gene] = histogram(cellular_frequencies[gene], num_bins, min_value=0, max_value=1, normalise=True)
+            posteriors[gene] = histogram(cellular_frequencies[gene][burnin::thin],
+                                         num_bins,
+                                         min_value=0,
+                                         max_value=1,
+                                         normalise=True)
         
         return posteriors
     
-    def get_num_component_posteriors(self):
-        num_components = self.num_components
+    def get_num_component_posteriors(self, burnin=0, thin=1):
+        num_components = self.num_components[burnin::thin]
         
         min_value = floor(min(num_components)) - 0.5       
         max_value = ceil(max(num_components)) + 0.5
@@ -101,8 +104,8 @@ class DpSamplerPostProcessor(object):
                 
         return histogram(num_components, num_bins, min_value=min_value, max_value=max_value, normalise=True)        
     
-    def get_similarity_posteriors(self):
-        sim_mat = self.similarity_matrix
+    def get_similarity_posteriors(self, burnin=0, thin=1):
+        sim_mat = self.get_similarity_matrix(burnin=burnin, thin=thin)
         
         for i, row in enumerate(sim_mat):
             sim_mat[i] = [x / max(row) for x in row]
