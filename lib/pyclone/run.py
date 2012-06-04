@@ -27,7 +27,10 @@ def run_dp_model(args):
     
     analysis_db['data'] = data_set.values()
     
-    sampler = DirichletProcessSampler(data_set.values(), burnin=args.burnin, thin=args.thin)
+    sampler = DirichletProcessSampler(data_set.values(), 
+                                      burnin=args.burnin, 
+                                      thin=args.thin, 
+                                      concentration=args.concentration)
     
     sampler.sample(analysis_db, num_iters=args.num_iters)
     
