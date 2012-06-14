@@ -30,9 +30,8 @@ analyse_parser.add_argument('--burnin', default=0, type=int,
 analyse_parser.add_argument('--thin', default=1, type=int,
                             help='''How many samples to skip before saving one sample into the trace. Default 1.''')
 
-analyse_parser.add_argument('--concentration', default=0, type=int,
-                            help='''Concentration (alpha) value for DP sampler. If set to 0 the value will inferred.
-                            Default 0.''')
+analyse_parser.add_argument('--concentration', default=None, type=int,
+                            help='''Concentration (alpha) value for DP sampler. It not set will be estimated.''')
 
 
 analyse_parser.set_defaults(func=run_dp_model)
