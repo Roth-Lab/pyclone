@@ -15,7 +15,7 @@ class PycloneSyntheticDataSet(object):
     Object representing a sample from a pyclone data set. The data is count data, LOH, and copy number data with some
     noise like would be generated from NGS sequencing experiment.
     ''' 
-    def __init__(self, clonal_population_data, mean_depth, error_rate=0.001, prior_model='vague'):
+    def __init__(self, clonal_population_data, mean_depth, error_rate=0.001):
         '''
         Args:
            clonal_population_data (:class: ClonalMutationDataSet): The true population which will be sampled from.
@@ -35,15 +35,19 @@ class PycloneSyntheticDataSet(object):
                 if depth > 0:
                     break
             
-            self.data[gene] = PycloneSyntheticDataPoint(data_point, depth, prior_model, error_rate)
+            self.data[gene] = PycloneSyntheticDataPoint(data_point, depth, error_rate)
     
-    def save_to_file(self, file_name):
+    def save_to_file(self, file_name, prior_model='vague'):
         '''
         Save data-set to file. Format Pyclone compatible tab delimited with header. Fields are gene, a, d, mu_r,
         delta_r, mu_v, delta_v.
         
         Args:
             file_name (str): Path to where the file will be save.
+
+        Kwargs:
+            prior_model (str): Model to be used to assign priors valid values ['vague', 'informative','diploid_no_loh',
+                               'diploid_loh'].
         '''        
         fields = ['gene', 'a', 'd', 'mu_r', 'delta_r', 'mu_v', 'delta_v', 'genotype', 'cellular_frequency']
         
@@ -62,8 +66,10 @@ class PycloneSyntheticDataSet(object):
             out_row['mu_r'] = self._list_to_comma_separated_string(data_point.mu_ref)
             out_row['delta_r'] = self._list_to_comma_separated_string(data_point.delta_ref)
             
-            out_row['mu_v'] = self._list_to_comma_separated_string(data_point.mu_var)
-            out_row['delta_v'] = self._list_to_comma_separated_string(data_point.delta_var)
+            mu_var, delta_var = data_point.get_variant_priors(prior_model) 
+            
+            out_row['mu_v'] = self._list_to_comma_separated_string(mu_var)
+            out_row['delta_v'] = self._list_to_comma_separated_string(delta_var)
             
             out_row['genotype'] = data_point.genotype
             out_row['cellular_frequency'] = data_point.cellular_frequency
@@ -74,16 +80,13 @@ class PycloneSyntheticDataSet(object):
         return ",".join([str(x_i) for x_i in x])
 
 class PycloneSyntheticDataPoint(object):
-    def __init__(self, clonal_muatation_data_point, depth, prior_model, error_rate):
+    def __init__(self, clonal_muatation_data_point, depth, error_rate):
         '''        
         Args:
             depth (int): Depth of coverage for this position.
         
             clonal_muatation_data_point (:class: ClonalMuationDataPoint): Data point to sample counts, genotype
                                                                           estimates for.
-
-            prior_model (string): Model to be used to assign priors valid values ['vague', 'informative',
-                                  'diploid_no_loh', 'diploid_loh'].s
                                                                           
             error_rate (float): Error rate of sequencing technology i.e. how frequently an A is called as a B or vice
                                 versa.            
@@ -100,17 +103,24 @@ class PycloneSyntheticDataPoint(object):
         self._set_counts()
         
         self._set_reference_priors()
-        
+    
+    def get_variant_priors(self, prior_model):
+        '''
+        prior_model (str): Model to be used to assign priors valid values ['vague', 'informative','diploid_no_loh',
+                           'diploid_loh'].
+        '''
         if prior_model == 'vague':
-            self._set_vague_priors()
+            priors = self._get_vague_priors()
         elif prior_model == 'informative':
-            self._set_informative_priors()
+            priors =  self._get_informative_priors()
         elif prior_model == 'diploid_no_loh':
-            self._set_diploid_no_loh_priors()
+            priors =  self._get_diploid_no_loh_priors()
         elif prior_model == 'diploid_loh':
-            self._set_diploid_loh_priors()
+            priors = self._get_diploid_loh_priors()
         else:
             raise Exception("Prior model `{0}` not recognised.".format(prior_model))
+        
+        return priors
     
     def _set_counts(self):
         mu_var = self._get_ref_allele_sampling_frequency(self._data_point.genotype)
@@ -173,7 +183,7 @@ class PycloneSyntheticDataPoint(object):
         self.mu_ref = [1 - self._error_rate, ]
         self.delta_ref = [1, ]
 
-    def _set_vague_priors(self):
+    def _get_vague_priors(self):
         '''
         Convert copy number and LOH calls to a prior.
         
@@ -221,10 +231,12 @@ class PycloneSyntheticDataPoint(object):
             elif mu_v != self._error_rate and is_loh == 0:
                 pseudo_counts[mu_v] *= 5
         
-        self.mu_var = sorted(pseudo_counts.keys())        
-        self.delta_var = [pseudo_counts[x] for x in self.mu_var]
+        mu_var = sorted(pseudo_counts.keys())        
+        delta_var = [pseudo_counts[x] for x in mu_var]
+        
+        return mu_var, delta_var
     
-    def _set_informative_priors(self):
+    def _get_informative_priors(self):
         true_cn = len(self._data_point.genotype)
         true_num_ref_alleles = self._data_point.genotype.count('A')
                 
@@ -248,16 +260,20 @@ class PycloneSyntheticDataPoint(object):
         elif not is_loh:
             priors[self._error_rate] = 1 / 10
         
-        self.mu_var = sorted(priors.keys())
-        self.delta_var = [priors[x] for x in self.mu_var]
+        mu_var = sorted(priors.keys())
+        delta_var = [priors[x] for x in mu_var]
+        
+        return mu_var, delta_var
         
     
-    def _set_diploid_no_loh_priors(self):
-        self.mu_var = [self._error_rate, 0.5]
-        self.delta_var = [1, 1]
+    def _get_diploid_no_loh_priors(self):
+        mu_var = [self._error_rate, 0.5]
+        delta_var = [1, 1]
+        
+        return mu_var, delta_var
     
-    def _set_diploid_loh_priors(self):
-        self.mu_var = [self._error_rate, 0.5]
+    def _get_diploid_loh_priors(self):
+        mu_var = [self._error_rate, 0.5]
         
         true_num_ref_alleles = self._data_point.genotype.count('A')
                 
@@ -267,9 +283,11 @@ class PycloneSyntheticDataPoint(object):
             is_loh = False
         
         if is_loh:
-            self.delta_var = [10, 1]
+            delta_var = [10, 1]
         else:
-            self.delta_var = [1 / 10, 1]
+            delta_var = [1 / 10, 1]
+        
+        return mu_var, delta_var
     
     @property
     def genotype(self):

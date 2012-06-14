@@ -10,7 +10,8 @@ setup(
       package_dir = {'': 'lib'},    
       packages=[ 
                 'pyclone',
-                'pyclone.samplers'
+                'pyclone.samplers',
+                'pyclone.simulation'
                 ],
       scripts=['PyClone']
      )
