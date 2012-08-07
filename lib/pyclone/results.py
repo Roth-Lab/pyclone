@@ -3,10 +3,22 @@ Created on 2012-05-10
 
 @author: Andrew
 '''
+import os
+
 import pyclone.zshelve as shelve
 
 class AnalysisDB(object):
-    def __init__(self, file_prefix, max_cache_size=1000):
+    def __init__(self, file_prefix, mode='r', max_cache_size=1000):
+        if mode in ['a', 'r'] and not os.path.exists(file_prefix):
+            raise Exception("{0} does not exists.".format(file_prefix))
+        elif mode == 'w':
+            if os.path.exists(file_prefix):
+                raise Exception("{0} exists, cannot overwrite.".format(file_prefix))
+            if not os.path.exists(os.path.dirname(file_prefix)):
+                raise Exception("Folder {0} does not exist to create pyclone file in.".format(os.path.dirname(file_prefix)))
+        
+        self.mode = mode
+        
         self._load_db(file_prefix)
 
         self._cache_size = 0
@@ -28,7 +40,10 @@ class AnalysisDB(object):
     def __getitem__(self, key):
         return self._db[key]
     
-    def __setitem__(self, key, value):        
+    def __setitem__(self, key, value):
+        if self.mode == 'r':
+            raise Exception('AnalysisDB cannot be edited in read only mode.')
+             
         self._db[key] = value 
         
     def update_trace(self, state):

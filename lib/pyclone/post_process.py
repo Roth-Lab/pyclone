@@ -8,11 +8,14 @@ from __future__ import division
 from collections import defaultdict
 from math import ceil, floor
 
-from pyclone.utils import histogram
+from pyclone.utils import histogram, log_sum_exp
+from pyclone.model import BinomialLikelihood
 
 class DpSamplerPostProcessor(object):
     def __init__(self, data):       
         self.genes = data['genes']
+        
+        self._db = data
         
         self._results = data['trace']
         
@@ -48,6 +51,22 @@ class DpSamplerPostProcessor(object):
             num_components.append(len(set(sample)))
         
         return num_components
+    
+    @property
+    def likelihood(self):
+        '''
+        Return a dictionary of likelihood objects, one object for each gene.
+        '''
+        likelihoods = {}
+        
+        for gene, data_point in zip(self._db['genes'], self._db['data']):
+            likelihoods[gene] = BinomialLikelihood(data_point)
+        
+        return likelihoods
+    
+    @property
+    def num_samples(self):
+        return self._db['sampler'].num_iters
 
     def get_similarity_matrix(self, burnin=0, thin=1):
         '''
@@ -135,6 +154,37 @@ class DpSamplerPostProcessor(object):
                 similarity += 1
         
         return similarity
+    
+    @property
+    def map_clusters(self):
+        likelihoods = self.likelihood
+                
+        frequencies = self.cellular_frequencies
+        
+        max_ll = float('-inf')
+        best_sample = None
+        
+        for i in range(self.num_samples):
+            ll = []
+            
+            for gene in likelihoods:
+                phi = frequencies[gene][i]
+                gene_ll = likelihoods[gene].compute_log_likelihood(phi)
+                ll.append(gene_ll)
+            
+            ll = log_sum_exp(ll)
+            
+            if ll > max_ll:
+                max_ll = ll
+                best_sample = i
+        
+        clusters = defaultdict(list)
+        
+        for gene in frequencies:
+            clusters[frequencies[gene][best_sample]].append(gene)
+        
+        return clusters
+            
 
 if __name__ == "__main__":
     post_processor = DpSamplerPostProcessor("../../examples/test.pickle")

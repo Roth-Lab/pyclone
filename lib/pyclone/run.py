@@ -19,7 +19,7 @@ def run_dp_model(args):
     '''
     data_set = load_data(args.in_file)
     
-    analysis_db = AnalysisDB(args.out_prefix)
+    analysis_db = AnalysisDB(args.out_prefix, mode='w')
     
     analysis_db['input_file'] = open(args.in_file).readlines()
     
@@ -42,7 +42,7 @@ def resume_dp_model(args):
     '''
     Restart an existing analysis.
     '''    
-    analysis_db = AnalysisDB(args.out_prefix)
+    analysis_db = AnalysisDB(args.out_prefix, 'a')
     
     sampler = analysis_db['sampler']
     
@@ -78,7 +78,7 @@ def load_data(input_file_name):
     return data
         
 def post_process_results(args):    
-    analysis_db = AnalysisDB(args.results_prefix)
+    analysis_db = AnalysisDB(args.results_prefix, mode='r')
     
     post_processor = DpSamplerPostProcessor(analysis_db)
     
