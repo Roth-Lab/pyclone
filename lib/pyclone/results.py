@@ -14,7 +14,7 @@ class AnalysisDB(object):
         elif mode == 'w':
             if os.path.exists(file_prefix):
                 raise Exception("{0} exists, cannot overwrite.".format(file_prefix))
-            if not os.path.exists(os.path.dirname(file_prefix)):
+            if not os.path.exists(os.path.dirname(os.path.abspath(file_prefix))):
                 raise Exception("Folder {0} does not exist to create pyclone file in.".format(os.path.dirname(file_prefix)))
         
         self.mode = mode
