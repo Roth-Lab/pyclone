@@ -8,13 +8,11 @@ from __future__ import division
 from math import exp, log
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, random, shuffle
 
-from pyclone.model import BinomialLikelihood
+from pyclone.model import BinomialLikelihood, BetaBinomialLikelihood
 from pyclone.utils import bernoulli_rvs, discrete_rvs, log_space_normalise
 
 class DirichletProcessSampler(object):
-    def __init__(self, data, m=2, burnin=0, thin=1, concentration=None):
-        likelihoods = [BinomialLikelihood(data_point) for data_point in data]
-                    
+    def __init__(self, likelihoods, m=2, burnin=0, thin=1, concentration=None):
         self._clusters = Clusters(likelihoods)
                                                 
         self._seat_sampler = LabelUpdater(m)            
