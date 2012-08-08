@@ -5,8 +5,8 @@ Created on 2012-02-08
 '''
 from __future__ import division
 
-from collections import defaultdict
-from math import ceil, floor
+from collections import defaultdict, Counter
+from math import ceil, floor, log
 
 from pyclone.utils import histogram, log_sum_exp
 from pyclone.model import BinomialLikelihood
@@ -160,6 +160,9 @@ class DpSamplerPostProcessor(object):
         likelihoods = self.likelihood
                 
         frequencies = self.cellular_frequencies
+        labels = self._get_labels_by_gene()
+        partitions = self._results['labels']
+        alpha = self.alpha
         
         max_ll = float('-inf')
         best_sample = None
@@ -167,10 +170,17 @@ class DpSamplerPostProcessor(object):
         for i in range(self.num_samples):
             ll = []
             
+            partition_size = Counter(partitions[i])
+            
             for gene in likelihoods:
                 phi = frequencies[gene][i]
                 gene_ll = likelihoods[gene].compute_log_likelihood(phi)
-                ll.append(gene_ll)
+                
+                gene_partition = labels[gene][i]
+                
+                weight = log(partition_size[gene_partition] + alpha[i] - 1)
+                
+                ll.append(gene_ll + weight)
             
             ll = log_sum_exp(ll)
             
