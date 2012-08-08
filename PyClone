@@ -33,6 +33,9 @@ analyse_parser.add_argument('--thin', default=1, type=int,
 analyse_parser.add_argument('--concentration', default=None, type=int,
                             help='''Concentration (alpha) value for DP sampler. It not set will be estimated.''')
 
+analyse_parser.add_argument('--model', default='binomial', choices=['binomial', 'beta-binomial'],
+                            help='''Likelihood model to use for count data. Default is binomial. Use beta-binomial if
+                            data is overdispersed.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
 
