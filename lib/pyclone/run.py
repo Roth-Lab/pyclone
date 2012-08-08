@@ -5,7 +5,7 @@ Created on 2012-02-08
 '''
 from collections import OrderedDict
 
-from pyclone.model import DataPoint, get_independent_posterior
+from pyclone.model import DataPoint, get_independent_posterior, BinomialLikelihood, BetaBinomialLikelihood
 from pyclone.post_process import DpSamplerPostProcessor
 from pyclone.results import AnalysisDB
 from pyclone.samplers import DirichletProcessSampler
@@ -27,10 +27,16 @@ def run_dp_model(args):
     
     analysis_db['data'] = data_set.values()
     
-    sampler = DirichletProcessSampler(data_set.values(), 
+    if args.model == 'binomial':
+        likelihoods = [BinomialLikelihood(data_point) for data_point in data_set.values()]
+    elif args.model == 'beta-binomial':
+        likelihoods = [BetaBinomialLikelihood(data_point) for data_point in data_set.values()]    
+    
+    sampler = DirichletProcessSampler(likelihoods, 
                                       burnin=args.burnin, 
                                       thin=args.thin, 
-                                      concentration=args.concentration)
+                                      concentration=args.concentration,
+                                      model=args.model)
     
     sampler.sample(analysis_db, num_iters=args.num_iters)
     
