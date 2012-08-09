@@ -58,7 +58,7 @@ def log_beta_pdf(x, a, b):
     if x == 0 or x == 1:
         return float('-inf')    
     
-    return log_beta(a, b) + (a - 1) * log(x) + (b - 1) * log(1 - x)
+    return -log_beta(a, b) + (a - 1) * log(x) + (b - 1) * log(1 - x)
 
 #=======================================================================================================================
 # Random variate generators
