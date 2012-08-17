@@ -5,7 +5,7 @@ from pyclone.results import AnalysisDB
 import matplotlib.pyplot as plot
 import os
 
-def main(pyclone_file, out_folder):
+def main(pyclone_file, out_folder, burnin, thin):
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
     
@@ -17,7 +17,7 @@ def main(pyclone_file, out_folder):
     
     genes = post_processor.genes
     
-    sim_mat = post_processor.get_similarity_posteriors(1000, 10)
+    sim_mat = post_processor.get_similarity_posteriors(burnin, thin)
     
     sm.plot(genes, sim_mat)
     
@@ -29,7 +29,7 @@ def main(pyclone_file, out_folder):
         
     cellular_frequencies = post_processor.cellular_frequencies
     
-    cp = CellularFrequencyPlot(cellular_frequencies, clusters)
+    cp = CellularFrequencyPlot(cellular_frequencies, clusters, burnin=burnin, thin=thin)
     
     cp.plot()
     
@@ -44,5 +44,7 @@ if __name__ == "__main__":
     
     pyclone_file = sys.argv[1]
     out_folder = sys.argv[2]
+    burnin = int(sys.argv[3])
+    thin = int(sys.argv[4])
     
-    main(pyclone_file, out_folder)
+    main(pyclone_file, out_folder, burnin, thin)
