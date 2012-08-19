@@ -7,7 +7,7 @@ import os
 
 import pyclone.zshelve as shelve
 
-class AnalysisDB(object):
+class TraceDB(object):
     def __init__(self, file_prefix, mode='r', max_cache_size=1000):
         if mode in ['a', 'r'] and not os.path.exists(file_prefix):
             raise Exception("{0} does not exists.".format(file_prefix))
