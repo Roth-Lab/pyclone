@@ -18,7 +18,7 @@ def run_dp_model(args):
     '''
     data_set = load_data(args.in_file)
     
-    tace_db = TraceDB(args.out_prefix, mode='w')
+    tace_db = TraceDB(args.trace_file, mode='w')
     
     tace_db['input_file'] = open(args.in_file).readlines()
     
@@ -46,7 +46,7 @@ def resume_dp_model(args):
     '''
     Restart an existing analysis.
     '''    
-    trace_db = TraceDB(args.out_prefix, 'a')
+    trace_db = TraceDB(args.trace_file, 'a')
     
     sampler = trace_db['sampler']
     
