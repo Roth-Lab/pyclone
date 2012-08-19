@@ -30,13 +30,38 @@ class DpSamplerPostProcessor(object):
         '''
         phi = defaultdict(list)
         
-        labels = self._get_labels_by_gene()
+        labels = self.labels
         
         for gene in labels:
             for label, sample in zip(labels[gene], self._results['phi']):
                 phi[gene].append(sample[label])
         
         return phi
+
+    @property
+    def labels(self):
+        '''
+        Returns a dict with keys genes, and values the class label of the genes for each MCMC sample.
+        '''
+        labels = defaultdict(list)
+        
+        for sample in self._results['labels']:
+            for gene, label in zip(self.genes, sample):
+                labels[gene].append(label)
+        
+        return labels
+
+    @property
+    def likelihood(self):
+        '''
+        Return a dictionary of likelihood objects, one object for each gene.
+        '''
+        likelihoods = {}
+        
+        for gene, data_point in zip(self._db['genes'], self._db['data']):
+            likelihoods[gene] = BinomialLikelihood(data_point)
+        
+        return likelihoods
 
     @property
     def num_components(self):
@@ -53,18 +78,6 @@ class DpSamplerPostProcessor(object):
         return num_components
     
     @property
-    def likelihood(self):
-        '''
-        Return a dictionary of likelihood objects, one object for each gene.
-        '''
-        likelihoods = {}
-        
-        for gene, data_point in zip(self._db['genes'], self._db['data']):
-            likelihoods[gene] = BinomialLikelihood(data_point)
-        
-        return likelihoods
-    
-    @property
     def num_samples(self):
         return self._db['sampler'].num_iters
 
@@ -77,7 +90,7 @@ class DpSamplerPostProcessor(object):
         
         sim_mat = [[0] * n for _ in range(n)] 
         
-        labels = self._get_labels_by_gene()
+        labels = self.labels
         
         for i in range(n):
             for j in range(i, n):
@@ -130,18 +143,6 @@ class DpSamplerPostProcessor(object):
             sim_mat[i] = [x / max(row) for x in row]
         
         return sim_mat
-        
-    def _get_labels_by_gene(self):
-        '''
-        Returns a dict with keys genes, and values the class label of the genes for each MCMC sample.
-        '''
-        labels = defaultdict(list)
-        
-        for sample in self._results['labels']:
-            for gene, label in zip(self.genes, sample):
-                labels[gene].append(label)
-        
-        return labels
 
     def _get_gene_similarity(self, labels_1, labels_2):
         '''
@@ -160,8 +161,11 @@ class DpSamplerPostProcessor(object):
         likelihoods = self.likelihood
                 
         frequencies = self.cellular_frequencies
-        labels = self._get_labels_by_gene()
+        
+        labels = self.labels
+        
         partitions = self._results['labels']
+        
         alpha = self.alpha
         
         max_ll = float('-inf')
