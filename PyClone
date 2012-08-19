@@ -18,8 +18,8 @@ analyse_parser = subparsers.add_parser('analyse', help='''Start a new PyClone an
 analyse_parser.add_argument('in_file',
                             help='Path to tab separated input file. See examples for format.')
 
-analyse_parser.add_argument('out_prefix',
-                            help='Prefix for file to store analysis results in.')
+analyse_parser.add_argument('trace_file',
+                            help='Path where trace file for MCMC sampler will be written.')
 
 analyse_parser.add_argument('--num_iters', default=10000, type=int,
                             help='''How many iterations the MCMC chain will run. Default is 10,000.''')
@@ -35,15 +35,15 @@ analyse_parser.add_argument('--concentration', default=None, type=int,
 
 analyse_parser.add_argument('--model', default='binomial', choices=['binomial', 'beta-binomial'],
                             help='''Likelihood model to use for count data. Default is binomial. Use beta-binomial if
-                            data is overdispersed.''')
+                            data is over-dispersed.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 resume_parser = subparsers.add_parser('resume', help='''Resume a previous PyClone analysis.''')
 
-resume_parser.add_argument('out_prefix',
-                            help='Prefix of previously created results file. New results will be appended here.')
+resume_parser.add_argument('trace_file',
+                            help='Path to previous created trace file. New results will be appended here.')
 
 resume_parser.add_argument('--num_iters', default=10000, type=int,
                             help='''How many more iterations of the MCMC chain will run. Default is 10,000.''')
@@ -53,35 +53,15 @@ resume_parser.set_defaults(func=resume_dp_model)
 #----------------------------------------------------------------------------------------------------------------------
 pp_parser = subparsers.add_parser('post_process', help='''Post-process a PyClone analysis.''') 
 
-pp_parser.add_argument('results_prefix',
-                        help='Prefix of results file to post-proces.')
+pp_parser.add_argument('trace_file',
+                        help='Path to trace file to post-process.')
 
 pp_parser.add_argument('out_dir',
-                       help='''Path to folder where post-process files will be outputed.''')
-
-pp_parser.add_argument('--num_bins', default=100, type=int,
-                       help='''Number of bins to use when generating posterior histogram for cellular frequencies.
-                       Default is 100.''')
-
-pp_parser.add_argument('--output_raw_data', action='store_true', default=False,
-                       help='''If set the raw trace data will be output.''')
-
-pp_parser.add_argument('--independent', action='store_true', default=False,
-                       help='''If set the results of using the independent PyClone model without DP process will be
-                       outputeed.''')
-
-pp_parser.add_argument('--no_similarity_matrix', action='store_true', default=False,
-                       help='''If set the results the posterior similarity matrix will not produced. Used to save the
-                       O(n^2) computation.''')
-
-pp_parser.add_argument('--burnin', default=0, type=int,
-                        help='''How many samples from the start of the MCMC chain to discard as burnin. Default 0.''')
-
-pp_parser.add_argument('--thin', default=1, type=int,
-                        help='''How many samples to thin by when computing posteriors. Default 1.''')
+                       help='''Path to folder where post-processed trace files will be outputed.''')
 
 pp_parser.set_defaults(func=post_process_results)
 
+#---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()
 
 args.func(args)
