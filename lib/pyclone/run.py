@@ -5,10 +5,9 @@ Created on 2012-02-08
 '''
 from collections import OrderedDict
 
-from pyclone.model import DataPoint, get_independent_posterior, BinomialLikelihood, BetaBinomialLikelihood
-from pyclone.post_process import DpSamplerPostProcessor
-from pyclone.results import AnalysisDB
-from pyclone.samplers import DirichletProcessSampler
+from pyclone._likelihoods import  BetaBinomialLikelihood, BinomialLikelihood, DataPoint
+from pyclone._sampler import DirichletProcessSampler
+from pyclone._trace import TraceDB, TracePostProcessor
 
 import csv
 import os
@@ -19,43 +18,43 @@ def run_dp_model(args):
     '''
     data_set = load_data(args.in_file)
     
-    analysis_db = AnalysisDB(args.out_prefix, mode='w')
+    tace_db = TraceDB(args.out_prefix, mode='w')
     
-    analysis_db['input_file'] = open(args.in_file).readlines()
+    tace_db['input_file'] = open(args.in_file).readlines()
     
-    analysis_db['genes'] = data_set.keys()
+    tace_db['genes'] = data_set.keys()
     
-    analysis_db['data'] = data_set.values()
+    tace_db['data'] = data_set.values()
     
     if args.model == 'binomial':
         likelihoods = [BinomialLikelihood(data_point) for data_point in data_set.values()]
     elif args.model == 'beta-binomial':
         likelihoods = [BetaBinomialLikelihood(data_point, beta_precision=100) for data_point in data_set.values()]    
     
-    sampler = DirichletProcessSampler(likelihoods, 
-                                      burnin=args.burnin, 
-                                      thin=args.thin, 
+    sampler = DirichletProcessSampler(likelihoods,
+                                      burnin=args.burnin,
+                                      thin=args.thin,
                                       concentration=args.concentration)
     
-    sampler.sample(analysis_db, num_iters=args.num_iters)
+    sampler.sample(tace_db, num_iters=args.num_iters)
     
-    analysis_db['sampler'] = sampler
+    tace_db['sampler'] = sampler
     
-    analysis_db.close()
+    tace_db.close()
 
 def resume_dp_model(args):
     '''
     Restart an existing analysis.
     '''    
-    analysis_db = AnalysisDB(args.out_prefix, 'a')
+    trace_db = TraceDB(args.out_prefix, 'a')
     
-    sampler = analysis_db['sampler']
+    sampler = trace_db['sampler']
     
-    sampler.sample(analysis_db, num_iters=args.num_iters)
+    sampler.sample(trace_db, num_iters=args.num_iters)
     
-    analysis_db['sampler'] = sampler
+    trace_db['sampler'] = sampler
     
-    analysis_db.close()
+    trace_db.close()
 
 def load_data(input_file_name):
     '''
@@ -82,128 +81,58 @@ def load_data(input_file_name):
 
     return data
         
-def post_process_results(args):    
-    analysis_db = AnalysisDB(args.results_prefix, mode='r')
+def post_process_trace(args):    
+    safe_makedirs(args.out_dir)
     
-    post_processor = DpSamplerPostProcessor(analysis_db)
+    trace_db = TraceDB(args.trace_file, mode='r')
     
-    if args.output_raw_data:
-        raw_dir = os.path.join(args.out_dir, 'raw_data')
-        
-        safe_makedirs(raw_dir)
-        
-        write_raw_data(post_processor, raw_dir)
-    
-    if args.independent:
-        independent_dir = os.path.join(args.out_dir, "independent")
-        
-        safe_makedirs(independent_dir)
-        
-        write_independent_posteriors(analysis_db['genes'], analysis_db['data'], args.num_bins, independent_dir)
-    
-    posteriors_dir = os.path.join(args.out_dir, 'posteriors')
-    
-    safe_makedirs(posteriors_dir)
-    
-    write_posteriors(post_processor, args.num_bins, posteriors_dir, args.no_similarity_matrix, args.burnin, args.thin)
-    
-    analysis_db.close()
+    post_processor = TracePostProcessor(trace_db)
 
-def write_raw_data(post_processor, out_dir):
-    # Save genes
-    gene_file = os.path.join(out_dir, "genes.tsv")
-    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
-    writer.writerows(list_to_csv_rows(post_processor.genes))
+    _write_trace(post_processor, args.out_dir)
     
+    trace_db.close()
+
+def _write_trace(post_processor, out_dir):
     # Save alpha
     alpha_file = os.path.join(out_dir, 'alpha.tsv')
     writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
     writer.writerows(list_to_csv_rows(post_processor.alpha))
     
     # Save num components
-    components_file = os.path.join(out_dir, 'components.tsv')
+    components_file = os.path.join(out_dir, 'num_components.tsv')
     writer = csv.writer(open(components_file, 'w'), delimiter='\t')
     writer.writerows(list_to_csv_rows(post_processor.num_components))
     
     # Save cellular frequencies.
-    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
+    cellular_frequencies_file = os.path.join(out_dir, 'cellular_frequencies.tsv')    
+    cellular_frequencies = post_processor.cellular_frequencies
+    _write_trace_dict(cellular_frequencies, cellular_frequencies_file)
     
-    if not os.path.exists(cellular_freq_dir):
-        os.makedirs(cellular_freq_dir)
-    
-    cellular_freqs = post_processor.cellular_frequencies
-    
-    for gene in post_processor.genes:
-        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
-        
-        fh = open(gene_file, 'w')
-        
-        writer = csv.writer(fh, delimiter='\t')
-        
-        writer.writerows(list_to_csv_rows(cellular_freqs[gene]))
-        
-        fh.close()
-    
-    # Save similarity matrix
-    sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
-    writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-    writer.writerows(post_processor.get_similarity_matrix())
+    # Save labels
+    labels_file = os.path.join(out_dir, "labels.tsv")
+    labels = post_processor.labels
+    _write_trace_dict(labels, labels_file) 
 
-def write_independent_posteriors(genes, data, num_bins, out_dir):
-    for gene, data_point in zip(genes, data):
-        gene_file = os.path.join(out_dir, "{0}.tsv".format(gene))
-        
-        fh = open(gene_file, 'w')
-        
-        writer = csv.writer(fh, delimiter='\t')
-                
-        writer.writerows(get_independent_posterior(data_point, num_bins))
-        
-        fh.close()
-
-def write_posteriors(post_processor, num_bins, out_dir, no_sim_mat, burnin, thin):
-    # Save genes
-    gene_file = os.path.join(out_dir, "genes.tsv")
-    writer = csv.writer(open(gene_file, 'w'), delimiter='\t')
-    writer.writerows(list_to_csv_rows(post_processor.genes))
+def _write_trace_dict(trace_dict, file_name):
+    fields = ['gene', 'trace']
     
-    # Save alpha
-    alpha_file = os.path.join(out_dir, 'alpha.tsv')
-    writer = csv.writer(open(alpha_file, 'w'), delimiter='\t')
-    writer.writerows(histogram_to_csv_rows(post_processor.get_alpha_posteriors(burnin=burnin, thin=thin)))
+    writer = csv.DictWriter(open(file_name, 'w'), fields, delimiter='\t')
     
-    # Save num components
-    components_file = os.path.join(out_dir, 'components.tsv')
-    writer = csv.writer(open(components_file, 'w'), delimiter='\t')
-    writer.writerows(histogram_to_csv_rows(post_processor.get_num_component_posteriors(burnin=burnin, thin=thin)))
+    writer.writeheader()
     
-    # Save cellular frequencies.
-    cellular_freq_dir = os.path.join(out_dir, 'cellular_frequencies')
-    
-    if not os.path.exists(cellular_freq_dir):
-        os.makedirs(cellular_freq_dir)
-    
-    cellular_freqs = post_processor.get_cellular_frequency_posteriors(num_bins, burnin=burnin, thin=thin)
-    
-    for gene in post_processor.genes:
-        gene_file = os.path.join(cellular_freq_dir, "{0}.tsv".format(gene))
+    for gene in trace_dict:
+        out_row = {
+                   'gene' : gene,
+                   'trace' : list_to_string(trace_dict[gene])
+                   }
         
-        fh = open(gene_file, 'w')
-        
-        writer = csv.writer(fh, delimiter='\t')
-        
-        writer.writerows(histogram_to_csv_rows(cellular_freqs[gene]))
-        
-        fh.close()
-    
-    if not no_sim_mat:
-        # Save similarity matrix
-        sim_mat_file = os.path.join(out_dir, "similarity_matrix.tsv")
-        writer = csv.writer(open(sim_mat_file, 'w'), delimiter='\t')
-        writer.writerows(post_processor.get_similarity_posteriors())
+        writer.writerow(out_row)
 
 def list_to_csv_rows(x):
     return [[x_i, ] for x_i in x]
+
+def list_to_string(x):
+    return ",".join([str(x_i) for x_i in x])
 
 def histogram_to_csv_rows(x):
     return zip(x[0], x[1])
