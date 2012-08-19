@@ -7,9 +7,7 @@ from __future__ import division
 
 from collections import defaultdict
 
-from pyclone.model import BinomialLikelihood
-
-class DpSamplerPostProcessor(object):
+class PostProcessor(object):
     def __init__(self, data):       
         self.genes = data['genes']
         
@@ -50,18 +48,6 @@ class DpSamplerPostProcessor(object):
         return labels
 
     @property
-    def likelihood(self):
-        '''
-        Return a dictionary of likelihood objects, one object for each gene.
-        '''
-        likelihoods = {}
-        
-        for gene, data_point in zip(self._db['genes'], self._db['data']):
-            likelihoods[gene] = BinomialLikelihood(data_point)
-        
-        return likelihoods
-
-    @property
     def num_components(self):
         '''
         Returns a list of the number of components used in by each MCMC sample.
@@ -76,5 +62,8 @@ class DpSamplerPostProcessor(object):
         return num_components
     
     @property
-    def num_samples(self):
+    def num_iterations(self):
+        '''
+        Returns the number of MCMC iterations.
+        '''
         return self._db['sampler'].num_iters
