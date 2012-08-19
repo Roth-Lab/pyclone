@@ -9,9 +9,7 @@ setup(
       url='http://compbio.bccrc.ca',
       package_dir = {'': 'lib'},    
       packages=[ 
-                'pyclone',
-                'pyclone.samplers',
-                'pyclone.simulation'
+                'pyclone'
                 ],
       scripts=['PyClone']
      )
