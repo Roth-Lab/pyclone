@@ -6,7 +6,7 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import run_dp_model, resume_dp_model, post_process_results
+from pyclone.run import run_dp_model, resume_dp_model, post_process_trace
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
@@ -66,7 +66,7 @@ pp_parser.add_argument('trace_file',
 pp_parser.add_argument('out_dir',
                        help='''Path to folder where post-processed trace files will be outputed.''')
 
-pp_parser.set_defaults(func=post_process_results)
+pp_parser.set_defaults(func=post_process_trace)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()
