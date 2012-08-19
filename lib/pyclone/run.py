@@ -29,7 +29,7 @@ def run_dp_model(args):
     if args.model == 'binomial':
         likelihoods = [BinomialLikelihood(data_point) for data_point in data_set.values()]
     elif args.model == 'beta-binomial':
-        likelihoods = [BetaBinomialLikelihood(data_point, beta_precision=100) for data_point in data_set.values()]    
+        likelihoods = [BetaBinomialLikelihood(data_point, beta_precision=args.beta_precision) for data_point in data_set.values()]    
     
     sampler = DirichletProcessSampler(likelihoods,
                                       burnin=args.burnin,
