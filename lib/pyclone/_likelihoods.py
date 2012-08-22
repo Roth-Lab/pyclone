@@ -6,9 +6,10 @@ Created on 2011-12-29
 from __future__ import division
 
 from collections import OrderedDict
-from math import lgamma as log_gamma, log
+from math import lgamma as log_gamma, exp
 
-from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood, log_beta_pdf
+from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood, log_beta_pdf, \
+    SimpsonsRuleIntegrator, adaptive_log_simpsons_rule
 
 class DataPoint(object):
     def __init__(self, a, d, mu_r, mu_v, delta_r, delta_v):
@@ -91,7 +92,7 @@ class BinomialLikelihood(Likelihood):
         return log_sum_exp(ll)
 
 class BetaBinomialLikelihood(Likelihood):
-    def __init__(self, data_point, mesh_size=100, beta_precision=100):
+    def __init__(self, data_point, mesh_size=1000, beta_precision=100):
         '''
         Likelihood with a beta prior over mu_v. 
         
@@ -104,8 +105,8 @@ class BetaBinomialLikelihood(Likelihood):
         self.mu_r = data_point.mu_r
                 
         self._set_beta_params(data_point.mu_v, beta_precision)
-        
-        self._set_mesh(mesh_size)
+
+        self._integrator = SimpsonsRuleIntegrator(0, 1, mesh_size)
 
     def _log_likelihood(self, phi):    
         ll = []
@@ -122,14 +123,9 @@ class BetaBinomialLikelihood(Likelihood):
         '''
         Log likelihood obtained by integrating out mu_v against a beta prior.
         '''
-        log_sum = []
-            
-        for mu_v in self._mesh:
-            y_i = self._log_binomial_likelihood(phi, mu_r, mu_v) + log_beta_pdf(mu_v, alpha_v, beta_v)
-    
-            log_sum.append(y_i + self._log_xi)
-                
-        return log_sum_exp(log_sum)
+        log_f = lambda x: self._log_binomial_likelihood(phi, mu_r, x) + log_beta_pdf(x, alpha_v, beta_v)
+
+        return self._integrator.log_integrate(log_f)
     
     def _set_beta_params(self, mu_v, s):
         self.alpha_v = []
@@ -141,15 +137,3 @@ class BetaBinomialLikelihood(Likelihood):
             
             self.alpha_v.append(alpha)
             self.beta_v.append(beta)
-    
-    def _set_mesh(self, mesh_size):
-        '''
-        Setup mesh for mid-point integration.
-        '''
-        knots = [i / mesh_size for i in range(0, mesh_size + 1)]
-        
-        # Bin centers for integration
-        self._mesh = [(knots[i] + knots[i + 1]) / 2 for i in range(0, mesh_size)]
-        
-        # Log of delta x value for Riemann sum
-        self._log_xi = -log(mesh_size)
