@@ -3,8 +3,7 @@ from __future__ import division
 import bisect
 import random
 
-from math import exp, log, lgamma as log_gamma, isinf, log1p
-from sympy.mpmath import quad 
+from math import exp, log, lgamma as log_gamma, isinf
 
 #=======================================================================================================================
 # Log space normalisation.
@@ -39,9 +38,6 @@ def log_space_normalise(log_X):
         normalised_log_X.append(x - log_norm_const)
     
     return normalised_log_X
-
-def log_space_subtract(x, y):    
-    return x + log(-exp(y - x))
 
 #=======================================================================================================================
 # Distribution related code.
