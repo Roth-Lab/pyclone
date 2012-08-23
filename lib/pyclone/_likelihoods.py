@@ -6,10 +6,10 @@ Created on 2011-12-29
 from __future__ import division
 
 from collections import OrderedDict
-from math import lgamma as log_gamma, exp
+from math import lgamma as log_gamma
 
 from pyclone.utils import log_sum_exp, log_binomial_coefficient, log_binomial_likelihood, log_beta_pdf, \
-    SimpsonsRuleIntegrator, adaptive_log_simpsons_rule
+    SimpsonsRuleIntegrator
 
 class DataPoint(object):
     def __init__(self, a, d, mu_r, mu_v, delta_r, delta_v):
@@ -92,7 +92,7 @@ class BinomialLikelihood(Likelihood):
         return log_sum_exp(ll)
 
 class BetaBinomialLikelihood(Likelihood):
-    def __init__(self, data_point, mesh_size=1000, beta_precision=100):
+    def __init__(self, data_point, mesh_size=100, beta_precision=100):
         '''
         Likelihood with a beta prior over mu_v. 
         
