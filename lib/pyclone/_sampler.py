@@ -48,7 +48,7 @@ class DirichletProcessSampler(object):
             
             if self.num_iters % print_freq == 0:
                 print self.num_iters, self._clusters, self._seat_sampler.concentration_parameter
-    
+
     def  _update_phi(self):
         self._dish_sampler.update_clusters(self._clusters)
         
@@ -228,9 +228,9 @@ class ConcentrationUpdater(object):
         
         scale = 1 / (b - log(eta))
                 
-        if label == 0:
+        if label == 1:
             return gamma_rvs(a + k, scale)
-        elif label == 1:
+        elif label == 0:
             return gamma_rvs(a + k - 1, scale)
         else:
             raise Exception("Invalid label drawn.")
@@ -255,7 +255,7 @@ class Clusters(object):
     
     @property
     def labels(self):
-        labels = [-1] * self.num_members
+        labels = [None] * self.num_members
         
         for k, table in enumerate(self.tables):
             for member in table:
@@ -304,7 +304,6 @@ class Clusters(object):
         
     def get_cluster_data_points(self, cluster_id):
         return [self.data[i] for i in self.tables[cluster_id]]
-    
     
     def _init_clusters(self):        
         for i in range(self.num_members):
