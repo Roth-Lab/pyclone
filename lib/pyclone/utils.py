@@ -1,8 +1,10 @@
 from __future__ import division
 
 import bisect
+import functools
 import random
 
+from collections import OrderedDict
 from math import exp, log, lgamma as log_gamma, isinf
 
 #=======================================================================================================================
@@ -128,3 +130,32 @@ class SimpsonsRuleIntegrator(Integrator):
         log_total.append(log(2) + log_sum_exp(two_total))
   
         return log(self.step_size) - log(3) + log_sum_exp(log_total)
+
+#=======================================================================================================================
+# Function caching
+#=======================================================================================================================
+class memoized(object):
+    def __init__(self, func, cache_size=10000):
+        self.func = func
+        
+        self.cache = OrderedDict()
+
+        self.cache_size = cache_size        
+    
+    def __call__(self, *args):
+        if args in self.cache:
+            value = self.cache[args]
+        else:
+            value = self.func(*args)
+            
+            self.cache[args] = value
+        
+        if len(self.cache) > self.cache_size:
+            self.cache.popitem(last=False)
+        
+        return value
+
+    def __get__(self, obj, objtype):
+        '''Support instance methods.'''
+        
+        return functools.partial(self.__call__, obj)

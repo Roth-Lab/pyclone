@@ -5,7 +5,7 @@ Created on 2012-02-08
 '''
 from collections import OrderedDict
 
-from pyclone._likelihoods import  BetaBinomialLikelihood, BinomialLikelihood, DataPoint
+from pyclone._likelihoods import  BetaBinomialLikelihood, BinomialLikelihood
 from pyclone._sampler import DirichletProcessSampler
 from pyclone._trace import TraceDB, TracePostProcessor
 
@@ -16,7 +16,7 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data_set = load_data(args.in_file)
+    data_set = load_pyclone_data(args.in_file)
     
     tace_db = TraceDB(args.trace_file, mode='w')
     
@@ -27,13 +27,12 @@ def run_dp_model(args):
     tace_db['data'] = data_set.values()
     
     if args.model == 'binomial':
-        likelihoods = [BinomialLikelihood(data_point) for data_point in data_set.values()]
+        likelihoods = [BinomialLikelihood(*data_point) for data_point in data_set.values()]
     elif args.model == 'beta-binomial':
-        likelihoods = [BetaBinomialLikelihood(data_point, beta_precision=args.beta_precision) for data_point in data_set.values()]    
+        likelihoods = [BetaBinomialLikelihood(*data_point) for data_point in data_set.values()]    
     
     sampler = DirichletProcessSampler(likelihoods,
-                                      burnin=args.burnin,
-                                      thin=args.thin,
+                                      args.model,
                                       concentration=args.concentration)
     
     sampler.sample(tace_db, num_iters=args.num_iters)
@@ -56,7 +55,8 @@ def resume_dp_model(args):
     
     trace_db.close()
 
-def load_data(input_file_name):
+    
+def load_pyclone_data(input_file_name):
     '''
     Load data from PyClone formatted input file.
     '''
@@ -77,7 +77,10 @@ def load_data(input_file_name):
         mu_v = [float(x) for x in row['mu_v'].split(',')]
         delta_v = [float(x) for x in row['delta_v'].split(',')]
         
-        data[gene] = DataPoint(a, d, mu_r, mu_v, delta_r, delta_v)
+        ref_priors = dict(zip(mu_r, delta_r))
+        var_priors = dict(zip(mu_v, delta_v))
+        
+        data[gene] = (a, d, ref_priors, var_priors)
 
     return data
         
