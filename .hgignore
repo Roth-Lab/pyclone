@@ -13,3 +13,17 @@ syntax: regexp
 ^build$
 syntax: regexp
 ^examples/triple_negative_breast_cancer$
+syntax: regexp
+^examples/001\.pyclone\.tsv$
+syntax: regexp
+^examples/004\.pyclone\.tsv$
+syntax: regexp
+^examples/alpha_test\.tsv$
+syntax: regexp
+\.ipynb$
+syntax: regexp
+^examples/alpha_test$
+syntax: regexp
+^examples/metastasis\.illumina\.pyclone\.tsv$
+syntax: regexp
+^examples/xenograft\.illumina\.pyclone\.tsv$

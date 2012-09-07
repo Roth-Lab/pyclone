@@ -1,11 +1,11 @@
 from __future__ import division
 
 import bisect
+import functools
 import random
 
+from collections import OrderedDict
 from math import exp, log, lgamma as log_gamma, isinf
-
-from scipy.integrate import quad
 
 #=======================================================================================================================
 # Log space normalisation.
@@ -50,8 +50,21 @@ def log_factorial(n):
 def log_binomial_coefficient(n, k):
     return log_factorial(n) - log_factorial(k) - log_factorial(n - k)
 
-def log_binomial_likelihood(x, n, mu):
-    return x * log(mu) + (n - x) * log(1 - mu)
+def log_binomial_likelihood(x, n, mu):    
+    if mu == 0:
+        if x == 0:
+            return 0
+        else:
+            return float('-inf')
+    
+    elif mu == 1:
+        if x == n:
+            return 0
+        else:
+            return float('-inf')
+    
+    else:    
+        return x * log(mu) + (n - x) * log(1 - mu)
 
 def log_binomial_pdf(x, n, mu):
     return log_binomial_coefficient(n, x) + x * log(mu) + (n - x) * log(1 - mu)
@@ -131,15 +144,31 @@ class SimpsonsRuleIntegrator(Integrator):
   
         return log(self.step_size) - log(3) + log_sum_exp(log_total)
 
-def log_integrate(log_f, a, b, mesh_size):
-    step_size = (b - a) / mesh_size
+#=======================================================================================================================
+# Function caching
+#=======================================================================================================================
+class memoized(object):
+    def __init__(self, func, cache_size=10000):
+        self.func = func
+        
+        self.cache = OrderedDict()
+
+        self.cache_size = cache_size        
     
-    knots = [i * step_size + a for i in range(mesh_size + 1)]
-    
-    m = max([log_f(x) for x in knots])
-    
-    f = lambda x: exp(log_f(x) - m)
-    
-    I = quad(f, a, b)[0]
-    
-    return m + log(I)
+    def __call__(self, *args):
+        if args in self.cache:
+            value = self.cache[args]
+        else:
+            value = self.func(*args)
+            
+            self.cache[args] = value
+        
+        if len(self.cache) > self.cache_size:
+            self.cache.popitem(last=False)
+        
+        return value
+
+    def __get__(self, obj, objtype):
+        '''Support instance methods.'''
+        
+        return functools.partial(self.__call__, obj)
