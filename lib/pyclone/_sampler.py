@@ -159,6 +159,11 @@ class Restaurant(object):
         '''
         for table in self.tables:
             old_phi = table.dish[0]
+
+            if old_phi == 1:
+                old_phi = 1 - 1e-10
+            elif old_phi == 0:
+                old_phi = 1e-10 
     
             old_phi_star = old_phi / (1 - old_phi)
             
@@ -166,7 +171,7 @@ class Restaurant(object):
             
             new_phi_star = exp(log(old_phi_star) + eps)
             
-            new_phi = new_phi_star / (1 + new_phi_star)            
+            new_phi = new_phi_star / (1 + new_phi_star) 
             
             if self.beta_precision is None:
                 new_dish = (new_phi,) 

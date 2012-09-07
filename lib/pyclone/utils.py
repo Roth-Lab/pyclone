@@ -50,8 +50,21 @@ def log_factorial(n):
 def log_binomial_coefficient(n, k):
     return log_factorial(n) - log_factorial(k) - log_factorial(n - k)
 
-def log_binomial_likelihood(x, n, mu):
-    return x * log(mu) + (n - x) * log(1 - mu)
+def log_binomial_likelihood(x, n, mu):    
+    if mu == 0:
+        if x == 0:
+            return 0
+        else:
+            return float('-inf')
+    
+    elif mu == 1:
+        if x == n:
+            return 0
+        else:
+            return float('-inf')
+    
+    else:    
+        return x * log(mu) + (n - x) * log(1 - mu)
 
 def log_binomial_pdf(x, n, mu):
     return log_binomial_coefficient(n, x) + x * log(mu) + (n - x) * log(1 - mu)
