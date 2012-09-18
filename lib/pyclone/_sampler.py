@@ -7,72 +7,86 @@ from __future__ import division
 
 from math import exp, log
 
-from random import betavariate as beta_rvs, gammavariate as gamma_rvs, normalvariate as normal_rvs, \
-    uniform as uniform_rvs, shuffle, choice
+from random import betavariate as beta_rvs, gammavariate as gamma_rvs, uniform as uniform_rvs, shuffle
 
 from pyclone.utils import discrete_rvs, log_space_normalise
 
-class DirichletProcessSampler(object):
-    def __init__(self, likelihoods, model, concentration=None, m=2):
-        customers = [Customer(x) for x in likelihoods]
-        
-        if concentration is None:
-            self.update_concentration = True
-            
-            concentration = 1
-        else:
-            self.update_concentration = False
-        
-        if model == 'binomial':
-            self.update_beta_precision = False            
-            beta_precision = None
-            
-        elif model == 'beta-binomial':
-            self.update_beta_precision = True            
-            beta_precision = 100
-                        
-        else:
-            raise Exception("Model {0} not recognised.".format(model))
+def sample_alpha(old_value, k, n, a=1, b=1):
+    eta = beta_rvs(old_value + 1, n)
 
-        self.restaurant = Restaurant(customers, beta_precision=beta_precision, concentration=concentration, m=m)
+    x = (a + k - 1) / (n * (b - log(eta)))
+    
+    pi = x / (1 + x)
+
+    label = discrete_rvs([pi, 1 - pi])
+    
+    scale = 1 / (b - log(eta))
+            
+    if label == 0:
+        new_value = gamma_rvs(a + k, scale)
+    else:
+        new_value = gamma_rvs(a + k - 1, scale)
+    
+    return new_value
+
+def sample_phi(old_value, data, priors):
+        
+class DirichletProcessSampler(object):
+    def __init__(self, customers, concentration_parameter, update_concentration=True, m=2):
+        self.customers = customers
+        
+        self.cook = UniformCook(0, 1)
+        
+        self.host = Host(m)
+        
+        self.restaurant = Restaurant(self.cook, customers)
+        
+        self.concentration_parameter = concentration_parameter
+        
+        self.update_concentration = update_concentration
         
         self.num_iters = 0
         
     def sample(self, results_db, num_iters, print_freq=100):
         for _ in range(num_iters):
             if self.num_iters % print_freq == 0:
-                print self.num_iters, self.restaurant.number_of_tables, self.restaurant.concentration,
-                
-                if self.update_beta_precision:
-                    print self.restaurant.beta_precision
-                else:
-                    print
+                print self.num_iters, self.restaurant.number_of_tables, self.concentration_parameter.value
             
-            self.num_iters += 1
+            state = self.interactive_sample()
             
-            self.restaurant.sample_partition()
-            
-            self.restaurant.sample_cellular_frequencies()
-            
-            if self.update_concentration:
-                self.restaurant.sample_concentration()
-            
-            if self.update_beta_precision:
-                self.restaurant.sample_beta_precision()
-            
-            results_db.update_trace(self.state)
+            results_db.update_trace(state)
+    
+    def interactive_sample(self):
+        self.num_iters += 1
+        
+        if self.update_concentration:
+            self._sample_concentration_parameter()
+        
+        self._sample_partition()
+        
+        self._sample_cluster_parameters()
+        
+        return self.state
+    
+    def _sample_concentration_parameter(self):
+        self.concentration_parameter.sample(self.restaurant.number_of_tables,
+                                            self.restaurant.number_of_customers)
+    
+    def _sample_partition(self):
+        self.host.reseat_customers(self.concentration.value,
+                                   self.restaurant)
+    
+    def _sample_cluster_parameters(self):
+        self.restaurant.try_new_dishes()
                 
     @property
     def state(self):
         state = {
-                  'alpha' : self.restaurant.concentration,
-                  'labels' : self.restaurant.seating_assignment,
-                  'phi' : self.restaurant.dishes                
-                  }
-        
-        if self.update_beta_precision:
-            state['beta_precision'] = self.restaurant.beta_precision
-        
+                 'alpha' : self.concentration_parameter.value,
+                 'labels' : self.restaurant.seating_assignment,
+                 'phi' : self.restaurant.dishes                
+                 }
+
         return state
 
 class ConcentrationParameter(object):
@@ -90,7 +104,7 @@ class ConcentrationParameter(object):
         self.a = a
         self.b = b
         
-    def update(self, k, n):
+    def sample(self, k, n):
         '''
         Args:
             k : (int) Number of active clusters in DP (number of tables in restaurant)
@@ -118,117 +132,31 @@ class ConcentrationParameter(object):
         
         self.value = new_value
         
-class Restaurant(object):
-    def __init__(self, customers, concentration, m=2, beta_precision=None):
-        self.customers = customers
-        
-        self.beta_precision = beta_precision
-        
-        self.concentration = concentration
-        
+class Host(object):
+    '''
+    Class responsible for reseating customers in restaurant.
+    '''
+    def __init__(self, m=2):
         self.m = m
-        
-        self.base_measure_rand.
-        
-        self._init_tables()
-
-    @property
-    def dishes(self):
-        '''
-        Returns a list of values assosciated with each cluster (dishes served at each table).
-        '''
-        dishes = []
-        
-        for table in self.tables:
-            dishes.append(table.dish[0])
-        
-        return dishes
     
-    @property
-    def number_of_customers(self):
-        '''
-        Returns the number of data points (customers) currently used by DP.
-        '''
-        return len(self.customers)
-    
-    @property
-    def number_of_tables(self):
-        '''
-        Returns the number of clusters (tables) currently used by the DP.
-        '''
-        return len(self.tables)
-
-    @property
-    def seating_assignment(self):
-        '''
-        Returns a list with the id of the table each customer is seated at.
-        '''        
-        seating_assignment = []
+    def reseat_customers(self, alpha, restaurant):
+        customers = restaurant.customers
         
-        for customer in self.customers:
-            table = self.table_map[customer]
-            
-            table_id = self.tables.index(table)
-            
-            seating_assignment.append(table_id)
+        shuffle(customers)
         
-        return seating_assignment
-                
-    def sample_beta_precision(self):
+        for customer in customers:
+            self._reseat_customer(alpha, customer, restaurant)
+        
+    def _reseat_customer(self, alpha, customer, restaurant):
         '''
-        Metropolis-Hastings update of beta precision.
+        Reseat customer using algorithm 8 from Markov chain sampling methods for Dirichlet process mixture models, R.M.
+        Neal, 2000.
         '''
-        old_beta_precision = self.beta_precision
-        new_beta_precision = uniform_rvs(1, 10000)
-
-        old_ll = 0
-        new_ll = 0
+        tables = restaurant.tables
         
-        for table in self.tables:
-            phi = table.dish[0]
-            
-            old_dish = phi, old_beta_precision
-            new_dish = phi, new_beta_precision
-            
-            old_ll += table.evaluate_table_likelihood(old_dish)
-            new_ll += table.evaluate_table_likelihood(new_dish)
+        table_map = restaurant.table_map
         
-        log_ratio = new_ll - old_ll
-        
-        u = uniform_rvs(0, 1)
-        
-        if log_ratio >= log(u):
-            self.beta_precision = new_beta_precision
-        
-            for table in self.tables:
-                phi = table.dish[0]
-                
-                table.dish = phi, new_beta_precision
-   
-    def sample_cellular_frequencies(self):
-        '''
-        Metropolis-Hastings update of cellular frequencies for each table.
-        '''
-        for table in self.tables:
-            new_phi = uniform_rvs(0, 1)
-            
-            if self.beta_precision is None:
-                new_dish = (new_phi,) 
-            else:
-                new_dish = (new_phi, self.beta_precision)
-            
-            table.try_new_dish(new_dish)
-
-    def sample_partition(self):
-        for customer in self.customers:
-            self._reseat_customer(customer)
-        
-    def _reseat_customer(self, customer):
-        '''
-        Reseat customer using algorithm 8 from 
-        Markov chain sampling methods for Dirichlet process mixture models, R.M. Neal, 2000.
-        '''
-        table = self.table_map[customer]
+        table = table_map[customer]
         
         table.remove_customer(customer)
         
@@ -239,86 +167,147 @@ class Restaurant(object):
             num_new_tables = self.m
         
         for _ in range(num_new_tables):
-            table = self._create_table()
-            
-            self.tables.append(table)
+            tables.append(Table(self.cook))
         
         # Sample new table for the customer
-        log_p = []
+        log_probs = []
         
-        for table in self.tables:
-            dish = table.dish
-            
-            ll = customer.likelihood.evaluate(*dish)
+        for table in tables:
+            cluster_log_prob = customer.logp(table.dish)
             
             if table.empty:
-                counts = self.concentration.value / self.m
+                counts = alpha / self.m
             else:
                 counts = table.number_of_customers
             
-            log_p.append(log(counts) + ll)
+            log_probs.append(log(counts) + cluster_log_prob)
             
-        log_p = log_space_normalise(log_p)
+        log_probs = log_space_normalise(log_probs)
         
-        p = [exp(x) for x in log_p]
+        p = [exp(x) for x in log_probs]
         
         table_id = discrete_rvs(p)
         
         # Assign customer to table update map
-        table = self.tables[table_id]
+        table = tables[table_id]
         
         table.add_customer(customer)
         
-        self.table_map[customer] = table
+        table_map[customer] = table
         
         # Remove empty tables
-        empty_tables = []
-        
-        for table in self.tables:
+        for table in tables[:]:
             if table.empty:
-                empty_tables.append(table)
+                tables.remove(table)
         
-        for table in empty_tables:
-            self.tables.remove(table)
+        restaurant.tables = tables
+        restaurant.table_map = table_map    
+            
+        
+class Restaurant(object):
+    def __init__(self, cook, customers):
+        self.cook = cook
+        
+        self._customers = customers
+        
+        self._init_tables()
+
+    @property
+    def customers(self):
+        '''
+        Return a list of customers in restaurant.
+        '''
+        return self._customers[:]
+
+    @property
+    def dishes(self):
+        '''
+        Returns a list of values assosciated with each cluster (dishes served at each table).
+        '''
+        dishes = []
+        
+        for table in self._tables:
+            dishes.append(table.dish[0])
+        
+        return dishes
+    
+    @property
+    def number_of_customers(self):
+        '''
+        Returns the number of data points (customers) currently used by DP.
+        '''
+        return len(self._customers)
+    
+    @property
+    def number_of_tables(self):
+        '''
+        Returns the number of clusters (tables) currently used by the DP.
+        '''
+        return len(self._tables)
+
+    @property
+    def seating_assignment(self):
+        '''
+        Returns a list with the id of the table each customer is seated at.
+        '''        
+        seating_assignment = []
+        
+        for customer in self._customers:
+            table = self._table_map[customer]
+            
+            table_id = self._tables.index(table)
+            
+            seating_assignment.append(table_id)
+        
+        return seating_assignment
+    
+    @property
+    def tables(self):
+        return self._tables[:]
+    
+    @tables.setter
+    def tables(self, value):
+        self._tables = value[:]
+        
+    @property
+    def table_map(self):
+        return self._table_map.copy()
+    
+    @table_map.setter
+    def table_map(self, value):
+        self._table_map = value.copy()
+   
+    def try_new_dishes(self):
+        '''
+        Metropolis-Hastings update of cellular frequencies for each table.
+        '''
+        for table in self.tables:
+            table.try_new_dish()
 
     def _init_tables(self):
-        self.tables = []
-        self.table_map = {}
+        self._tables = []
+        self._table_map = {}
         
         for customer in self.customers:
-            table = self._create_table()
+            table = Table(self.cook)
             
             table.add_customer(customer)
             
-            self.tables.append(table)
+            self._tables.append(table)
             
-            self.table_map[customer] = table
-
-    def _create_table(self):
-        table = Table()
-
-        new_phi = self._cellular_frequency_proposal() 
-        
-        if self.beta_precision is None:
-            new_dish = (new_phi,) 
-        else:
-            new_dish = (new_phi, self.beta_precision)
-            
-        table.dish = new_dish
-        
-        return table
-
-    def _cellular_frequency_proposal(self):
-        return uniform_rvs(0, 1)
+            self._table_map[customer] = table
 
 class Table(object):
-    def __init__(self):
-        self._dish = None
+    def __init__(self, cook):
+        self.cook = cook
+        
+        self._dish = cook.propose_dish()
+        
         self._customers = []
     
     @property
     def customers(self):
-        return self._customers
+        return self._customers[:]
     
     @property
     def dish(self):
@@ -345,7 +334,9 @@ class Table(object):
     def remove_customer(self, customer):
         self._customers.remove(customer)
     
-    def try_new_dish(self, new_dish):
+    def try_new_dish(self):
+        new_dish = self.cook.propose_dish()
+        
         old_dish = self.dish
         
         old_ll = self.evaluate_table_likelihood(old_dish)
@@ -362,14 +353,22 @@ class Table(object):
         ll = 0
         
         for customer in self._customers:
-            ll += customer.likelihood.evaluate(*dish)
+            ll += customer.logp(dish)
         
         return ll
 
-class Customer(object):
-    def __init__(self, likelihood):
-        self._likelihood = likelihood
+class UniformCook(object):
+    '''
+    Cook for proposing dishes from Uniform(a,b) continuous distribution.
+    '''
+    def __init__(self, a=0, b=1):
+        '''
+        Kwargs:
+            a : (float) Left end point of Uniform distribution
+            b : (float) Right end point of Uniform distribution
+        ''' 
+        self.a = a
+        self.b = b
     
-    @property   
-    def likelihood(self):
-        return self._likelihood
+    def propose_dish(self):
+        return uniform_rvs(self.a, self.b)

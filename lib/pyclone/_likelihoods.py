@@ -9,6 +9,12 @@ from math import lgamma as log_gamma
 
 from pyclone.utils import SimpsonsRuleIntegrator, memoized, log_beta_pdf, log_binomial_likelihood, log_sum_exp
 
+class Customer(object):
+    def __init__(self):
+        self.data = None
+        
+    
+
 class PyCloneLikelihood(object):
     def __init__(self, a, d, ref_priors, var_priors):
         self.a = a
