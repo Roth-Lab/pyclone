@@ -8,7 +8,7 @@ from __future__ import division
 from math import exp, log
 
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, normalvariate as normal_rvs, \
-    uniform as uniform_rvs
+    uniform as uniform_rvs, shuffle, choice
 
 from pyclone.utils import discrete_rvs, log_space_normalise
 
@@ -75,8 +75,51 @@ class DirichletProcessSampler(object):
         
         return state
 
+class ConcentrationParameter(object):
+    def __init__(self, value, a=1, b=1):
+        '''
+        Args:
+            value : (float) Initial value.
+        
+        Kwargs:
+            a : (float) Location parameter in gamma prior
+            b : (float) Scale parameter in gamma prior
+        '''
+        self.value = value
+        
+        self.a = a
+        self.b = b
+        
+    def update(self, k, n):
+        '''
+        Args:
+            k : (int) Number of active clusters in DP (number of tables in restaurant)
+            n : (int) Number of data points in DP (number of customers in restaurant)
+        '''
+        a = self.a
+        b = self.b
+        
+        old_value = self.value
+        
+        eta = beta_rvs(old_value + 1, n)
+
+        x = (a + k - 1) / (n * (b - log(eta)))
+        
+        pi = x / (1 + x)
+
+        label = discrete_rvs([pi, 1 - pi])
+        
+        scale = 1 / (b - log(eta))
+                
+        if label == 0:
+            new_value = gamma_rvs(a + k, scale)
+        else:
+            new_value = gamma_rvs(a + k - 1, scale)
+        
+        self.value = new_value
+        
 class Restaurant(object):
-    def __init__(self, customers, beta_precision=None, concentration=1, m=2):
+    def __init__(self, customers, concentration, m=2, beta_precision=None):
         self.customers = customers
         
         self.beta_precision = beta_precision
@@ -85,12 +128,14 @@ class Restaurant(object):
         
         self.m = m
         
+        self.base_measure_rand.
+        
         self._init_tables()
 
     @property
     def dishes(self):
         '''
-        Returns a list of dishes served at each table
+        Returns a list of values assosciated with each cluster (dishes served at each table).
         '''
         dishes = []
         
@@ -100,7 +145,17 @@ class Restaurant(object):
         return dishes
     
     @property
+    def number_of_customers(self):
+        '''
+        Returns the number of data points (customers) currently used by DP.
+        '''
+        return len(self.customers)
+    
+    @property
     def number_of_tables(self):
+        '''
+        Returns the number of clusters (tables) currently used by the DP.
+        '''
         return len(self.tables)
 
     @property
@@ -124,10 +179,7 @@ class Restaurant(object):
         Metropolis-Hastings update of beta precision.
         '''
         old_beta_precision = self.beta_precision
-        
-        eps = normal_rvs(0, 1)
-        
-        new_beta_precision = exp(log(old_beta_precision) + eps)
+        new_beta_precision = uniform_rvs(1, 10000)
 
         old_ll = 0
         new_ll = 0
@@ -158,20 +210,7 @@ class Restaurant(object):
         Metropolis-Hastings update of cellular frequencies for each table.
         '''
         for table in self.tables:
-            old_phi = table.dish[0]
-
-            if old_phi == 1:
-                old_phi = 1 - 1e-10
-            elif old_phi == 0:
-                old_phi = 1e-10 
-    
-            old_phi_star = old_phi / (1 - old_phi)
-            
-            eps = normal_rvs(0, 1)
-            
-            new_phi_star = exp(log(old_phi_star) + eps)
-            
-            new_phi = new_phi_star / (1 + new_phi_star) 
+            new_phi = uniform_rvs(0, 1)
             
             if self.beta_precision is None:
                 new_dish = (new_phi,) 
@@ -180,32 +219,10 @@ class Restaurant(object):
             
             table.try_new_dish(new_dish)
 
-    def sample_concentration(self):
-        a = 1
-        b = 1
-        
-        n = len(self.customers)
-        k = len(self.tables)
-        
-        eta = beta_rvs(self.concentration + 1, n)
-
-        x = (a + k - 1) / (n * (b - log(eta)))
-        
-        pi = x / (1 + x)
-
-        label = discrete_rvs([pi, 1 - pi])
-        
-        scale = 1 / (b - log(eta))
-                
-        if label == 0:
-            self.concentration = gamma_rvs(a + k, scale)
-        elif label == 1:
-            self.concentration = gamma_rvs(a + k - 1, scale)
-
     def sample_partition(self):
         for customer in self.customers:
             self._reseat_customer(customer)
-    
+        
     def _reseat_customer(self, customer):
         '''
         Reseat customer using algorithm 8 from 
@@ -219,7 +236,7 @@ class Restaurant(object):
         if table.empty:
             num_new_tables = self.m - 1
         else:
-            num_new_tables = self.m 
+            num_new_tables = self.m
         
         for _ in range(num_new_tables):
             table = self._create_table()
@@ -235,7 +252,7 @@ class Restaurant(object):
             ll = customer.likelihood.evaluate(*dish)
             
             if table.empty:
-                counts = self.concentration / self.m
+                counts = self.concentration.value / self.m
             else:
                 counts = table.number_of_customers
             
@@ -276,11 +293,7 @@ class Restaurant(object):
             self.tables.append(table)
             
             self.table_map[customer] = table
-        
-        # Initialise clusters to good values by re-sampling
-        for _ in range(100):
-            self.sample_cellular_frequencies()
-    
+
     def _create_table(self):
         table = Table()
 
@@ -317,7 +330,7 @@ class Table(object):
 
     @property
     def empty(self):
-        if len(self._customers) == 0:
+        if self.number_of_customers == 0:
             return True
         else:
             return False

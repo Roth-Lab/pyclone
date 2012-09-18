@@ -87,13 +87,9 @@ def load_pyclone_data(input_file_name):
 def post_process_trace(args):    
     safe_makedirs(args.out_dir)
     
-    trace_db = TraceDB(args.trace_file, mode='r')
-    
-    post_processor = TracePostProcessor(trace_db)
+    post_processor = TracePostProcessor(args.trace_file, args.burnin, args.thin)
 
     _write_trace(post_processor, args.out_dir)
-    
-    trace_db.close()
 
 def _write_trace(post_processor, out_dir):
     # Save alpha

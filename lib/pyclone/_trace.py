@@ -31,7 +31,10 @@ class TraceDB(object):
         '''
         Load the shelve db object if it exists, otherwise initialise.
         '''
-        self._db = shelve.open(file_prefix, writeback=True)
+        if self.mode == 'r':
+            self._db = shelve.open(file_prefix, writeback=False)
+        else:
+            self._db = shelve.open(file_prefix, writeback=True)
         
         # Check if file exists, if not initialise
         if 'trace' not in self._db:                
@@ -65,20 +68,21 @@ class TraceDB(object):
         self._db.sync()
 
 class TracePostProcessor(object):
-    def __init__(self, trace_db):       
-        self.genes = trace_db['genes']
+    def __init__(self, file_name, burnin, thin):
+        trace_db = TraceDB(file_name, mode='r')
         
-        self._db = trace_db
+        self.genes = trace_db['genes'][:]
+            
+        self.alpha = trace_db['trace']['alpha'][burnin::thin]
         
-        self._results = trace_db['trace']
+        self.dishes = trace_db['trace']['phi'][burnin::thin]
         
-    @property
-    def alpha(self):
-        '''
-        Returns a list of alpha values of each iteration of the MCMC chain.
-        '''
-        return self._results['alpha']
-    
+        self.partitions = trace_db['trace']['labels'][burnin::thin]
+        
+        self.num_iterations = trace_db['sampler'].num_iters
+        
+        trace_db.close()
+
     @property
     def cellular_frequencies(self):
         '''
@@ -88,9 +92,11 @@ class TracePostProcessor(object):
         
         labels = self.labels
         
+        dishes = self.dishes
+        
         for gene in labels:
-            for label, sample in zip(labels[gene], self._results['phi']):
-                phi[gene].append(sample[label])
+            for label, dish_sample in zip(labels[gene], dishes):
+                phi[gene].append(dish_sample[label])
         
         return phi
 
@@ -100,10 +106,10 @@ class TracePostProcessor(object):
         Returns a dict with keys genes, and values the class label of the genes for each MCMC sample.
         '''
         labels = defaultdict(list)
-        
-        for sample in self._results['labels']:
-            for gene, label in zip(self.genes, sample):
-                labels[gene].append(label)
+
+        for partition in self.partitions:
+            for gene, cluster_id in zip(self.genes, partition):
+                labels[gene].append(cluster_id)
         
         return labels
 
@@ -111,19 +117,10 @@ class TracePostProcessor(object):
     def num_components(self):
         '''
         Returns a list of the number of components used in by each MCMC sample.
-        '''
-        labels = self._results['labels']
-        
+        '''        
         num_components = []
         
-        for sample in labels:
-            num_components.append(len(set(sample)))
+        for partition in self.partitions:
+            num_components.append(len(set(partition)))
         
         return num_components
-    
-    @property
-    def num_iterations(self):
-        '''
-        Returns the number of MCMC iterations.
-        '''
-        return self._db['sampler'].num_iters
