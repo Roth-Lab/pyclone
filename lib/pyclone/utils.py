@@ -19,10 +19,7 @@ def log_sum_exp(log_X):
     max_exp = max(log_X)
     
     if isinf(max_exp):
-        if max_exp < 0:
-            return float('-inf')
-        else:
-            return float('inf')
+        return max_exp
     
     total = 0
 
