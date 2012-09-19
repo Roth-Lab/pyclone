@@ -5,167 +5,165 @@ Created on 2012-09-15
 '''
 from __future__ import division
 
-import numpy as np
 import random
 
-from random import gammavariate as gamma_rvs
+from random import betavariate as beta_rvs, gammavariate as gamma_rvs, normalvariate as normal_rvs
 
-from pyclone.utils import discrete_rvs
+from pyclone.utils import discrete_rvs, dirichlet_rvs, binomial_rvs
 
-from pyclone._likelihoods import BinomialLikelihood
-#from pyclone._sampler import Customer, Restaurant
+from pyclone._sampler import PyCloneData, Partition, sample_alpha, sample_partition, sample_cell_values
 
-from pyclone.test.crp import ChineseRestaurantProcess
+from pyclone.test.crp import sample_from_crp
 from pyclone.test.geweke import compare_trace
 
+def normal_proposal(old_phi):
+    while True:
+        new_phi = normal_rvs(old_phi, 1)
+        
+        if 0 <= new_phi <= 1:
+            return new_phi
+
+def beta_proposal(m):
+    if m == 0 or m == 1:
+        return random.random()
+    
+    s = 10
+    
+    a = s * m
+    b = s - a
+    
+    if a <= 0:
+        a = 1e-100
+    if b <= 0:
+        b = 1e-100
+
+    return beta_rvs(a, b)  
+
+def uniform_proposal(phi):
+    return random.random()
 
 #=======================================================================================================================
 # Heleper Simulators
 #=======================================================================================================================
-def draw_from_prior(priors):
-    params = {}
+def draw_from_prior(a, b, delta_v):
+    size = len(delta_v)
     
-    n = priors['delta_v'].shape[0]
+#    alpha = 1
+    alpha = gamma_rvs(a, b)
+    
+    labels, values = sample_from_crp(alpha, size, random.random)
+    
+    partition = Partition()
+    
+    for k, value in enumerate(values):
+        partition.add_cell(value)
+        
+        for item, cell_index in enumerate(labels):
+            if cell_index == k:
+                partition.add_item(item, cell_index)
 
-    #params['alpha'] = 1
-    params['alpha'] = gamma_rvs(priors['alpha']['location'], priors['alpha']['scale'])
+    return alpha, partition
+
+def draw_data(partition, mu_r, mu_v, delta_v):
+    g = []
     
-    crp = ChineseRestaurantProcess(params['alpha'], n, random.random)
+    for d_v in delta_v:
+        pi = dirichlet_rvs(d_v)
+        
+        g.append(discrete_rvs(pi))
+     
+    d = 100
     
-    params['phi'] = crp.draw_dishes()
+    data = []
     
-    params['mu_r'] = priors['mu_r']
-    params['mu_v'] = priors['mu_v']
+    phi = partition.item_values
     
-    params['delta_v'] = priors['delta_v']
+    for i in range(len(phi)):
+        mu = (1 - phi[i]) * mu_r + phi[i] * mu_v[g[i]]
+        
+        a = binomial_rvs(d, mu)
+        
+        data_point = PyCloneData(a,
+                                 d,
+                                 {mu_r : 1},
+                                 dict(zip(mu_v, delta_v[i])))
+        
+        data.append(data_point)
     
-    params['d'] = np.zeros(n, dtype='int')
-    params['d'][:] = 1000
+    return data
+    
+def marginal_conditional_simulator(a, b, mu_r, mu_v, delta_v, num_iters): 
+    params = []
+    
+    for _ in range(num_iters):
+        alpha, partition = draw_from_prior(a, b, delta_v) 
+        
+        params.append({'alpha' : alpha, 'phi' : partition.item_values})
+        
+        draw_data(partition, mu_r, mu_v, delta_v)
     
     return params
 
-def draw_data(params):
-    g = []
-        
-    for x in params['delta_v']:
-        pi = np.random.dirichlet(x)
-        
-        g.append(discrete_rvs(pi))
-   
-    mu_v = params['mu_v'][g]
+def successive_conditional_simulator(a, b, mu_r, mu_v, delta_v, num_iters):
+    params_sample = []
     
-    mu_r = params['mu_r']
-    
-    phi = params['phi']
-    
-    mu = (1 - phi) * mu_r + phi * mu_v
-    
-    a = np.random.binomial(params['d'], mu)
-    
-    return a    
-    
-def marginal_conditional_simulator(priors, num_iters):
-    data = []    
-    params = []
+    alpha, partition = draw_from_prior(a, b, delta_v)
     
     for _ in range(num_iters):
-        params.append(draw_from_prior(priors))
+        data = draw_data(partition, mu_r, mu_v, delta_v)
+        
+#        new_alpha = 1
+        new_partition = sample_partition(alpha, data, partition, random.random)
+        
+        new_alpha = sample_alpha(alpha,
+                                 new_partition.number_of_cells,
+                                 new_partition.number_of_items,
+                                 a=a,
+                                 b=b)
+        
+#        new_partition = partition     
+        
+        
+        sample_cell_values(data, new_partition, uniform_proposal)
+        
+        params = {'alpha' : new_alpha, 'phi' : new_partition.item_values}
+        
+        params_sample.append(params)
+        
+        alpha = new_alpha
+        
+        partition = new_partition
     
-        data.append(draw_data(params[-1]))
+    return params_sample
     
-    return data, params
-
-def successive_conditional_simulator(priors, num_iters):
-    data = []
-    params = []
-    
-    restaurant = None
-    
-    old_params = draw_from_prior(priors)  
-    
-    for _ in range(num_iters):
-        a = draw_data(old_params)
-        
-        d = old_params['d']
-        
-        mu_r = priors['mu_r']
-        ref_priors = {mu_r : 1}
-                    
-        likelihoods = []
-        
-        for i, (a_i, d_i) in enumerate(zip(a, d)):
-            var_priors = {}
-            
-            for mu_v, delta_v in zip(priors['mu_v'], priors['delta_v'][i]):
-                var_priors[mu_v] = delta_v                           
-            
-            likelihoods.append(BinomialLikelihood(a_i, d_i, ref_priors, var_priors))
-        
-        if restaurant is None:
-            customers = [Customer(x) for x in likelihoods]
-            
-            restaurant = Restaurant(customers, concentration=old_params['alpha'], m=2)
-        else:
-            for customer, likelihood in zip(restaurant.customers, likelihoods):
-                customer._likelihood = likelihood
-
-        restaurant.sample_partition()
-        
-        restaurant.sample_cellular_frequencies()
-        
-        restaurant.sample_concentration()
-        
-        new_params = old_params.copy()
-        
-        new_params['alpha'] = restaurant.concentration
-        
-        phi = []
-        
-        for table_id in restaurant.seating_assignment:
-            phi.append(restaurant.dishes[table_id])
-        
-        new_params['phi'] = np.array(phi)
-        
-        params.append(new_params)            
-        data.append(a)
-        
-        old_params = new_params
-    
-    return data, params
-
 if __name__ == "__main__":
-    priors = {}
-    
-    priors['delta_v'] = np.array([
-                                  [1,],
-                                  [1,]   
-                                  ])
+    delta_v = [
+               [1, 1],
+               [1, 1]
+               ]
 
-    priors['mu_r'] = 0.999    
-    priors['mu_v'] = np.array([0.5,])
+    mu_r = 0.999    
+    mu_v = [0.001, 0.5]
     
-    priors['depth'] = 1000
-    
-    priors['alpha'] = {}
-    priors['alpha']['location'] = 1
-    priors['alpha']['scale'] = 1
+    a = 1
+    b = 1
     
     burnin = 90000
     num_iters = 100000
-    thin = 1
+    thin = 100
     
-    data_1, params_1 = marginal_conditional_simulator(priors, num_iters)
-    data_2, params_2 = marginal_conditional_simulator(priors, num_iters)    
+    params_1 = marginal_conditional_simulator(a, b, mu_r, mu_v, delta_v, num_iters)
+    params_2 = successive_conditional_simulator(a, b, mu_r, mu_v, delta_v, num_iters)    
     
-    trace_1 = np.array([x['alpha'] for x in params_1][burnin::thin])
-    trace_2 = np.array([x['alpha'] for x in params_2][burnin::thin])
+    trace_1 = [x['alpha'] for x in params_1][burnin::thin]
+    trace_2 = [x['alpha'] for x in params_2][burnin::thin]
     
     print compare_trace(trace_1, trace_2, lambda x: x)
-    print compare_trace(trace_1, trace_2, lambda x: x**2)
+    print compare_trace(trace_1, trace_2, lambda x: x ** 2)
     
-    for i in range(len(priors['delta_v'])):
-        trace_1 =  np.array([x['phi'][i] for x in params_1][burnin::thin])
-        trace_2 =  np.array([x['phi'][i] for x in params_2][burnin::thin])
+    for i in range(len(delta_v)):
+        trace_1 = [x['phi'][i] for x in params_1][burnin::thin]
+        trace_2 = [x['phi'][i] for x in params_2][burnin::thin]
         
         print compare_trace(trace_1, trace_2, lambda x: x)
-        print compare_trace(trace_1, trace_2, lambda x: x**2)
+        print compare_trace(trace_1, trace_2, lambda x: x ** 2)

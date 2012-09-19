@@ -5,9 +5,9 @@ Created on 2012-02-08
 '''
 from collections import OrderedDict
 
-from pyclone._likelihoods import  BetaBinomialLikelihood, BinomialLikelihood
-from pyclone._sampler import DirichletProcessSampler
-from pyclone._trace import TraceDB, TracePostProcessor
+from pyclone.sampler import DirichletProcessSampler, PyCloneData
+
+from pyclone.trace import TraceDB, TracePostProcessor
 
 import csv
 import os
@@ -16,24 +16,17 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data_set = load_pyclone_data(args.in_file)
+    data = load_pyclone_data(args.in_file)
     
     tace_db = TraceDB(args.trace_file, mode='w')
     
     tace_db['input_file'] = open(args.in_file).readlines()
     
-    tace_db['genes'] = data_set.keys()
+    tace_db['genes'] = data.keys()
     
-    tace_db['data'] = data_set.values()
+    tace_db['data'] = data.values()  
     
-    if args.model == 'binomial':
-        likelihoods = [BinomialLikelihood(*data_point) for data_point in data_set.values()]
-    elif args.model == 'beta-binomial':
-        likelihoods = [BetaBinomialLikelihood(*data_point) for data_point in data_set.values()]    
-    
-    sampler = DirichletProcessSampler(likelihoods,
-                                      args.model,
-                                      concentration=args.concentration)
+    sampler = DirichletProcessSampler(data.values(), alpha=args.concentration)
     
     sampler.sample(tace_db, num_iters=args.num_iters)
     
@@ -55,7 +48,6 @@ def resume_dp_model(args):
     
     trace_db.close()
 
-    
 def load_pyclone_data(input_file_name):
     '''
     Load data from PyClone formatted input file.
@@ -80,7 +72,7 @@ def load_pyclone_data(input_file_name):
         ref_priors = dict(zip(mu_r, delta_r))
         var_priors = dict(zip(mu_v, delta_v))
         
-        data[gene] = (a, d, ref_priors, var_priors)
+        data[gene] = PyCloneData(a, d, ref_priors, var_priors)
 
     return data
         

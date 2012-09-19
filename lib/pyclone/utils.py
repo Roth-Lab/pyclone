@@ -6,6 +6,7 @@ import random
 
 from collections import OrderedDict
 from math import exp, log, lgamma as log_gamma, isinf
+from random import gammavariate as gamma_rvs
 
 #=======================================================================================================================
 # Log space normalisation.
@@ -78,6 +79,48 @@ def log_beta_pdf(x, a, b):
 #=======================================================================================================================
 # Random variate generators
 #=======================================================================================================================
+def bernoulli_rvs(p):
+    u = random.random()
+    
+    if u <= p:
+        return 1
+    else:
+        return 0
+
+def binomial_rvs(n, p):
+    if p > 0.5:
+        return n - binomial_rvs(n, 1 - p)
+    
+    if p == 0:
+        return 0
+    
+    log_u = log(random.random())
+    
+    log_c = log(p) - log(1 - p)
+    
+    i = 0
+    
+    log_prob = n * log(1 - p)
+    
+    log_F = log_prob
+    
+    while True:
+        if log_u < log_F:
+            return i
+        
+        log_prob += log_c + log(n - i) - log(i + 1)
+        
+        log_F = log_sum_exp([log_F, log_prob])
+        
+        i += 1
+
+def dirichlet_rvs(alpha):
+    g = [gamma_rvs(a, 1) for a in alpha]
+    
+    norm_const = sum(g)
+    
+    return [x / norm_const  for x in g]
+
 def discrete_rvs(p):
     choices = range(len(p))
     
@@ -90,14 +133,7 @@ def discrete_rvs(p):
     
     return choices[bisect.bisect(cum_dist, x)]
 
-def bernoulli_rvs(p):
-    u = random.random()
-    
-    if u <= p:
-        return 1
-    else:
-        return 0
-    
+
 #=======================================================================================================================
 # Integration
 #=======================================================================================================================

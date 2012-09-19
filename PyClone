@@ -30,16 +30,6 @@ analyse_parser.add_argument('--concentration', default=None, type=int,
                             help='''Concentration (alpha) value for DP sampler. It not set will be estimated. Default
                             estimated.''')
 
-analyse_parser.add_argument('--model', default='binomial', choices=['binomial', 'beta-binomial'],
-                            help='''Likelihood model to use for count data. Default is binomial. Use beta-binomial if
-                            data is over-dispersed. Default binomial.''')
-
-analyse_parser.add_argument('--beta-precision', default=100, type=float,
-                            help='''Value of the precision parameter for beta priors in beta-binomial model. Larger
-                            values represent more precise prior belief about the binomial sampling probabilities
-                            genotype associated with a genotype. If the binomial model is used this is ignored. Default
-                            100.''')
-
 analyse_parser.set_defaults(func=run_dp_model)
 
 #---------------------------------------------------------------------------------------------------------------------- 
