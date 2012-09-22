@@ -12,7 +12,8 @@ from pydp.base_measures import BetaBaseMeasure
 from pydp.densities import Density, log_binomial_pdf
 from pydp.partition import Partition
 
-from pydp.samplers.atom import BaseMeasureAtomSampler
+from pydp.proposal_funcs import beta_proposal
+from pydp.samplers.atom import MetropolisHastingsAtomSampler
 from pydp.samplers.concentration import GammaPriorConcentrationSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
@@ -28,7 +29,7 @@ class DirichletProcessSampler(object):
         
         self.partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
-        self.atom_sampler = BaseMeasureAtomSampler(base_measure, cluster_density)        
+        self.atom_sampler = MetropolisHastingsAtomSampler(base_measure, cluster_density, beta_proposal)        
         
         if alpha is None:
             self.alpha = 1
