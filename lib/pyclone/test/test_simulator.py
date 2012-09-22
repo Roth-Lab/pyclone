@@ -11,7 +11,7 @@ from random import betavariate as beta_rvs, gammavariate as gamma_rvs, normalvar
 
 from pyclone.utils import discrete_rvs, dirichlet_rvs, binomial_rvs
 
-from pyclone._sampler import PyCloneData, Partition, sample_alpha, sample_partition, sample_cell_values
+from pyclone.sampler import PyCloneData, Partition, sample_alpha, sample_partition, sample_cell_values
 
 from pyclone.test.crp import sample_from_crp
 from pyclone.test.geweke import compare_trace

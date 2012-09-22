@@ -21,10 +21,8 @@ def compare_trace(trace_1, trace_2, g):
     M_2 = len(g_2)
     
     diff = (mean_1 - mean_2) 
-    
-    print mean_1, mean_2, sigma_1, sigma_2
-    
-    return diff / sqrt(sigma_1 / M_1 + sigma_2 / M_2)
+
+    return diff / sqrt((sigma_1 / M_1) + (sigma_2 / M_2))
 
 def mean(x):
     return sum(x) / len(x)
@@ -32,4 +30,4 @@ def mean(x):
 def variance(x):
     ss = sum([x_i ** 2 for x_i in x])
     
-    return ss / len(x) - mean(x) ** 2
+    return (ss / len(x)) - mean(x) ** 2

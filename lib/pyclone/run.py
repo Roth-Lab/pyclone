@@ -3,10 +3,9 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
-from collections import OrderedDict
+from math import lgamma as log_gamma
 
 from pyclone.sampler import DirichletProcessSampler, PyCloneData
-
 from pyclone.trace import TraceDB, TracePostProcessor
 
 import csv
@@ -16,17 +15,17 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data = load_pyclone_data(args.in_file)
+    data, genes = load_pyclone_data(args.in_file)
     
     tace_db = TraceDB(args.trace_file, mode='w')
     
     tace_db['input_file'] = open(args.in_file).readlines()
     
-    tace_db['genes'] = data.keys()
+    tace_db['genes'] = genes
     
-    tace_db['data'] = data.values()  
+    tace_db['data'] = data  
     
-    sampler = DirichletProcessSampler(data.values(), alpha=args.concentration)
+    sampler = DirichletProcessSampler(data, alpha=args.concentration)
     
     sampler.sample(tace_db, num_iters=args.num_iters)
     
@@ -48,33 +47,50 @@ def resume_dp_model(args):
     
     trace_db.close()
 
-def load_pyclone_data(input_file_name):
+def load_pyclone_data(file_name):
     '''
     Load data from PyClone formatted input file.
     '''
-    data = OrderedDict()
+    data = []
+    genes = []
     
-    reader = csv.DictReader(open(input_file_name), delimiter='\t')
+    reader = csv.DictReader(open(file_name), delimiter='\t')
 
     for row in reader:
-        gene = row['gene']
+        genes.append(row['gene'])
         
         a = int(row['a'])
         
         d = int(row['d'])
         
         mu_r = [float(x) for x in row['mu_r'].split(',')]
-        delta_r = [float(x) for x in row['delta_r'].split(',')]
-        
         mu_v = [float(x) for x in row['mu_v'].split(',')]
+        
+        delta_r = [float(x) for x in row['delta_r'].split(',')]
         delta_v = [float(x) for x in row['delta_v'].split(',')]
         
-        ref_priors = dict(zip(mu_r, delta_r))
-        var_priors = dict(zip(mu_v, delta_v))
+        log_pi_r = get_log_mix_weights(delta_r)
+        log_pi_v = get_log_mix_weights(delta_v)
         
-        data[gene] = PyCloneData(a, d, ref_priors, var_priors)
+        data.append(PyCloneData(a, d, tuple(mu_r), tuple(mu_v), tuple(log_pi_r), tuple(log_pi_v)))
 
-    return data
+    return data, genes
+
+def get_log_mix_weights(delta):
+    log_denominator = log_gamma(sum(delta) + 1)
+    
+    log_mix_weights = []
+    
+    for i, d_i in enumerate(delta):
+        log_numerator = log_gamma(d_i + 1)
+        
+        for j, d_j in enumerate(delta):
+            if i != j:
+                log_numerator += log_gamma(d_j)
+        
+        log_mix_weights.append(log_numerator - log_denominator)
+    
+    return log_mix_weights
         
 def post_process_trace(args):    
     safe_makedirs(args.out_dir)

@@ -7,7 +7,7 @@ from __future__ import division
 
 from pyclone.utils import discrete_rvs
 
-def sample_from_crp(alpha, size, proposal_func):
+def sample_from_crp(alpha, size, base_measure):
     labels = []
     values = []
     
@@ -17,7 +17,7 @@ def sample_from_crp(alpha, size, proposal_func):
     tables.append([0, ])
     
     labels.append(0)
-    values.append(proposal_func())
+    values.append(base_measure.random())
     
     for customer in range(1, size):
         p = _get_table_probabilities(tables, alpha)
@@ -27,7 +27,7 @@ def sample_from_crp(alpha, size, proposal_func):
         if table_id == len(tables):
             tables.append([customer, ])
             
-            values.append(proposal_func())
+            values.append(base_measure.random())
         else:
             tables[table_id].append(customer)
         
