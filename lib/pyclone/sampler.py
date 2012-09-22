@@ -22,7 +22,7 @@ class DirichletProcessSampler(object):
     def __init__(self, data, alpha=None):        
         self.data = data
         
-        base_measure = BetaBaseMeasure()
+        base_measure = BetaBaseMeasure(1, 1)
         
         cluster_density = PyCloneDensity()
         
@@ -49,8 +49,9 @@ class DirichletProcessSampler(object):
     def state(self):
         return {
                 'alpha' : self.alpha,
+                'cellular_frequencies' : [param.x for param in self.partition.item_values],
                 'labels' : self.partition.labels,
-                'phi' : self.partition.item_values
+                'phi' : [param.x for param in self.partition.cell_values]
                 }
     
     def sample(self, results_db, num_iters, print_freq=100):
@@ -66,8 +67,8 @@ class DirichletProcessSampler(object):
     
     def interactive_sample(self):
         if self.update_alpha:
-            self.alpha = self.concentration_sampler.sample(self.alpha, 
-                                                           self.partition.number_of_cells, 
+            self.alpha = self.concentration_sampler.sample(self.alpha,
+                                                           self.partition.number_of_cells,
                                                            self.partition.number_of_items)
         
         self.partition_sampler.sample(self.data, self.partition, self.alpha)
