@@ -20,7 +20,7 @@ def run_dp_model(args):
     trace_db = TraceDB(args.out_dir, genes)
     
     try:
-        sampler = DirichletProcessSampler(data, alpha=args.concentration)
+        sampler = DirichletProcessSampler(alpha=args.concentration)
     except:
         trace_db.close()
         
@@ -28,7 +28,7 @@ def run_dp_model(args):
         
         raise
     
-    sampler.sample(trace_db, num_iters=args.num_iters)
+    sampler.sample(data, trace_db, num_iters=args.num_iters)
 
     trace_db.close()
 
