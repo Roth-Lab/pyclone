@@ -10,7 +10,7 @@ from pyclone.run import run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.6.0')
+parser.add_argument('--version', action='version', version='PyClone-0.7.0')
 
 subparsers = parser.add_subparsers()
 

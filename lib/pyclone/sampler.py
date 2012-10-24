@@ -20,8 +20,8 @@ from pydp.samplers.atom import AtomSampler, BaseMeasureAtomSampler, MetropolisHa
 from pydp.samplers.concentration import GammaPriorConcentrationSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
-from pydp.utils import log_sum_exp, memoized
-from pydp.data import BetaParameter, BetaData
+from pydp.utils import log_sum_exp
+from pydp.data import BetaData
 
 class DirichletProcessSampler(object):
     def __init__(self, alpha=None):
@@ -208,6 +208,7 @@ class PyCloneGibbsAtomSampler(AtomSampler):
         log_step_size = log(b - a) - log(mesh_size)
     
         knots = [i * step_size + a for i in range(0, mesh_size + 1)]
+        
         knots = [BetaData(x) for x in knots]
     
         log_total = [log_f(x) + log_step_size for x in knots]
@@ -217,12 +218,12 @@ class PyCloneGibbsAtomSampler(AtomSampler):
         log_cdf = None
         
         for x in knots:
-            term = log_f(x) - log_norm_const
+            term = log_f(x) - log_norm_const + log_step_size
             
             if log_cdf is None:
                 log_cdf = term
             else:
-                log_cdf = log_sum_exp([log_cdf, term + log_step_size])
+                log_cdf = log_sum_exp([log_cdf, term])
 
             if log_u < log_cdf:
                 return x
