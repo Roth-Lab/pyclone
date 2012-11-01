@@ -20,7 +20,7 @@ def run_dp_model(args):
     trace_db = TraceDB(args.out_dir, genes)
     
     try:
-        sampler = DirichletProcessSampler(alpha=args.concentration)
+        sampler = DirichletProcessSampler(args.tumour_content, alpha=args.concentration)
     except:
         trace_db.close()
         
@@ -42,7 +42,7 @@ def load_pyclone_data(file_name):
     reader = csv.DictReader(open(file_name), delimiter='\t')
 
     for row in reader:
-        genes.append(row['gene'])
+        genes.append(row['mutation'])
         
         a = int(row['a'])
         

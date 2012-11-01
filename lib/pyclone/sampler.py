@@ -7,7 +7,7 @@ from __future__ import division
 
 from collections import namedtuple
 
-from pydp.base_measures import BetaBaseMeasure
+from pydp.base_measures import BaseMeasure
 
 from pydp.densities import Density, log_binomial_pdf
 from pydp.partition import Partition
@@ -16,11 +16,12 @@ from pydp.samplers.atom import BaseMeasureAtomSampler
 from pydp.samplers.concentration import GammaPriorConcentrationSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
+from pydp.rvs import uniform_rvs
 from pydp.utils import log_sum_exp
 
 class DirichletProcessSampler(object):
-    def __init__(self, alpha=None):
-        self.base_measure = BetaBaseMeasure(1, 1)
+    def __init__(self, tumour_content, alpha=None):
+        self.base_measure = PyCloneBaseMeasure(tumour_content)
         
         cluster_density = PyCloneDensity()
         
@@ -45,9 +46,9 @@ class DirichletProcessSampler(object):
     def state(self):
         return {
                 'alpha' : self.alpha,
-                'cellular_frequencies' : [param.x for param in self.partition.item_values],
+                'cellular_frequencies' : [param.phi for param in self.partition.item_values],
                 'labels' : self.partition.labels,
-                'phi' : [param.x for param in self.partition.cell_values]
+                'phi' : [param.phi for param in self.partition.cell_values]
                 }
     
     def initialise_partition(self, data):
@@ -60,6 +61,8 @@ class DirichletProcessSampler(object):
     
     def sample(self, data, results_db, num_iters, print_freq=100):
         self.initialise_partition(data)
+        
+        print "Tumour Content :", self.base_measure.tumour_content
         
         for i in range(num_iters):
             if i % print_freq == 0:
@@ -88,11 +91,22 @@ class DirichletProcessSampler(object):
             self.partition.add_cell(base_measure.random())
             
             self.partition.add_item(item, item)
-            
+
+class PyCloneBaseMeasure(BaseMeasure):
+    def __init__(self, tumour_content):
+        self.tumour_content = tumour_content
+        
+    def random(self):
+        phi = uniform_rvs(0, 1)
+        
+        return PyCloneParameter(phi, self.tumour_content)
+
 #=======================================================================================================================
 # Data class
 #=======================================================================================================================
 PyCloneData = namedtuple('PyCloneData', ['a', 'd', 'mu_r', 'mu_v', 'log_pi_r', 'log_pi_v'])
+
+PyCloneParameter = namedtuple('PyCloneParameter', ['phi', 's'])
 
 class PyCloneDensity(Density):
     def log_p(self, data, params):
@@ -100,13 +114,17 @@ class PyCloneDensity(Density):
         
         for mu_r, log_pi_r in zip(data.mu_r, data.log_pi_r):
             for mu_v, log_pi_v in zip(data.mu_v, data.log_pi_v):
-                temp = log_pi_r + log_pi_v + self._log_binomial_likelihood(data.a, data.d, params.x, mu_r, mu_v)
+                temp = log_pi_r + log_pi_v + self._log_binomial_likelihood(data.a, data.d, params.phi, params.s, mu_r, mu_v)
                 
                 ll.append(temp)
         
         return log_sum_exp(ll)
     
-    def _log_binomial_likelihood(self, a, d, phi, mu_r, mu_v):
-        mu = (1 - phi) * mu_r + phi * mu_v
+    def _log_binomial_likelihood(self, a, d, phi, s, mu_r, mu_v):
+        mu_N = mu_r
         
-        return log_binomial_pdf(a, d, mu)
+        mu_T = (1 - phi) * mu_r + phi * mu_v
+        
+        mu = (1 - s) * mu_N + s * mu_T
+        
+        return log_binomial_pdf(a, d, mu) 

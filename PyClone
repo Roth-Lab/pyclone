@@ -10,7 +10,7 @@ from pyclone.run import run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.6.0')
+parser.add_argument('--version', action='version', version='PyClone-0.7.0')
 
 subparsers = parser.add_subparsers()
 
@@ -29,6 +29,9 @@ analyse_parser.add_argument('--num_iters', default=10000, type=int,
 analyse_parser.add_argument('--concentration', default=None, type=int,
                             help='''Concentration (alpha) value for DP sampler. It not set will be estimated. Default
                             estimated.''')
+
+analyse_parser.add_argument('--tumour_content', default=1, type=float,
+                            help='''The fraction of the cancer cells in the sample. Default 1.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
 

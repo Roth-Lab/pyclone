@@ -37,7 +37,6 @@ class TraceDB(object):
         
         self._phi_file = bz2.BZ2File(os.path.join(out_dir, 'phi.txt.bz2'), mode)        
 
-
         self._alpha_writer = csv.writer(self._alpha_file)
             
         self._frequencies_writer = csv.writer(self._frequencies_file)
