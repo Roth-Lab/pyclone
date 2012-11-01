@@ -27,7 +27,7 @@ analyse_parser.add_argument('--num_iters', default=10000, type=int,
                             help='''How many iterations the MCMC chain will run. Default 10,000.''')
 
 analyse_parser.add_argument('--concentration', default=None, type=int,
-                            help='''Concentration (alpha) value for DP sampler. It not set will be estimated. Default
+                            help='''Concentration (alpha) value for DP sampler. If not set it will be estimated. Default
                             estimated.''')
 
 analyse_parser.add_argument('--tumour_content', default=1, type=float,
