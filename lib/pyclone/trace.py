@@ -8,7 +8,7 @@ import csv
 import os
 
 class TraceDB(object):
-    def __init__(self, out_dir, genes):
+    def __init__(self, out_dir, mutations):
         if os.path.exists(out_dir):
             raise Exception("{0} exists, cannot overwrite.".format(out_dir))
     
@@ -19,9 +19,9 @@ class TraceDB(object):
   
         self._open_files(out_dir)
         
-        self._frequencies_writer.writerow(genes)
+        self._frequencies_writer.writerow(mutations)
         
-        self._labels_writer.writerow(genes)
+        self._labels_writer.writerow(mutations)
 
     def _open_files(self, out_dir):
         '''

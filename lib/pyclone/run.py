@@ -15,9 +15,9 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data, genes = load_pyclone_data(args.in_file)
+    data, mutations = load_pyclone_data(args.in_file)
     
-    trace_db = TraceDB(args.out_dir, genes)
+    trace_db = TraceDB(args.out_dir, mutations)
     
     try:
         sampler = DirichletProcessSampler(args.tumour_content, alpha=args.concentration)
@@ -37,12 +37,12 @@ def load_pyclone_data(file_name):
     Load data from PyClone formatted input file.
     '''
     data = []
-    genes = []
+    mutations = []
     
     reader = csv.DictReader(open(file_name), delimiter='\t')
 
     for row in reader:
-        genes.append(row['mutation'])
+        mutations.append(row['mutation'])
         
         a = int(row['a'])
         
@@ -59,7 +59,7 @@ def load_pyclone_data(file_name):
         
         data.append(PyCloneData(a, d, tuple(mu_r), tuple(mu_v), tuple(log_pi_r), tuple(log_pi_v)))
 
-    return data, genes
+    return data, mutations
 
 def get_log_mix_weights(delta):
     log_denominator = log_gamma(sum(delta) + 1)
