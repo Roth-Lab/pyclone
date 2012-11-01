@@ -27,3 +27,7 @@ syntax: regexp
 ^examples/metastasis\.illumina\.pyclone\.tsv$
 syntax: regexp
 ^examples/xenograft\.illumina\.pyclone\.tsv$
+syntax: regexp
+^examples/data$
+syntax: regexp
+^examples/results$
