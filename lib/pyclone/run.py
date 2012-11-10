@@ -3,13 +3,15 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
-from math import lgamma as log_gamma
+from __future__ import division
 
-from pyclone.sampler import DirichletProcessSampler, PyCloneData
-from pyclone.trace import TraceDB
+from math import log
 
 import csv
 import shutil
+
+from pyclone.sampler import DirichletProcessSampler, PyCloneData
+from pyclone.trace import TraceDB
 
 def run_dp_model(args):
     '''
@@ -62,17 +64,6 @@ def load_pyclone_data(file_name):
     return data, mutations
 
 def get_log_mix_weights(delta):
-    log_denominator = log_gamma(sum(delta) + 1)
+    pi = [x / sum(delta) for x in delta]
     
-    log_mix_weights = []
-    
-    for i, d_i in enumerate(delta):
-        log_numerator = log_gamma(d_i + 1)
-        
-        for j, d_j in enumerate(delta):
-            if i != j:
-                log_numerator += log_gamma(d_j)
-        
-        log_mix_weights.append(log_numerator - log_denominator)
-    
-    return log_mix_weights
+    return [log(x) for x in pi]
