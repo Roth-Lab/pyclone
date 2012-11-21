@@ -10,7 +10,7 @@ from pyclone.run import run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.7.1')
+parser.add_argument('--version', action='version', version='PyClone-0.8.0')
 
 subparsers = parser.add_subparsers()
 
@@ -24,7 +24,7 @@ analyse_parser.add_argument('out_dir',
                             help='Path where trace file for MCMC sampler will be written.')
 
 analyse_parser.add_argument('--num_iters', default=10000, type=int,
-                            help='''How many iterations the MCMC chain will run. Default 10,000.''')
+                            help='''How many iterations of the MCMC chain will run. Default 10,000.''')
 
 analyse_parser.add_argument('--concentration', default=None, type=int,
                             help='''Concentration (alpha) value for DP sampler. If not set it will be estimated. Default
@@ -37,7 +37,6 @@ analyse_parser.add_argument('--sampling_model', default='cell', choices=['cell',
                             help='''The way data is assumed to be sample. The cell model assumes as single cell is first
                             sampled then a read is chosen from this cell. The fragment model assumes the dna fragments
                             from all cells are mixed together and sampled from. Default cell.''')
-
 
 analyse_parser.add_argument('--concentration_prior_shape', default=1, type=float,
                             help='''Prior on the shape parameter in the prior for the concentration parameter. Default
