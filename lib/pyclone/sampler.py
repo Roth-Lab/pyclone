@@ -9,7 +9,7 @@ from collections import namedtuple
 
 from pydp.base_measures import BaseMeasure
 
-from pydp.densities import Density, log_binomial_pdf
+
 from pydp.partition import Partition
 
 from pydp.samplers.atom import BaseMeasureAtomSampler
@@ -17,14 +17,11 @@ from pydp.samplers.concentration import GammaPriorConcentrationSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
 from pydp.rvs import uniform_rvs
-from pydp.utils import log_sum_exp
 
 class DirichletProcessSampler(object):
-    def __init__(self, tumour_content, alpha=None):
+    def __init__(self, cluster_density, tumour_content, alpha=None):
         self.base_measure = PyCloneBaseMeasure(tumour_content)
-        
-        cluster_density = PyCloneDensity()
-        
+
         self.partition_sampler = AuxillaryParameterPartitionSampler(self.base_measure, cluster_density)
         
         self.atom_sampler = BaseMeasureAtomSampler(self.base_measure, cluster_density)           
@@ -100,31 +97,7 @@ class PyCloneBaseMeasure(BaseMeasure):
         phi = uniform_rvs(0, 1)
         
         return PyCloneParameter(phi, self.tumour_content)
-
-#=======================================================================================================================
-# Data class
-#=======================================================================================================================
-PyCloneData = namedtuple('PyCloneData', ['a', 'd', 'mu_r', 'mu_v', 'log_pi_r', 'log_pi_v'])
-
-PyCloneParameter = namedtuple('PyCloneParameter', ['phi', 's'])
-
-class PyCloneDensity(Density):
-    def log_p(self, data, params):
-        ll = []
-        
-        for mu_r, log_pi_r in zip(data.mu_r, data.log_pi_r):
-            for mu_v, log_pi_v in zip(data.mu_v, data.log_pi_v):
-                temp = log_pi_r + log_pi_v + self._log_binomial_likelihood(data.a, data.d, params.phi, params.s, mu_r, mu_v)
-                
-                ll.append(temp)
-        
-        return log_sum_exp(ll)
     
-    def _log_binomial_likelihood(self, a, d, phi, s, mu_r, mu_v):
-        mu_N = mu_r
-        
-        mu_T = (1 - phi) * mu_r + phi * mu_v
-        
-        mu = (1 - s) * mu_N + s * mu_T
-        
-        return log_binomial_pdf(a, d, mu) 
+PyCloneParameter = namedtuple('PyCloneParameter', ['phi', 's'])
+    
+    

@@ -10,19 +10,25 @@ from math import log
 import csv
 import shutil
 
-from pyclone.sampler import DirichletProcessSampler, PyCloneData
+from pyclone.densities import FragmentSampledData, CellSampledData, CellSampledDensity, FragmentSampledDensity
+from pyclone.sampler import DirichletProcessSampler
 from pyclone.trace import TraceDB
 
 def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data, mutations = load_pyclone_data(args.in_file)
+    data, mutations = load_pyclone_data(args.in_file, args.sampling_model)
     
     trace_db = TraceDB(args.out_dir, mutations)
     
+    if args.sampling_model == 'cell':
+        cluster_density = CellSampledDensity()
+    elif args.sampling_model == 'fragment':
+        cluster_density = FragmentSampledDensity()
+    
     try:
-        sampler = DirichletProcessSampler(args.tumour_content, alpha=args.concentration)
+        sampler = DirichletProcessSampler(cluster_density, args.tumour_content, alpha=args.concentration)
     except:
         trace_db.close()
         
@@ -34,7 +40,7 @@ def run_dp_model(args):
 
     trace_db.close()
 
-def load_pyclone_data(file_name):
+def load_pyclone_data(file_name, sampling_model):
     '''
     Load data from PyClone formatted input file.
     '''
@@ -59,7 +65,23 @@ def load_pyclone_data(file_name):
         log_pi_r = get_log_mix_weights(delta_r)
         log_pi_v = get_log_mix_weights(delta_v)
         
-        data.append(PyCloneData(a, d, tuple(mu_r), tuple(mu_v), tuple(log_pi_r), tuple(log_pi_v)))
+        if sampling_model == 'dna':
+            cn_r = [int(x) for x in row['cn_r'].split(',')]
+            cn_v = [int(x) for x in row['cn_v'].split(',')]
+            
+            data_point = FragmentSampledData(a, 
+                                             d, 
+                                             tuple(mu_r), 
+                                             tuple(mu_v), 
+                                             tuple(log_pi_r), 
+                                             tuple(log_pi_v),
+                                             tuple(cn_r),
+                                             tuple(cn_v))
+        
+        else:
+            data_point = CellSampledData(a, d, tuple(mu_r), tuple(mu_v), tuple(log_pi_r), tuple(log_pi_v))
+            
+        data.append(data_point)
 
     return data, mutations
 
