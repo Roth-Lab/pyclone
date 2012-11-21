@@ -38,6 +38,16 @@ analyse_parser.add_argument('--sampling_model', default='cell', choices=['cell',
                             sampled then a read is chosen from this cell. The fragment model assumes the dna fragments
                             from all cells are mixed together and sampled from. Default cell.''')
 
+
+analyse_parser.add_argument('--concentration_prior_shape', default=1, type=float,
+                            help='''Prior on the shape parameter in the prior for the concentration parameter. Default
+                            1.''')
+
+analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
+                            help='''Prior on the rate parameter in the prior for the concentration parameter. Default
+                            1.''')
+
+
 analyse_parser.set_defaults(func=run_dp_model)
 
 args = parser.parse_args()

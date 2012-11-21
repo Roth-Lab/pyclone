@@ -28,7 +28,11 @@ def run_dp_model(args):
         cluster_density = FragmentSampledDensity()
     
     try:
-        sampler = DirichletProcessSampler(cluster_density, args.tumour_content, alpha=args.concentration)
+        sampler = DirichletProcessSampler(cluster_density,
+                                          args.tumour_content,
+                                          alpha=args.concentration,
+                                          alpha_shape=args.concentration_prior_shape,
+                                          alpha_rate=args.concentration_prior_rate)
     except:
         trace_db.close()
         
@@ -69,11 +73,11 @@ def load_pyclone_data(file_name, sampling_model):
             cn_r = [int(x) for x in row['cn_r'].split(',')]
             cn_v = [int(x) for x in row['cn_v'].split(',')]
             
-            data_point = FragmentSampledData(a, 
-                                             d, 
-                                             tuple(mu_r), 
-                                             tuple(mu_v), 
-                                             tuple(log_pi_r), 
+            data_point = FragmentSampledData(a,
+                                             d,
+                                             tuple(mu_r),
+                                             tuple(mu_v),
+                                             tuple(log_pi_r),
                                              tuple(log_pi_v),
                                              tuple(cn_r),
                                              tuple(cn_v))

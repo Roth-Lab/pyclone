@@ -19,7 +19,7 @@ from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 from pydp.rvs import uniform_rvs
 
 class DirichletProcessSampler(object):
-    def __init__(self, cluster_density, tumour_content, alpha=None):
+    def __init__(self, cluster_density, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
         self.base_measure = PyCloneBaseMeasure(tumour_content)
 
         self.partition_sampler = AuxillaryParameterPartitionSampler(self.base_measure, cluster_density)
@@ -31,7 +31,7 @@ class DirichletProcessSampler(object):
             
             self.update_alpha = True
             
-            self.concentration_sampler = GammaPriorConcentrationSampler(1, 1)
+            self.concentration_sampler = GammaPriorConcentrationSampler(alpha_shape, alpha_rate)
         else:
             self.alpha = alpha
             
