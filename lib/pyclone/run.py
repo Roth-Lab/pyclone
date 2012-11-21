@@ -69,7 +69,7 @@ def load_pyclone_data(file_name, sampling_model):
         log_pi_r = get_log_mix_weights(delta_r)
         log_pi_v = get_log_mix_weights(delta_v)
         
-        if sampling_model == 'dna':
+        if sampling_model == 'fragment':
             cn_r = [int(x) for x in row['cn_r'].split(',')]
             cn_v = [int(x) for x in row['cn_v'].split(',')]
             
