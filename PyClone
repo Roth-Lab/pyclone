@@ -10,7 +10,7 @@ from pyclone.run import run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.8.0')
+parser.add_argument('--version', action='version', version='PyClone-0.9.0')
 
 subparsers = parser.add_subparsers()
 
@@ -33,10 +33,10 @@ analyse_parser.add_argument('--concentration', default=None, type=int,
 analyse_parser.add_argument('--tumour_content', default=1, type=float,
                             help='''The fraction of the cancer cells in the sample. Default 1.''')
 
-analyse_parser.add_argument('--sampling_model', default='cell', choices=['cell', 'fragment'],
+analyse_parser.add_argument('--sampling_model', default='fragment', choices=['cell', 'fragment'],
                             help='''The way data is assumed to be sample. The cell model assumes as single cell is first
                             sampled then a read is chosen from this cell. The fragment model assumes the dna fragments
-                            from all cells are mixed together and sampled from. Default cell.''')
+                            from all cells are mixed together and sampled from. Default fragment.''')
 
 analyse_parser.add_argument('--concentration_prior_shape', default=1, type=float,
                             help='''Prior on the shape parameter in the prior for the concentration parameter. Default
@@ -46,6 +46,8 @@ analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
                             help='''Prior on the rate parameter in the prior for the concentration parameter. Default
                             1.''')
 
+analyse_parser.add_argument('--error_rate', default=1e-3, type=float,
+                            help='''Error rate of sequencing. Default 1e-3.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
 

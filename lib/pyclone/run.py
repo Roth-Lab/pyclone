@@ -18,9 +18,9 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data, mutations = load_pyclone_data(args.in_file, args.sampling_model)
+    data = load_pyclone_data(args.in_file, args.error_rate, args.sampling_model)
     
-    trace_db = TraceDB(args.out_dir, mutations)
+    trace_db = TraceDB(args.out_dir, data.keys())
     
     if args.sampling_model == 'cell':
         cluster_density = CellSampledDensity()
@@ -40,54 +40,52 @@ def run_dp_model(args):
         
         raise
     
-    sampler.sample(data, trace_db, num_iters=args.num_iters)
+    sampler.sample(data.values(), trace_db, num_iters=args.num_iters)
 
     trace_db.close()
 
-def load_pyclone_data(file_name, sampling_model):
+def load_pyclone_data(file_name, error_rate, sampling_model):
     '''
     Load data from PyClone formatted input file.
     '''
-    data = []
-    mutations = []
+    data = {}
     
     reader = csv.DictReader(open(file_name), delimiter='\t')
 
     for row in reader:
-        mutations.append(row['mutation'])
+        mutation = row['mutation']
         
-        a = int(row['a'])
+        b = int(row['b'])
         
         d = int(row['d'])
         
-        mu_r = [float(x) for x in row['mu_r'].split(',')]
-        mu_v = [float(x) for x in row['mu_v'].split(',')]
+        prior_weights = [float(x) for x in row['prior_weight'].split(',')]
+            
+        log_pi = get_log_mix_weights(prior_weights)
         
-        delta_r = [float(x) for x in row['delta_r'].split(',')]
-        delta_v = [float(x) for x in row['delta_v'].split(',')]
-        
-        log_pi_r = get_log_mix_weights(delta_r)
-        log_pi_v = get_log_mix_weights(delta_v)
+        mu_v = [float(x) for x in row['mu_v'].split(',')]        
         
         if sampling_model == 'fragment':
-            cn_r = [int(x) for x in row['cn_r'].split(',')]
-            cn_v = [int(x) for x in row['cn_v'].split(',')]
+            cn_r = [float(x) for x in row['cn_r'].split(',')]
             
-            data_point = FragmentSampledData(a,
-                                             d,
-                                             tuple(mu_r),
-                                             tuple(mu_v),
-                                             tuple(log_pi_r),
-                                             tuple(log_pi_v),
-                                             tuple(cn_r),
-                                             tuple(cn_v))
+            cn_v = [float(x) for x in row['cn_v'].split(',')]
         
-        else:
-            data_point = CellSampledData(a, d, tuple(mu_r), tuple(mu_v), tuple(log_pi_r), tuple(log_pi_v))
-            
-        data.append(data_point)
+            data[mutation] = FragmentSampledData(b,
+                                                 d,
+                                                 error_rate,
+                                                 tuple(cn_r),
+                                                 tuple(cn_v),
+                                                 tuple(mu_v),
+                                                 tuple(log_pi))
+        
+        elif sampling_model == 'cell':
+            data[mutation] = CellSampledData(b,
+                                             d,
+                                             error_rate,
+                                             tuple(mu_v),
+                                             tuple(log_pi))
 
-    return data, mutations
+    return data
 
 def get_log_mix_weights(delta):
     pi = [x / sum(delta) for x in delta]
