@@ -20,6 +20,8 @@ from pydp.rvs import uniform_rvs
 
 class DirichletProcessSampler(object):
     def __init__(self, cluster_density, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
+        self.cluster_density = cluster_density
+        
         self.base_measure = PyCloneBaseMeasure(tumour_content)
 
         self.partition_sampler = AuxillaryParameterPartitionSampler(self.base_measure, cluster_density)
@@ -88,6 +90,9 @@ class DirichletProcessSampler(object):
             self.partition.add_cell(base_measure.random())
             
             self.partition.add_item(item, item)
+            
+    def _update_tumour_content(self, data):
+        log_pdf = self.cluster_density.log_p
 
 class PyCloneBaseMeasure(BaseMeasure):
     def __init__(self, tumour_content):
