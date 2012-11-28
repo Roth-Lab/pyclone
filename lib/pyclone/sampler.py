@@ -6,9 +6,9 @@ Created on 2011-12-15
 from __future__ import division
 
 from collections import namedtuple
+from math import log
 
 from pydp.base_measures import BaseMeasure
-
 
 from pydp.partition import Partition
 
@@ -17,6 +17,7 @@ from pydp.samplers.concentration import GammaPriorConcentrationSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
 from pydp.rvs import uniform_rvs
+from pydp.utils import log_sum_exp
 
 class DirichletProcessSampler(object):
     def __init__(self, cluster_density, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
@@ -58,14 +59,14 @@ class DirichletProcessSampler(object):
             
             self.partition.add_item(item, item)        
     
-    def sample(self, data, results_db, num_iters, print_freq=100):
+    def sample(self, data, results_db, num_iters, print_freq=1):
         self.initialise_partition(data)
         
         print "Tumour Content :", self.base_measure.tumour_content
         
         for i in range(num_iters):
             if i % print_freq == 0:
-                print self.num_iters, self.partition.number_of_cells, self.alpha
+                print self.num_iters, self.partition.number_of_cells, self.alpha, self.base_measure.tumour_content
             
             self.interactive_sample(data)
             
@@ -82,6 +83,8 @@ class DirichletProcessSampler(object):
         self.partition_sampler.sample(data, self.partition, self.alpha)
         
         self.atom_sampler.sample(data, self.partition)
+        
+        self._update_tumour_content(data)
     
     def _init_partition(self, base_measure):
         self.partition = Partition()
@@ -92,7 +95,9 @@ class DirichletProcessSampler(object):
             self.partition.add_item(item, item)
             
     def _update_tumour_content(self, data):
-        log_pdf = self.cluster_density.log_p
+        log_f = lambda x: sum([self.cluster_density.log_p(data_point, PyCloneParameter(params.phi, x)) for data_point, params in zip(data, self.partition.item_values)])
+        
+        self.base_measure.tumour_content, _ = inverse_sample(log_f, 0, 1, 1000)
 
 class PyCloneBaseMeasure(BaseMeasure):
     def __init__(self, tumour_content):
@@ -105,4 +110,39 @@ class PyCloneBaseMeasure(BaseMeasure):
     
 PyCloneParameter = namedtuple('PyCloneParameter', ['phi', 's'])
     
+def inverse_sample(log_f, a, b, mesh_size=100):
+    u = uniform_rvs(0, 1)
     
+    log_u = log(u)
+
+    step_size = (b - a) / mesh_size
+
+    log_step_size = log(b - a) - log(mesh_size)
+
+    knots = [i * step_size + a for i in range(0, mesh_size + 1)]
+    
+    log_likelihood = [log_f(x) for x in knots]
+    
+    log_riemann_sum = []
+    
+    for y in log_likelihood:
+        log_riemann_sum.append(y + log_step_size)
+    
+    log_norm_const = log_sum_exp(log_riemann_sum)
+    
+    log_cdf = None
+    
+    for x, y in zip(knots, log_likelihood):
+        log_q = y - log_norm_const
+        
+        log_partial_pdf_riemann_sum = log_q + log_step_size
+        
+        if log_cdf is None:
+            log_cdf = log_partial_pdf_riemann_sum
+        else:
+            log_cdf = log_sum_exp([log_cdf, log_partial_pdf_riemann_sum])
+     
+        if log_u < log_cdf:
+            break
+
+    return x, log_q    
