@@ -9,9 +9,9 @@ import csv
 import os
 import shutil
 
-from pyclone.post_process.cluster import cluster_pyclone_trace
 from pyclone.sampler import DirichletProcessSampler, DataPoint
 from pyclone.trace import TraceDB
+
 
 def run_dp_model(args):
     '''
@@ -65,9 +65,28 @@ def load_pyclone_data(file_name, error_rate):
     return data
 
 def cluster_trace(args):
+    from pyclone.post_process.cluster import cluster_pyclone_trace
+    
     pyclone_file = os.path.join(args.trace_dir, 'labels.tsv.bz2')
     
-    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th
-            sample'''.format(in_file=pyclone_file, method=args.method, burnin=args.burnin, thin=args.thin)    
+    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, method=args.method, burnin=args.burnin, thin=args.thin)    
     
     cluster_pyclone_trace(pyclone_file, args.out_file, args.method, args.burnin, args.thin)
+
+def plot_cellular_frequencies(args):
+    import pyclone.post_process.plot as plot
+    
+    pyclone_file = os.path.join(args.trace_dir, 'cellular_frequencies.tsv.bz2')
+    
+    print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
+    
+    plot.plot_cellular_frequencies(pyclone_file, args.out_file, args.burnin, args.thin) 
+    
+def plot_similarity_matrix(args):
+    import pyclone.post_process.plot as plot
+    
+    pyclone_file = os.path.join(args.trace_dir, 'labels.tsv.bz2')
+    
+    print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
+    
+    plot.plot_similarity_matrix(pyclone_file, args.out_file, args.burnin, args.thin) 

@@ -6,7 +6,7 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import cluster_trace, run_dp_model
+from pyclone.run import cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
@@ -59,8 +59,8 @@ cluster_parser.add_argument('trace_dir',
 cluster_parser.add_argument('out_file',
                             help='Path to file where clustering results will be written.')
 
-cluster_parser.add_argument('--method', default='mpear', 
-                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear', 
+cluster_parser.add_argument('--method', default='mpear',
+                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
                                     'single_linkage', 'spectral_clustering'],
                             help='''Method used to cluster the PyClone trace file. Default is mpear.''')
 
@@ -72,6 +72,46 @@ cluster_parser.add_argument('--thin', default=1, type=int,
                             after burning will be used for inference. Default is 1.''')
 
 cluster_parser.set_defaults(func=cluster_trace)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+plot_cf_parser = subparsers.add_parser('plot_cellular_frequencies',
+                                       help='''Plot the posterior densities of the cellular frequencies of the mutations
+                                       from a PyClone analysis.''')
+
+plot_cf_parser.add_argument('trace_dir',
+                            help='Path to directory where the PyClone analysis trace was written.')
+
+plot_cf_parser.add_argument('out_file',
+                            help='Path to file where plot will be saved.')
+
+plot_cf_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
+plot_cf_parser.add_argument('--thin', default=1, type=int,
+                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
+                            after burning will be used for inference. Default is 1.''')
+
+plot_cf_parser.set_defaults(func=plot_cellular_frequencies)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+plot_sm_parser = subparsers.add_parser('plot_similarity_matrix',
+                                       help='''Plot a heat map of the posterior similarity matrix from a PyClone
+                                       analysis.''')
+
+plot_sm_parser.add_argument('trace_dir',
+                            help='Path to directory where the PyClone analysis trace was written.')
+
+plot_sm_parser.add_argument('out_file',
+                            help='Path to file where plot will be saved.')
+
+plot_sm_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
+plot_sm_parser.add_argument('--thin', default=1, type=int,
+                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
+                            after burning will be used for inference. Default is 1.''')
+
+plot_sm_parser.set_defaults(func=plot_similarity_matrix)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 
