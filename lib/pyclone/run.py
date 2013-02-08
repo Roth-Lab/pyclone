@@ -8,10 +8,10 @@ from __future__ import division
 from math import log
 
 import csv
+import numpy as np
 import shutil
 
-from pyclone.densities import FragmentSampledData, CellSampledData, CellSampledDensity, FragmentSampledDensity
-from pyclone.sampler import DirichletProcessSampler
+from pyclone.sampler import DirichletProcessSampler, Data
 from pyclone.trace import TraceDB
 
 def run_dp_model(args):
@@ -22,14 +22,8 @@ def run_dp_model(args):
     
     trace_db = TraceDB(args.out_dir, data.keys())
     
-    if args.sampling_model == 'cell':
-        cluster_density = CellSampledDensity()
-    elif args.sampling_model == 'fragment':
-        cluster_density = FragmentSampledDensity()
-    
     try:
-        sampler = DirichletProcessSampler(cluster_density,
-                                          args.tumour_content,
+        sampler = DirichletProcessSampler(args.tumour_content,
                                           alpha=args.concentration,
                                           alpha_shape=args.concentration_prior_shape,
                                           alpha_rate=args.concentration_prior_rate)
@@ -70,20 +64,7 @@ def load_pyclone_data(file_name, error_rate, sampling_model):
             
             cn_v = [float(x) for x in row['cn_v'].split(',')]
         
-            data[mutation] = FragmentSampledData(b,
-                                                 d,
-                                                 error_rate,
-                                                 tuple(cn_r),
-                                                 tuple(cn_v),
-                                                 tuple(mu_v),
-                                                 tuple(log_pi))
-        
-        elif sampling_model == 'cell':
-            data[mutation] = CellSampledData(b,
-                                             d,
-                                             error_rate,
-                                             tuple(mu_v),
-                                             tuple(log_pi))
+            data[mutation] = Data(b, d, error_rate, np.array(cn_r), np.array(cn_v), np.array(mu_v), np.array(log_pi))
 
     return data
 

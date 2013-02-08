@@ -7,34 +7,27 @@ from __future__ import division
 
 from collections import namedtuple
 from math import log
+from numpy.random import multinomial
+from random import betavariate as beta_rvs, gammavariate as gamma_rvs, shuffle, uniform as uniform_rvs
 
-from pydp.base_measures import BaseMeasure
-
-from pydp.partition import Partition
-
-from pydp.samplers.atom import BaseMeasureAtomSampler
-from pydp.samplers.concentration import GammaPriorConcentrationSampler
-from pydp.samplers.partition import AuxillaryParameterPartitionSampler
-
-from pydp.rvs import uniform_rvs
-from pydp.utils import log_sum_exp
+import numpy as np
 
 class DirichletProcessSampler(object):
-    def __init__(self, cluster_density, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
-        self.cluster_density = cluster_density
+    def __init__(self, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
+        self.cluster_density = Density()
         
-        self.base_measure = PyCloneBaseMeasure(tumour_content)
+        self.base_measure = BaseMeasure(tumour_content)
 
-        self.partition_sampler = AuxillaryParameterPartitionSampler(self.base_measure, cluster_density)
+        self.partition_sampler = PartitionSampler(self.base_measure, self.cluster_density)
         
-        self.atom_sampler = BaseMeasureAtomSampler(self.base_measure, cluster_density)           
+        self.atom_sampler = AtomSampler(self.base_measure, self.cluster_density)           
         
         if alpha is None:
             self.alpha = 1
             
             self.update_alpha = True
             
-            self.concentration_sampler = GammaPriorConcentrationSampler(alpha_shape, alpha_rate)
+            self.concentration_sampler = ConcentrationSampler(alpha_shape, alpha_rate)
         else:
             self.alpha = alpha
             
@@ -59,7 +52,7 @@ class DirichletProcessSampler(object):
             
             self.partition.add_item(item, item)        
     
-    def sample(self, data, results_db, num_iters, print_freq=1):
+    def sample(self, data, results_db, num_iters, print_freq=100):
         self.initialise_partition(data)
         
         print "Tumour Content :", self.base_measure.tumour_content
@@ -83,8 +76,6 @@ class DirichletProcessSampler(object):
         self.partition_sampler.sample(data, self.partition, self.alpha)
         
         self.atom_sampler.sample(data, self.partition)
-        
-        self._update_tumour_content(data)
     
     def _init_partition(self, base_measure):
         self.partition = Partition()
@@ -93,56 +84,337 @@ class DirichletProcessSampler(object):
             self.partition.add_cell(base_measure.random())
             
             self.partition.add_item(item, item)
-            
-    def _update_tumour_content(self, data):
-        log_f = lambda x: sum([self.cluster_density.log_p(data_point, PyCloneParameter(params.phi, x)) for data_point, params in zip(data, self.partition.item_values)])
         
-        self.base_measure.tumour_content, _ = inverse_sample(log_f, 0, 1, 1000)
+#=======================================================================================================================
+# DP Samplers
+#=======================================================================================================================
+class AtomSampler(object):
+    '''
+    Update the atom values using a Metropolis-Hastings steps with the base measure as a proposal density.
+    '''
+    def __init__(self, base_measure, cluster_density):
+        self.base_measure = base_measure
+        
+        self.cluster_density = cluster_density
+        
+        self.proposal_func = BaseMeasureProposalFunction(base_measure)
+        
+    def sample(self, data, partition):
+        for cell in partition.cells:
+            old_param = cell.value
+            new_param = self.proposal_func.random(old_param)            
 
-class PyCloneBaseMeasure(BaseMeasure):
+            old_ll = 0
+            new_ll = 0
+
+            for j in cell.items:
+                old_ll += self.cluster_density.log_p(data[j], old_param)
+                new_ll += self.cluster_density.log_p(data[j], new_param)
+            
+            log_numerator = new_ll + self.proposal_func.log_p(old_param, new_param)
+            log_denominator = old_ll + self.proposal_func.log_p(new_param, old_param)
+            
+            log_ratio = log_numerator - log_denominator
+            
+            u = uniform_rvs(0, 1)
+            
+            if log_ratio >= log(u):
+                cell.value = new_param
+                
+class ConcentrationSampler(object):
+    '''
+    Sampler for updating concentration parameter. Uses Gibbs update assuming a gamma prior on the concentration
+    parameter.
+    '''
+    def __init__(self, a, b):
+        '''
+        Args :
+            a : (float) Location parameter of the gamma prior.
+            b : (float) Scale parameter of the gamma prior.
+        '''
+        self.a = a
+        self.b = b
+    
+    def sample(self, old_value, num_clusters, num_data_points):
+        a = self.a
+        b = self.b
+        
+        k = num_clusters
+        n = num_data_points
+        
+        eta = beta_rvs(old_value + 1, n)
+    
+        x = (a + k - 1) / (n * (b - log(eta)))
+        
+        pi = x / (1 + x)
+    
+        label = discrete_rvs([pi, 1 - pi])
+        
+        scale = 1 / (b - log(eta))
+                
+        if label == 0:
+            new_value = gamma_rvs(a + k, scale)
+        else:
+            new_value = gamma_rvs(a + k - 1, scale)
+        
+        return new_value                
+
+class PartitionSampler(object):
+    '''
+    Sampler for updating parition of the data. Uses algorithm 8 of Neal "Sampling Methods For Dirichlet Process Mixture
+    Models".
+    '''
+    
+    def __init__(self, base_measure, cluster_density):
+        self.base_measure = base_measure
+        
+        self.cluster_density = cluster_density
+    
+    def sample(self, data, partition, alpha, m=2):
+        '''
+        Sample a new partition. 
+        '''
+        items = range(len(data))
+        
+        shuffle(items)
+        
+        for item in items:
+            data_point = data[item]
+            
+            old_cell_index = partition.labels[item]
+            
+            partition.remove_item(item, old_cell_index)
+            
+            if partition.counts[old_cell_index] == 0:
+                num_new_tables = m - 1
+            else:
+                num_new_tables = m
+            
+            for _ in range(num_new_tables):
+                partition.add_cell(self.base_measure.random())
+            
+            log_p = np.zeros(len(partition))
+            
+            for i, cell in enumerate(partition.cells):
+                cluster_log_p = self.cluster_density.log_p(data_point, cell.value)
+                
+                counts = cell.size
+                
+                if counts == 0:
+                    counts = alpha / m
+                
+                log_p[i] = log(counts) + cluster_log_p
+    
+            log_p = log_space_normalise(log_p)
+            
+            p = np.exp(log_p)
+            
+            if p.sum() < 0.9999:
+                print p.sum()
+            
+            p = p / p.sum()
+            
+            new_cell_index = discrete_rvs(p)
+            
+            partition.add_item(item, new_cell_index)
+            
+            partition.remove_empty_cells()
+
+#=======================================================================================================================
+# Auxillary DP classes
+#=======================================================================================================================
+Parameter = namedtuple('Parameter', ['phi', 's'])
+
+Data = namedtuple('Data',
+                  ['b', 'd', 'eps', 'cn_r', 'cn_v', 'mu_v', 'log_pi'])
+
+class BaseMeasure(object):
+    '''
+    Class to sampler from the PyClone base measure.
+    '''
     def __init__(self, tumour_content):
         self.tumour_content = tumour_content
         
     def random(self):
         phi = uniform_rvs(0, 1)
         
-        return PyCloneParameter(phi, self.tumour_content)
+        return Parameter(phi, self.tumour_content)
     
-PyCloneParameter = namedtuple('PyCloneParameter', ['phi', 's'])
-    
-def inverse_sample(log_f, a, b, mesh_size=100):
-    u = uniform_rvs(0, 1)
-    
-    log_u = log(u)
-
-    step_size = (b - a) / mesh_size
-
-    log_step_size = log(b - a) - log(mesh_size)
-
-    knots = [i * step_size + a for i in range(0, mesh_size + 1)]
-    
-    log_likelihood = [log_f(x) for x in knots]
-    
-    log_riemann_sum = []
-    
-    for y in log_likelihood:
-        log_riemann_sum.append(y + log_step_size)
-    
-    log_norm_const = log_sum_exp(log_riemann_sum)
-    
-    log_cdf = None
-    
-    for x, y in zip(knots, log_likelihood):
-        log_q = y - log_norm_const
+class BaseMeasureProposalFunction(object):
+    '''
+    Proposal function for atom sampler which draw values from a base measure.
+    '''
+    def __init__(self, base_measure):
+        self.base_measure = base_measure
         
-        log_partial_pdf_riemann_sum = log_q + log_step_size
+    def log_p(self, data, params):
+        return 0
+    
+    def random(self, params):
+        return self.base_measure.random()
+    
+class Density(object):
+    def log_p(self, data, params):
+        b = data.b
+        d = data.d
         
-        if log_cdf is None:
-            log_cdf = log_partial_pdf_riemann_sum
+        phi = params.phi
+        s = params.s
+        
+        cn_n = 2        
+        cn_r = data.cn_r
+        cn_v = data.cn_v
+        
+        mu_n = data.eps
+        mu_r = data.eps
+        mu_v = data.mu_v
+        
+        p_n = (1 - s) * cn_n
+        p_r = s * (1 - phi) * cn_r
+        p_v = s * phi * cn_v
+        
+        norm_const = p_n + p_r + p_v
+        
+        p_n = p_n / norm_const
+        p_r = p_r / norm_const
+        p_v = p_v / norm_const
+        
+        mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
+        
+        ll = log_binomial_likelihood(b, d, mu)
+        
+        return log_sum_exp(ll)
+
+#=======================================================================================================================
+# Partition Data Structure
+#=======================================================================================================================
+class Partition(object):
+    def __init__(self):
+        self.cells = []
+    
+    def __len__(self):
+        return len(self.cells)
+    
+    @property
+    def cell_values(self):
+        return [cell.value for cell in self.cells]
+    
+    @property
+    def counts(self):
+        return [cell.size for cell in self.cells]
+    
+    @property
+    def item_values(self):
+        cell_values = self.cell_values
+        labels = self.labels
+        
+        return [cell_values[i] for i in labels]
+    
+    @property
+    def labels(self):
+        labels = [None] * self.number_of_items
+        
+        for cell_index, cell in enumerate(self.cells):
+            for item in cell.items:
+                labels[item] = cell_index
+        
+        return labels
+    
+    @property
+    def number_of_cells(self):
+        return len(self.cells)
+    
+    @property
+    def number_of_items(self):
+        return sum(self.counts)
+        
+    def add_cell(self, value):
+        self.cells.append(PartitionCell(value))
+    
+    def add_item(self, item, cell_index):
+        self.cells[cell_index].add_item(item)
+        
+    def get_cell_by_value(self, value):
+        for cell in self.cells:
+            if cell.value == value:
+                return cell
+    
+    def remove_item(self, item, cell_index):
+        self.cells[cell_index].remove_item(item)
+        
+    def remove_empty_cells(self):
+        for cell in self.cells[:]:
+            if cell.empty:
+                self.cells.remove(cell)
+
+    def copy(self):
+        partition = Partition()
+    
+        for cell_index, cell in enumerate(self.cells):
+            partition.add_cell(cell.value)
+        
+            for item in cell.items:
+                partition.add_item(item, cell_index)
+        
+        return partition
+
+class PartitionCell(object):
+    def __init__(self, value):
+        self.value = value
+        
+        self._items = []
+    
+    @property
+    def empty(self):
+        if self.size == 0:
+            return True
         else:
-            log_cdf = log_sum_exp([log_cdf, log_partial_pdf_riemann_sum])
-     
-        if log_u < log_cdf:
-            break
+            return False
+    
+    @property
+    def items(self):
+        return self._items[:]
+    
+    @property
+    def size(self):
+        return len(self._items)
+    
+    def add_item(self, item):
+        self._items.append(item)
+    
+    def remove_item(self, item):
+        self._items.remove(item)
+    
+    def __contains__(self, x):
+        if x in self._items:
+            return True
+        else:
+            return False
 
-    return x, log_q    
+#=======================================================================================================================
+# Utility functions
+#=======================================================================================================================
+def discrete_rvs(p):
+    '''
+    Return a discrete random variable.
+    
+    Args:
+        p : An iterable containing the probabilites for each class.
+        
+    Returns:
+        x : (int) The index of the class drawn.
+    '''
+    x = multinomial(1, p)
+    
+    return x.argmax()
+
+def log_binomial_likelihood(x, n, p):
+    return x * np.log(p) + (n - x) * np.log(1 - p)
+
+def log_space_normalise(x):
+    log_norm_const = log_sum_exp(x)
+    
+    return x - log_norm_const
+
+def log_sum_exp(x):
+    return np.logaddexp.reduce(x)
