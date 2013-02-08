@@ -5,8 +5,6 @@ Created on 2012-02-08
 '''
 from __future__ import division
 
-from math import log
-
 import csv
 import shutil
 
