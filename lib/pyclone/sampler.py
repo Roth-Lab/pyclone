@@ -6,7 +6,7 @@ Created on 2011-12-15
 from __future__ import division
 
 from collections import OrderedDict, namedtuple
-from math import log
+from math import log, lgamma as log_gamma
 from numpy.random import multinomial
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, shuffle, uniform as uniform_rvs
 
@@ -258,6 +258,8 @@ class DataPoint(object):
         
         self.log_pi = self._get_log_pi(weights)
         
+        self.log_norm_const = log_binomial_coefficient(d, b)
+        
         self.cache = OrderedDict()
         
         self.max_cache_size = 10000
@@ -298,7 +300,7 @@ class DataPoint(object):
         
         mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
         
-        ll = log_binomial_likelihood(b, d, mu)
+        ll = log_binomial_likelihood(b, d, mu) - self.log_norm_const
         
         return log_sum_exp(ll)
     
@@ -434,6 +436,12 @@ def discrete_rvs(p):
 
 def log_binomial_likelihood(x, n, p):
     return x * np.log(p) + (n - x) * np.log(1 - p)
+
+def log_binomial_coefficient(n, x):
+    return log_factorial(n) - log_factorial(n - x) - log_factorial(x)
+
+def log_factorial(n):
+    return log_gamma(n + 1)
 
 def log_space_normalise(x):
     log_norm_const = log_sum_exp(x)
