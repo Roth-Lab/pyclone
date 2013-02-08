@@ -20,7 +20,7 @@ except:
 
 from pyclone.post_process.utils import load_cluster_labels_trace
 
-def cluster_pyclone_trace(pyclone_file, cluster_file, method, burnin, thin):
+def cluster_pyclone_trace(pyclone_file, cluster_file, method, burnin, thin):    
     trace = load_cluster_labels_trace(pyclone_file, burnin, thin)
     
     X = trace.values()
@@ -61,8 +61,7 @@ def cluster_with_affinity_propogation(X):
     try:
         import sklearn.cluster as cluster
     except:
-        raise Exception('''Clustering with affinity propogation requires the scikit-learn package. See http://scikit-
-                        learn.org/stable/.''')
+        raise Exception('''Clustering with affinity propogation requires the scikit-learn package. See http://scikit-learn.org/stable/.''')
     
     X = np.array(X)
     
@@ -82,8 +81,7 @@ def cluster_with_dbscan(X):
     try:
         import sklearn.cluster as cluster
     except:
-        raise Exception('''Clustering with DBSCAN requires the scikit-learn package. See http://scikit-
-        learn.org/stable/.''')
+        raise Exception('''Clustering with DBSCAN requires the scikit-learn package. See http://scikit-learn.org/stable/.''')
         
     X = np.array(X)
     
@@ -118,8 +116,7 @@ def cluster_with_dynamic_tree_cut(X):
         from rpy2.robjects.packages import importr    
         from rpy2.robjects.numpy2ri import numpy2ri
     except:
-        raise Exception('''Clustering with dynamic tree cut requires rpy2 package. See
-                        http://rpy.sourceforge.net/rpy2.html.''')
+        raise Exception('''Clustering with dynamic tree cut requires rpy2 package. See http://rpy.sourceforge.net/rpy2.html.''')
     
     robjects.conversion.py2ri = numpy2ri
 
@@ -156,8 +153,7 @@ def cluster_with_spectral_clustering(X):
     try:
         import sklearn.cluster as cluster
     except:
-        raise Exception('''Clustering with spectral clustering requires the scikit-learn package. See http://scikit-
-                        learn.org/stable/.''')
+        raise Exception('''Clustering with spectral clustering requires the scikit-learn package. See http://scikit-learn.org/stable/.''')
             
     X = np.array(X)
     

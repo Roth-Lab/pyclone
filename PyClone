@@ -6,11 +6,11 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import run_dp_model
+from pyclone.run import cluster_trace, run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.9.0')
+parser.add_argument('--version', action='version', version='PyClone-0.10.0')
 
 subparsers = parser.add_subparsers()
 
@@ -21,7 +21,7 @@ analyse_parser.add_argument('in_file',
                             help='Path to tab separated input file. See examples for format.')
 
 analyse_parser.add_argument('out_dir',
-                            help='Path where trace file for MCMC sampler will be written.')
+                            help='Path where trace files for MCMC sampler will be written.')
 
 analyse_parser.add_argument('--num_iters', default=10000, type=int,
                             help='''How many iterations of the MCMC chain will run. Default 10,000.''')
@@ -47,6 +47,33 @@ analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
 
 analyse_parser.add_argument('--error_rate', default=1e-3, type=float,
                             help='''Error rate of sequencing. Default 1e-3.''')
+
+analyse_parser.set_defaults(func=run_dp_model)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
+
+cluster_parser.add_argument('trace_dir',
+                            help='Path to directory where the PyClone analysis trace was written.')
+
+cluster_parser.add_argument('out_file',
+                            help='Path to file where clustering results will be written.')
+
+cluster_parser.add_argument('--method', default='mpear', 
+                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear', 
+                                    'single_linkage', 'spectral_clustering'],
+                            help='''Method used to cluster the PyClone trace file. Default is mpear.''')
+
+cluster_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
+cluster_parser.add_argument('--thin', default=1, type=int,
+                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
+                            after burning will be used for inference. Default is 1.''')
+
+cluster_parser.set_defaults(func=cluster_trace)
+
+#---------------------------------------------------------------------------------------------------------------------- 
 
 analyse_parser.set_defaults(func=run_dp_model)
 

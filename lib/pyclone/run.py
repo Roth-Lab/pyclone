@@ -6,8 +6,10 @@ Created on 2012-02-08
 from __future__ import division
 
 import csv
+import os
 import shutil
 
+from pyclone.post_process.cluster import cluster_pyclone_trace
 from pyclone.sampler import DirichletProcessSampler, DataPoint
 from pyclone.trace import TraceDB
 
@@ -61,3 +63,11 @@ def load_pyclone_data(file_name, error_rate):
         data[mutation] = DataPoint(b, d, error_rate, cn_r, cn_v, mu_v, weights)
 
     return data
+
+def cluster_trace(args):
+    pyclone_file = os.path.join(args.trace_dir, 'labels.tsv.bz2')
+    
+    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th
+            sample'''.format(in_file=pyclone_file, method=args.method, burnin=args.burnin, thin=args.thin)    
+    
+    cluster_pyclone_trace(pyclone_file, args.out_file, args.method, args.burnin, args.thin)
