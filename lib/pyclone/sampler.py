@@ -5,7 +5,7 @@ Created on 2011-12-15
 '''
 from __future__ import division
 
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 from math import log
 from numpy.random import multinomial
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, shuffle, uniform as uniform_rvs
@@ -14,13 +14,11 @@ import numpy as np
 
 class DirichletProcessSampler(object):
     def __init__(self, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
-        self.cluster_density = Density()
-        
         self.base_measure = BaseMeasure(tumour_content)
 
-        self.partition_sampler = PartitionSampler(self.base_measure, self.cluster_density)
+        self.partition_sampler = PartitionSampler(self.base_measure)
         
-        self.atom_sampler = AtomSampler(self.base_measure, self.cluster_density)           
+        self.atom_sampler = AtomSampler(self.base_measure)           
         
         if alpha is None:
             self.alpha = 1
@@ -92,10 +90,8 @@ class AtomSampler(object):
     '''
     Update the atom values using a Metropolis-Hastings steps with the base measure as a proposal density.
     '''
-    def __init__(self, base_measure, cluster_density):
+    def __init__(self, base_measure):
         self.base_measure = base_measure
-        
-        self.cluster_density = cluster_density
         
         self.proposal_func = BaseMeasureProposalFunction(base_measure)
         
@@ -108,8 +104,8 @@ class AtomSampler(object):
             new_ll = 0
 
             for j in cell.items:
-                old_ll += self.cluster_density.log_p(data[j], old_param)
-                new_ll += self.cluster_density.log_p(data[j], new_param)
+                old_ll += data[j].log_p(old_param)
+                new_ll += data[j].log_p(new_param)
             
             log_numerator = new_ll + self.proposal_func.log_p(old_param, new_param)
             log_denominator = old_ll + self.proposal_func.log_p(new_param, old_param)
@@ -165,10 +161,8 @@ class PartitionSampler(object):
     Models".
     '''
     
-    def __init__(self, base_measure, cluster_density):
+    def __init__(self, base_measure):
         self.base_measure = base_measure
-        
-        self.cluster_density = cluster_density
     
     def sample(self, data, partition, alpha, m=2):
         '''
@@ -196,7 +190,7 @@ class PartitionSampler(object):
             log_p = np.zeros(len(partition))
             
             for i, cell in enumerate(partition.cells):
-                cluster_log_p = self.cluster_density.log_p(data_point, cell.value)
+                cluster_log_p = data_point.log_p(cell.value)
                 
                 counts = cell.size
                 
@@ -225,9 +219,6 @@ class PartitionSampler(object):
 #=======================================================================================================================
 Parameter = namedtuple('Parameter', ['phi', 's'])
 
-Data = namedtuple('Data',
-                  ['b', 'd', 'eps', 'cn_r', 'cn_v', 'mu_v', 'log_pi'])
-
 class BaseMeasure(object):
     '''
     Class to sampler from the PyClone base measure.
@@ -253,21 +244,47 @@ class BaseMeasureProposalFunction(object):
     def random(self, params):
         return self.base_measure.random()
     
-class Density(object):
-    def log_p(self, data, params):
-        b = data.b
-        d = data.d
+class DataPoint(object):
+    def __init__(self, b, d, eps, cn_r, cn_v, mu_v, weights):
+        self.b = b
+        self.d = d
         
+        self.eps = eps
+        
+        self.cn_r = np.array(cn_r)
+        self.cn_v = np.array(cn_v)
+        
+        self.mu_v = np.array(mu_v)
+        
+        self.log_pi = self._get_log_pi(weights)
+        
+        self.cache = OrderedDict()
+        
+        self.max_cache_size = 10000
+    
+    def log_p(self, params):
+        if params not in self.cache:
+            self.cache[params] = self._compute_log_(params)
+            
+            if len(self.cache) > self.max_cache_size:
+                self.cache.popitem(last=False)
+        
+        return self.cache[params]
+        
+    def _compute_log_(self, params):
         phi = params.phi
         s = params.s
         
+        b = self.b
+        d = self.d
+
         cn_n = 2        
-        cn_r = data.cn_r
-        cn_v = data.cn_v
+        cn_r = self.cn_r
+        cn_v = self.cn_v
         
-        mu_n = data.eps
-        mu_r = data.eps
-        mu_v = data.mu_v
+        mu_n = self.eps
+        mu_r = self.eps
+        mu_v = self.mu_v
         
         p_n = (1 - s) * cn_n
         p_r = s * (1 - phi) * cn_r
@@ -284,6 +301,13 @@ class Density(object):
         ll = log_binomial_likelihood(b, d, mu)
         
         return log_sum_exp(ll)
+    
+    def _get_log_pi(self, weights):
+        weights = np.array(weights)
+        
+        pi = weights / weights.sum()
+        
+        return np.log(pi)  
 
 #=======================================================================================================================
 # Partition Data Structure

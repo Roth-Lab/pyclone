@@ -8,10 +8,9 @@ from __future__ import division
 from math import log
 
 import csv
-import numpy as np
 import shutil
 
-from pyclone.sampler import DirichletProcessSampler, Data
+from pyclone.sampler import DirichletProcessSampler, DataPoint
 from pyclone.trace import TraceDB
 
 def run_dp_model(args):
@@ -53,22 +52,14 @@ def load_pyclone_data(file_name, error_rate, sampling_model):
         
         d = int(row['d'])
         
-        prior_weights = [float(x) for x in row['prior_weight'].split(',')]
-            
-        log_pi = get_log_mix_weights(prior_weights)
+        weights = [float(x) for x in row['prior_weight'].split(',')]
         
         mu_v = [float(x) for x in row['mu_v'].split(',')]        
         
-        if sampling_model == 'fragment':
-            cn_r = [float(x) for x in row['cn_r'].split(',')]
-            
-            cn_v = [float(x) for x in row['cn_v'].split(',')]
+        cn_r = [float(x) for x in row['cn_r'].split(',')]
         
-            data[mutation] = Data(b, d, error_rate, np.array(cn_r), np.array(cn_v), np.array(mu_v), np.array(log_pi))
+        cn_v = [float(x) for x in row['cn_v'].split(',')]
+    
+        data[mutation] = DataPoint(b, d, error_rate, cn_r, cn_v, mu_v, weights)
 
     return data
-
-def get_log_mix_weights(delta):
-    pi = [x / sum(delta) for x in delta]
-    
-    return [log(x) for x in pi]
