@@ -17,7 +17,7 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data = load_pyclone_data(args.in_file, args.error_rate, args.sampling_model)
+    data = load_pyclone_data(args.in_file, args.error_rate)
     
     trace_db = TraceDB(args.out_dir, data.keys())
     
@@ -33,11 +33,11 @@ def run_dp_model(args):
         
         raise
     
-    sampler.sample(data.values(), trace_db, num_iters=args.num_iters)
+    sampler.sample(data.values(), trace_db, num_iters=args.num_iters, seed=args.seed)
 
     trace_db.close()
 
-def load_pyclone_data(file_name, error_rate, sampling_model):
+def load_pyclone_data(file_name, error_rate):
     '''
     Load data from PyClone formatted input file.
     '''

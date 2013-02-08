@@ -11,6 +11,7 @@ from numpy.random import multinomial
 from random import betavariate as beta_rvs, gammavariate as gamma_rvs, shuffle, uniform as uniform_rvs
 
 import numpy as np
+import random
 
 class DirichletProcessSampler(object):
     def __init__(self, tumour_content, alpha=None, alpha_shape=None, alpha_rate=None):
@@ -50,7 +51,11 @@ class DirichletProcessSampler(object):
             
             self.partition.add_item(item, item)        
     
-    def sample(self, data, results_db, num_iters, print_freq=100):
+    def sample(self, data, results_db, num_iters, print_freq=100, seed=None):
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+        
         self.initialise_partition(data)
         
         print "Tumour Content :", self.base_measure.tumour_content

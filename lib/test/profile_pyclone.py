@@ -42,7 +42,7 @@ def main():
     
     sampler = DirichletProcessSampler(tumour_content, None, alpha_shape, alpha_rate)
     
-    sampler.sample(data_points.values(), results_db, num_iters, 100)
+    sampler.sample(data_points.values(), results_db, num_iters, 100, seed=1)
     
     shutil.rmtree(out_dir)
 
