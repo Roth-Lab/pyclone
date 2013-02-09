@@ -6,7 +6,7 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, run_dp_model
+from pyclone.run import build_prior_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
@@ -49,6 +49,34 @@ analyse_parser.add_argument('--error_rate', default=1e-3, type=float,
                             help='''Error rate of sequencing. Default 1e-3.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+build_prior_parser = subparsers.add_parser('build_prior', help='''Build an input file for PyClone analysis.''')
+
+build_prior_parser.add_argument('in_file',
+                                help='Path to tab separated input file. See examples for format.')
+
+build_prior_parser.add_argument('out_file',
+                                help='Path where PyClone formatted input file will be written.')
+
+build_prior_parser.add_argument('--error_rate', default=1e-3, type=float,
+                                help='''Estimated sequencing error rate. This should match the value used in subsequent
+                                PyClone analysis. Default 1e-3.''')
+
+build_prior_parser.add_argument('--cn_r', choices=['normal', 'variant', 'vague'], default='vague',
+                                help='''Method for setting the copy number of the reference population. "normal" sets it
+                                to 2 (copy number of normal). "variant" sets it to the value of "cn" in the input file
+                                row (copy number of the variant population). "vague" considers both options with equal
+                                prior weight. Default vague.''')
+
+build_prior_parser.add_argument('--mu_v', choices=['single', 'all', 'vague'], default='vague',
+                                help='''Method used to set mu_v parameter which is determined by the assume genotype of
+                                the variant population. "single" assumes the variant population has the genotype with
+                                one variant allele. "all" assumes the variant population has the genotype with all
+                                variant alleles. "vague" considers all genotypes compatible with the predicted copy
+                                number assigning equal weights. Default is vague.''')
+
+build_prior_parser.set_defaults(func=build_prior_file)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
