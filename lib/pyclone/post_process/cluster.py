@@ -111,12 +111,14 @@ def cluster_with_dbscan(X):
 
 def cluster_with_dynamic_tree_cut(X):
     try:         
-        import rpy2.robjects as robjects
-        
-        from rpy2.robjects.packages import importr    
-        from rpy2.robjects.numpy2ri import numpy2ri
+        import rpy2
     except:
         raise Exception('''Clustering with dynamic tree cut requires rpy2 package. See http://rpy.sourceforge.net/rpy2.html.''')
+    
+    import rpy2.robjects as robjects
+        
+    from rpy2.robjects.packages import importr    
+    from rpy2.robjects.numpy2ri import numpy2ri
     
     robjects.conversion.py2ri = numpy2ri
 
