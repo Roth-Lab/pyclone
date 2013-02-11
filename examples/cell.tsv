@@ -1,4 +1,0 @@
-mutation	b	d	mu_v	prior_weight
-mutation_1	1000	10000	0.5	10
-mutation_2	500	1000	0.001, 0.5	100,10
-mutation_3	5000	10000	0.001	1
