@@ -1,0 +1,4 @@
+mutation	b	d	cn_r	cn_v	mu_v	prior_weight
+mutation_1	1000	10000	3	3	0.5	1
+mutation_2	500	1000	2, 2	2,3	0.001, 0.5	1,1
+mutation_3	5000	10000	2	2	0.001	1
