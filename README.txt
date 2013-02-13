@@ -13,6 +13,7 @@ The following packages are required to perform a basic analysis with PyClone.
 
 * [numpy 1.6.2](http://www.numpy.org)
 
+* [PyYAML 3.10](http://pyyaml.org)
 
 ### Optional
 
