@@ -3,6 +3,8 @@ Created on 2013-02-12
 
 @author: Andrew Roth
 '''
+from __future__ import division
+
 class Mutation(object):
     def __init__(self, mutation_id, ref_counts, var_counts):
         self.id = mutation_id
@@ -36,10 +38,10 @@ class Mutation(object):
         return [x.get_mu_n(error_rate) for x in self.states]
     
     def get_mu_r(self, error_rate):
-        return [x.get_mu_n(error_rate) for x in self.states]
+        return [x.get_mu_r(error_rate) for x in self.states]
     
     def get_mu_v(self, error_rate):
-        return [x.get_mu_n(error_rate) for x in self.states]        
+        return [x.get_mu_v(error_rate) for x in self.states]        
     
     def to_dict(self):
         return {

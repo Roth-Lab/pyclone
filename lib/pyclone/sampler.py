@@ -250,7 +250,7 @@ class BaseMeasureProposalFunction(object):
         return self.base_measure.random()
     
 class DataPoint(object):
-    def __init__(self, a, b, cn_n, cn_r, cn_v, mu_n, mu_v, mu_r, prior_weights):
+    def __init__(self, a, b, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, prior_weights):
         self.a = a
         self.b = b
         

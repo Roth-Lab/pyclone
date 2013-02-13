@@ -118,7 +118,7 @@ def build_prior_file(args):
         
         cn_v = int(row['cn_v'])
 
-        states = _get_states(cn_n, cn_v, args.g_r, args.g_v)
+        states = _get_states(cn_n, cn_v, args.cn_r, args.g_v)
         
         for state in states:
             mutation.add_state(state)
@@ -131,7 +131,7 @@ def build_prior_file(args):
     
     fh.close()
 
-def _get_states(cn_n, cn_v, g_r_method, g_v_method):
+def _get_states(cn_n, cn_v, cn_r_method, g_v_method):
     states = []
     
     g_v = []
@@ -148,13 +148,13 @@ def _get_states(cn_n, cn_v, g_r_method, g_v_method):
             
     g_n = ["A" * cn_n for _ in g_v]
     
-    if g_r_method == 'normal':
+    if cn_r_method == 'normal':
         g_r = ["A" * cn_n for _ in g_v]
     
-    elif g_r_method == "variant":
+    elif cn_r_method == "variant":
         g_r = ["A" * cn_v for _ in g_v]
     
-    elif g_r_method == "vague":
+    elif cn_r_method == "vague":
         if cn_n == cn_v:
             g_r = ["A" * cn_n for _ in g_v]
         else:            
