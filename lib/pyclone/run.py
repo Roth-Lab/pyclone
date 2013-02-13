@@ -8,6 +8,7 @@ from __future__ import division
 import csv
 import os
 import shutil
+import yaml
 
 from pyclone.sampler import DirichletProcessSampler, DataPoint
 from pyclone.trace import TraceDB
@@ -16,7 +17,7 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data = load_pyclone_data(args.in_file, args.error_rate)
+    data = load_pyclone_data(args.in_file)
     
     trace_db = TraceDB(args.out_dir, data.keys())
     
@@ -36,32 +37,76 @@ def run_dp_model(args):
 
     trace_db.close()
 
-def load_pyclone_data(file_name, error_rate):
+def load_pyclone_data(file_name):
     '''
     Load data from PyClone formatted input file.
     '''
     data = {}
     
-    reader = csv.DictReader(open(file_name), delimiter='\t')
-
-    for row in reader:
-        mutation = row['mutation']
-        
-        b = int(row['b'])
-        
-        d = int(row['d'])
-        
-        weights = [float(x) for x in row['prior_weight'].split(',')]
-        
-        mu_v = [float(x) for x in row['mu_v'].split(',')]        
-        
-        cn_r = [float(x) for x in row['cn_r'].split(',')]
-        
-        cn_v = [float(x) for x in row['cn_v'].split(',')]
+    fh = open(file_name)
     
-        data[mutation] = DataPoint(b, d, error_rate, cn_r, cn_v, mu_v, weights)
+    config = yaml.load(fh)
+    
+    fh.close()
+    
+    error_rate = config['error_rate']
+
+    for mutation in config['mutations']:
+        mutation_id = mutation['id']
+        
+        a = mutation['ref_counts']
+        b = mutation['var_counts']
+
+        cn_n = []
+        cn_r = []
+        cn_v = []
+        
+        mu_n = []
+        mu_r = []
+        mu_v = []
+        
+        prior_weights = []
+
+        for state in mutation['states']:
+            g_n = state['g_n']
+            g_r = state['g_r']
+            g_v = state['g_v']
+            
+            cn_n.append(_get_copy_number(g_n))
+            cn_r.append(_get_copy_number(g_r))
+            cn_v.append(_get_copy_number(g_v))
+            
+            mu_n.append(_get_variant_allele_probability(g_n, error_rate))
+            mu_v.append(_get_variant_allele_probability(g_r, error_rate))
+            mu_r.append(_get_variant_allele_probability(g_v, error_rate))
+            
+            prior_weights.append(state['prior_weight'])
+
+        data[mutation_id] = DataPoint(a, b, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, prior_weights)
 
     return data
+
+def _get_copy_number(genotype):
+    return len(genotype)
+
+def _get_variant_allele_probability(genotype, error_rate):
+    if genotype is None:
+        return error_rate
+    
+    num_ref_alleles = genotype.count("A")
+    num_var_alleles = genotype.count("B")
+    
+    cn = len(genotype)
+    
+    if cn != num_ref_alleles + num_var_alleles:
+        raise Exception("{0} is not a valid genotype. Only A or B are allowed as alleles.")
+    
+    if num_ref_alleles == 0:
+        return 1 - error_rate
+    elif num_var_alleles == 0:
+        return error_rate
+    else:
+        return num_var_alleles / cn
 
 def cluster_trace(args):
     from pyclone.post_process.cluster import cluster_pyclone_trace

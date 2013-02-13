@@ -250,20 +250,23 @@ class BaseMeasureProposalFunction(object):
         return self.base_measure.random()
     
 class DataPoint(object):
-    def __init__(self, b, d, eps, cn_r, cn_v, mu_v, weights):
+    def __init__(self, a, b, cn_n, cn_r, cn_v, mu_n, mu_v, mu_r, prior_weights):
+        self.a = a
         self.b = b
-        self.d = d
         
-        self.eps = eps
+        self.d = a + b
         
+        self.cn_n = np.array(cn_n)
         self.cn_r = np.array(cn_r)
         self.cn_v = np.array(cn_v)
         
+        self.mu_n = np.array(mu_n)
+        self.mu_r = np.array(mu_r)
         self.mu_v = np.array(mu_v)
         
-        self.log_pi = self._get_log_pi(weights)
+        self.log_pi = self._get_log_pi(prior_weights)
         
-        self.log_norm_const = log_binomial_coefficient(d, b)
+        self.log_norm_const = log_binomial_coefficient(self.d, self.b)
         
         self.cache = OrderedDict()
         
@@ -285,12 +288,12 @@ class DataPoint(object):
         b = self.b
         d = self.d
 
-        cn_n = 2        
+        cn_n = self.cn_n        
         cn_r = self.cn_r
         cn_v = self.cn_v
         
-        mu_n = self.eps
-        mu_r = self.eps
+        mu_n = self.mu_n
+        mu_r = self.mu_r
         mu_v = self.mu_v
         
         p_n = (1 - s) * cn_n

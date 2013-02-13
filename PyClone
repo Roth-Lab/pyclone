@@ -45,9 +45,6 @@ analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
                             help='''Prior on the rate parameter in the prior for the concentration parameter. Default
                             1.''')
 
-analyse_parser.add_argument('--error_rate', default=1e-3, type=float,
-                            help='''Error rate of sequencing. Default 1e-3.''')
-
 analyse_parser.set_defaults(func=run_dp_model)
 
 #---------------------------------------------------------------------------------------------------------------------- 

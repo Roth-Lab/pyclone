@@ -1,0 +1,19 @@
+error_rate: 0.001
+
+mutations:
+- id: mutation_1
+  ref_counts: 100
+  var_counts: 100
+  
+  states:
+  - {g_n: AA, g_r: AA, g_v: AB, prior_weight: 1}
+  - {g_n: AA, g_r: AA, g_v: BB, prior_weight: 1}
+
+- id: mutation_2
+  ref_counts: 100
+  var_counts: 200
+  
+  states:
+  - {g_n: AA, g_r: AAA, g_v: AAB, prior_weight: 1}
+  - {g_n: AA, g_r: AAA, g_v: ABB, prior_weight: 1}
+  - {g_n: AA, g_r: AAA, g_v: BBB, prior_weight: 1}
