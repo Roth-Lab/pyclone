@@ -57,8 +57,7 @@ build_prior_parser.add_argument('out_file',
                                 help='Path where PyClone formatted input file will be written.')
 
 build_prior_parser.add_argument('--error_rate', default=1e-3, type=float,
-                                help='''Estimated sequencing error rate. This should match the value used in subsequent
-                                PyClone analysis. Default 1e-3.''')
+                                help='''Estimated sequencing error rate. Default 1e-3.''')
 
 build_prior_parser.add_argument('--cn_r', choices=['normal', 'variant', 'vague'], default='vague',
                                 help='''Method for setting the copy number of the reference population. "normal" sets it
