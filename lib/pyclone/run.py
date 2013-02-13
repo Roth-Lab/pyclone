@@ -96,7 +96,7 @@ def plot_similarity_matrix(args):
     plot.plot_similarity_matrix(pyclone_file, args.out_file, args.burnin, args.thin)
     
 
-def build_prior_file(args):
+def build_input_file(args):
     config = {}
     
     config['error_rate'] = args.error_rate

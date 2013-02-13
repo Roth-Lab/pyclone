@@ -6,7 +6,7 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import build_prior_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, run_dp_model
+from pyclone.run import build_input_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, run_dp_model
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
@@ -48,7 +48,7 @@ analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
 analyse_parser.set_defaults(func=run_dp_model)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-build_prior_parser = subparsers.add_parser('build_prior', help='''Build an input file for PyClone analysis.''')
+build_prior_parser = subparsers.add_parser('build_input_file', help='''Build an input file for PyClone analysis.''')
 
 build_prior_parser.add_argument('in_file',
                                 help='Path to tab separated input file. See examples for format.')
@@ -71,7 +71,7 @@ build_prior_parser.add_argument('--g_v', choices=['single', 'all', 'vague'], def
                                 the variant population has the genotype with all variant alleles. "vague" considers all
                                 genotypes compatible with "cn_v" assigning equal weights. Default vague.''')
 
-build_prior_parser.set_defaults(func=build_prior_file)
+build_prior_parser.set_defaults(func=build_input_file)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')

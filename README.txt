@@ -17,17 +17,17 @@ The following packages are required to perform a basic analysis with PyClone.
 
 ### Optional
 
-The following libraries are required to use the plotting capabilities of PyClone.
+The following libraries are required to use the clustering and plotting capabilities of PyClone.
 
-* [brewer2mpl 1.0] (https://github.com/jiffyclub/brewer2mpl)
+* [brewer2mpl 1.0] (https://github.com/jiffyclub/brewer2mpl) - Required for plotting.
 
-* [maplotlib 1.2.0](http://matplotlib.org)
+* [maplotlib 1.2.0](http://matplotlib.org) - Required for plotting.
 
-* [rpy2 2.3.3](http://rpy.sourceforge.net/rpy2.html)
+* [rpy2 2.3.3](http://rpy.sourceforge.net/rpy2.html) - Only necessary to use the dynamic_tree_cut clustering method. The dynamicTreeCut tree cut package should also be installed in R.
 
-* [scikits-learn 0.13](http://scikit-learn.org)
+* [scikits-learn 0.13](http://scikit-learn.org) - Only necessary to use affinity_propogation, dbscan, spectral_clustering clustering methods. 
 
-* [scipy 0.11](http://www.scipy.org)
+* [scipy 0.11](http://www.scipy.org) - Required for plotting and clustering.
 
 # Running PyClone
 
@@ -41,68 +41,74 @@ To run a PyClone analysis you need to perform several steps.
 
 4. (Optional) Cluster the PyClone output using the `cluster` command.
 
-## Prepare an input file
+## Prepare An Input File
 
-The input file for PyClone is a tab separated file with a header. The header should contain the following columns in any
-order. Note any additional columns will be *ignored* by PyClone so its save to include them to help document the file.
+To run a PyClone analysis you need to prepare a properly formatted YAML file. An example file, "advance.yaml", ships with this package in the examples directory. To make it easier to produce such a file PyClone has a command `build_input_file` which will take a simpler tab separated file and produce the required YAML file.
 
-* mutation - This column has the unique ID for the mutation. Using gene names is a bad idea since a single gene may have
-multiple mutations. If the same ID is used twice PyClone will raise an error.
+### Simple Input
 
-* b - The number of reads covering the mutant loci which contain the variant allele.
+The `build_input_file` takes a tab delimited file with a header as input and produces a YAML formatted file which can be used for running a PyClone analysis. An example input file 'simple.tsv' is included in the examples/ folder.
 
-* d - The total number of reads covering the mutant loci.
+The required fields in this file are:
 
-* cn_r - A comma separated list of copy numbers for the reference population. This should be the same length as the list
-for cn_v, mu_v and prior_weight.
+* mutation_id - A unique ID to identify the mutation. Good names are thing such a the genomic co-ordinates of the mutation i.e. chr22:12345. Gene names are not good IDs because one gene may have multiple mutations, in which case the ID is not unique.
 
-* cn_v -  A comma separated list of copy numbers for the variant population. This should be the same length as the list
-for cn_r, mu_v and prior_weight.
+* ref_counts - The number of reads covering the mutation which contain the reference (genome) allele.
 
-* mu_v -  A comma separated list of probabilities from sampling a variant allele from a cell with a given genotype. For 
-example if the possible genotypes are AB and BB the entry would be 0.5, 0.999 (assumin an error rate of 0.001. This 
-should be the same length as the list for cn_r, cn_v and prior_weight.
+* var_counts - The number of reads covering the mutation which contain the variant allele.
 
-* prior_weight - A comma separated list of relative prior weights assigned to a given state of the sample. The entries 
-in this last match with the entries in cn_r, cn_v, mu_v so it must be the same length.
+* cn_n - The copy number of the cells in the normal population. For autosomal chromosomes this will be 2 and for sex chromosomes it could be either 1 or 2. For species besides human other values are possible.
 
-An example file `pyclone.example.tsv` is included under the examples directory.
+* cn_v - The copy number of the cells in the variant population. Usually this value will be predicted from WGSS or array data.
 
-To understand the input consider the following lines
+The information provided in this file is deliberately kept simple, but it is insufficient to run a PyClone analysis. In order to produce a file with enough information the `build_input_file` command attempts to guess some details about the possible states. All states guessed by this command will be weighted equally.
 
-mutation	b	d	cn_r	cn_v	mu_v	prior_weight
-mutation_2	500	1000	2, 2	2,3	0.999,0.666	1,2
+The key flags which provide some control over `build_input_file` are:
 
-The first line is the header of the file. The second line says we have a mutation called `mutation_2`. There are b=500
-reads containing the variant allele covering the loci. There are d=1000 total reads covering the loci.
+* --cn_r - Controls how the copy number of the cells in reference population is set. Setting the copy number of the reference population completely determines the genotype of the reference cells since all cells in the reference population have no variant alleles in their genotype by definition. The possibilities are to consider states where 1) "normal" - the reference population shares the same copy number as the normal population, 2) "variant" - there reference population shares the same copy number as the variant population, 3) "vague - states in which the reference population has the copy number of the normal or variant population are considered with equal probability.
 
-Now notice that cn_r, cn_v, mu_v and prior_weight are all lists of length 2. The first entry of each list go together to 
-form a state and its prior weight. Similarly the second entries go together to form a state and ist prior weight.
+* --g_v - Controls how to set the genotype for the variant population. Since we supply the copy number of the variant population in the input file, we only need to fill in information about how many variant alleles the genotype has. The possible choices are 1) "single" - assumes a single variant allele in the genotype i.e. AAAB, 2) "all" - assumes all alleles in the genotype are variant i.e. BBBB, 3) "vague" - considers all genotypes with a variant allele which are compatible with the predicted copy number assigning equal prior weight i.e. AAAB, AABB, ABBB, BBBB.  
 
-The first state assumes: 
+### Advanced Input
 
-* The reference population has copy number 2. 
+For more control on specifying the states or prior weights a YAML file can be directly created. The file advanced.yaml in the examples/ directory shows the basic format. Rather than manually trying to format the file it is highly reccomemended that a YAML library such as PyYAML be used to help create the files. 
 
-* The variant population has copy number 2.
+Two top level nodes are required in the file.
 
-* The probability of sampling a variant read from the cells in the variant population is 0.999. This would be compatible
-with a genotype of BB assuming there was an error rate of 0.001 for sequencing.
+* error_rate - A scalar value indicating the sequencing error rate i.e. the probability of observing an A allele when it was really a B (assumed to be equal to the reverse).
 
-* The prior weight for this state is 1.
+* mutations - A list of mutations an there possible states. See below.
 
-The second state assumes:
+Under the mutations node we define each mutation as an item with the following nodes.
 
-* The reference population has copy number 2.
+* id - The unique ID of the mutation.
 
-* The variant population has copy number 3.
+* ref_counts - The number of reads covering the mutation which contain the reference (genome) allele.
 
-* The probability of sampling a variant read from the cells in the variant population is 0.666~2/3. This would be 
-compatible with a genotype of ABB. Note there are 2 B alleles out of 3 total alleles in the genotype.
+* var_counts - The number of reads covering the mutation which contain the variant allele.
 
-* The prior weight for this state is 2.
+* states - A list of possible states for the sample at this mutation along with prior weights.
 
-## Prior Weights
+Under the states node we define the following elements.
 
-The prior weights represent our belief ahead of time about the state of the sample. These weights are relative and will
-be normalised by PyClone to sum to 1 to form valid prior probabilities.
+* g_n - The genotype of the normal population in the state.
 
+* g_r - The genotype of the reference population in the state.
+
+* g_v - The genotype of the variant population in the state.
+
+* prior_weight - The relative prior weight of the state. The values will be normalised across all states to create a valid probability.
+
+## Run PyClone
+
+Once the required YAML file has been created PyClone can be run using the `analyse` command. To see the possible flags for the command run `PyClone analyse -h`. The `analyse` command will run a full MCMC analysis of the data writing the results to several files in the specified output directory. All files are bz2 compressed tab separated files, so they can easily be read by external tools.
+
+If the an estimate of tumour content is available be sure to set the --tumour_content flag.
+
+## Plot Results
+
+After running the analyse you can use the `plot_cellular_frequencies` and `plot_similarity_matrix` commands to visualise the results. These commands plot the posterior density estimates of the cellular frequencies and a heatmap of the posterior similarity matrix.
+
+## Cluster Results
+
+PyClone provides some methods for producing flat clusterings of the posterior similarity matrix via the `cluster` command. The default method is "mpear" which is based on the clustering method defined in "Improved Criteria for Clustering Based on the Posterior Similarity Matrix" by Fritsch et al. Another method which may be of interest is the "dynamic_tree_cut" which was used in "The clonal and mutational evolution spectrum of primary triple-negative breast cancers" by Shah et al.

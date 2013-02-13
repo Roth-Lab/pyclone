@@ -13,5 +13,6 @@ setup(
                 'pyclone.post_process',
                 'pyclone.post_process.plot'
                 ],
-      scripts=['PyClone']
+      scripts=['PyClone'],
+      data_files = [("", ["LICENSE.txt"])]
      )
