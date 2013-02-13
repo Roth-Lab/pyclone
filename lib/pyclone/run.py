@@ -12,6 +12,7 @@ import yaml
 
 from pyclone.sampler import DirichletProcessSampler, DataPoint
 from pyclone.trace import TraceDB
+from pyclone.config import load_mutation_from_dict, Mutation, State
 
 def run_dp_model(args):
     '''
@@ -51,62 +52,21 @@ def load_pyclone_data(file_name):
     
     error_rate = config['error_rate']
 
-    for mutation in config['mutations']:
-        mutation_id = mutation['id']
-        
-        a = mutation['ref_counts']
-        b = mutation['var_counts']
+    for mutation_dict in config['mutations']:
+        mutation = load_mutation_from_dict(mutation_dict)
 
-        cn_n = []
-        cn_r = []
-        cn_v = []
-        
-        mu_n = []
-        mu_r = []
-        mu_v = []
-        
-        prior_weights = []
-
-        for state in mutation['states']:
-            g_n = state['g_n']
-            g_r = state['g_r']
-            g_v = state['g_v']
-            
-            cn_n.append(_get_copy_number(g_n))
-            cn_r.append(_get_copy_number(g_r))
-            cn_v.append(_get_copy_number(g_v))
-            
-            mu_n.append(_get_variant_allele_probability(g_n, error_rate))
-            mu_v.append(_get_variant_allele_probability(g_r, error_rate))
-            mu_r.append(_get_variant_allele_probability(g_v, error_rate))
-            
-            prior_weights.append(state['prior_weight'])
-
-        data[mutation_id] = DataPoint(a, b, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, prior_weights)
+        data[mutation.id] = DataPoint(mutation.ref_counts,
+                                      mutation.var_counts,
+                                      mutation.cn_n,
+                                      mutation.cn_r,
+                                      mutation.cn_v,
+                                      mutation.get_mu_n(error_rate),
+                                      mutation.get_mu_r(error_rate),
+                                      mutation.get_mu_v(error_rate),
+                                      mutation.prior_weights)
+                                      
 
     return data
-
-def _get_copy_number(genotype):
-    return len(genotype)
-
-def _get_variant_allele_probability(genotype, error_rate):
-    if genotype is None:
-        return error_rate
-    
-    num_ref_alleles = genotype.count("A")
-    num_var_alleles = genotype.count("B")
-    
-    cn = len(genotype)
-    
-    if cn != num_ref_alleles + num_var_alleles:
-        raise Exception("{0} is not a valid genotype. Only A or B are allowed as alleles.")
-    
-    if num_ref_alleles == 0:
-        return 1 - error_rate
-    elif num_var_alleles == 0:
-        return error_rate
-    else:
-        return num_var_alleles / cn
 
 def cluster_trace(args):
     from pyclone.post_process.cluster import cluster_pyclone_trace
@@ -137,70 +97,79 @@ def plot_similarity_matrix(args):
     
 
 def build_prior_file(args):
+    config = {}
+    
+    config['error_rate'] = args.error_rate
+    
     reader = csv.DictReader(open(args.in_file), delimiter='\t')
     
-    extra_fields = [x for x in reader.fieldnames if x not in ['mutation', 'b', 'd']]
-    
-    writer_fields = ['mutation', 'b', 'd', 'cn_r', 'cn_v', 'mu_v', 'prior_weight'] + extra_fields
-    
-    writer = csv.DictWriter(open(args.out_file, 'w'), writer_fields, delimiter='\t')
-    
-    writer.writeheader()
-    
+    config['mutations'] = []
+
     for row in reader:
-        out_row = _get_prior_row(row, args.cn_r, args.mu_v, args.error_rate)
+        mutation_id = row['mutation_id']
+        
+        ref_counts = int(row['ref_counts'])
+        
+        var_counts = int(row['var_counts'])
+        
+        mutation = Mutation(mutation_id, ref_counts, var_counts)
                 
-        for field_name in extra_fields:
-            out_row[field_name] = row[field_name]
+        cn_n = int(row['cn_n'])
         
-        writer.writerow(out_row)
-    
-def _get_prior_row(row, cn_r_method, mu_v_method, eps, cn_n=2):
-    cn = int(row['cn'])
-    
-    mu_v = []
-    
-    if mu_v_method == 'single':
-        mu_v.append(1 / cn)
-    
-    elif mu_v_method == 'all':
-        mu_v.append(1 - eps)
-    
-    elif mu_v_method == 'vague':
-        for num_var_alleles in range(1, cn):
-            mu_v.append(num_var_alleles / cn)
+        cn_v = int(row['cn_v'])
+
+        states = _get_states(cn_n, cn_v, args.g_r, args.g_v)
         
-        mu_v.append(1 - eps)
+        for state in states:
+            mutation.add_state(state)
+
+        config['mutations'].append(mutation.to_dict())
     
-    if cn_r_method == 'normal':
-        cn_r = [cn_n for _ in mu_v]
+    fh = open(args.out_file, 'w')
     
-    elif cn_r_method == "variant":
-        cn_r = [cn for _ in mu_v]
+    yaml.dump(config, fh)
     
-    elif cn_r_method == "vague":
-        if cn == cn_n:
-            cn_r = [cn for _ in mu_v]
+    fh.close()
+
+def _get_states(cn_n, cn_v, g_r_method, g_v_method):
+    states = []
+    
+    g_v = []
+    
+    if g_v_method == 'single':
+        g_v.append("A" * (cn_v - 1) + "B")
+    
+    elif g_v_method == 'all':
+        g_v.append("B" * cn_v)
+    
+    elif g_v_method == 'vague':
+        for num_var_alleles in range(1, cn_v + 1):
+            g_v.append("A" *(cn_v - num_var_alleles) + "B" * num_var_alleles)
+            
+    g_n = ["A" * cn_n for _ in g_v]
+    
+    if g_r_method == 'normal':
+        g_r = ["A" * cn_n for _ in g_v]
+    
+    elif g_r_method == "variant":
+        g_r = ["A" * cn_v for _ in g_v]
+    
+    elif g_r_method == "vague":
+        if cn_n == cn_v:
+            g_r = ["A" * cn_n for _ in g_v]
         else:            
-            cn_r = [cn_n for _ in mu_v] + [cn for _ in mu_v]
+            g_r = ["A" * cn_n for _ in g_v] + ["A" * cn_v for _ in g_v]
         
-            mu_v = mu_v + mu_v
-        
-    cn_v = [cn for _ in mu_v]
+            g_n = g_n + g_n
+            
+            g_v = g_v + g_v
+
+    prior_weight = [1 for _ in g_v]
     
-    prior_weight = [1 for _ in mu_v]
+    for n, r, v, w in zip(g_n, g_r, g_v, prior_weight):
+        states.append(State(n, r, v, w))
     
-    out_row = {
-               'mutation' : row['mutation'],
-               'b' : row['b'],
-               'd' : row['d'],
-               'cn_r' : list_to_csv(cn_r),
-               'cn_v' : list_to_csv(cn_v),
-               'mu_v' : list_to_csv(mu_v),
-               'prior_weight' : list_to_csv(prior_weight)
-               }
-    
-    return out_row
+    return states
 
 def list_to_csv(l):
     return ",".join([str(x) for x in l])

@@ -14,6 +14,9 @@ mutations:
   var_counts: 200
   
   states:
+  - {g_n: AA, g_r: AA, g_v: AAB, prior_weight: 1}
+  - {g_n: AA, g_r: AA, g_v: ABB, prior_weight: 1}
+  - {g_n: AA, g_r: AA, g_v: BBB, prior_weight: 1}  
   - {g_n: AA, g_r: AAA, g_v: AAB, prior_weight: 1}
   - {g_n: AA, g_r: AAA, g_v: ABB, prior_weight: 1}
   - {g_n: AA, g_r: AAA, g_v: BBB, prior_weight: 1}
