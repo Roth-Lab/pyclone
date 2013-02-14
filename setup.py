@@ -14,5 +14,5 @@ setup(
                 'pyclone.post_process.plot'
                 ],
       scripts=['PyClone'],
-      data_files = [("", ["LICENSE.txt"])]
+      data_files = [("", ["LICENSE.txt", "examples/simple.tsv", "examples/advanced.yaml"])]
      )
