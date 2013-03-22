@@ -5,6 +5,10 @@ file for more details.
 
 # Versions
 
+## 0.11.1
+
+* Small change to clustering to use mutation_id not mutation in output, to make consistent with simple input.
+
 ## 0.11
 
 * Reverted to PyDP for implementing DP methods.

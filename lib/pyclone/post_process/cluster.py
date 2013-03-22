@@ -46,14 +46,14 @@ def cluster_pyclone_trace(pyclone_file, cluster_file, method, burnin, thin):
     
     writer = csv.DictWriter(
                             open(cluster_file, 'w'),
-                            ['mutation', 'cluster_id'],
+                            ['mutation_id', 'cluster_id'],
                             delimiter='\t'
                             )
     
     writer.writeheader()
     
     for mutation, cluster_id in zip(trace.keys(), labels):
-        out_row = {'mutation' : mutation, 'cluster_id' : int(cluster_id)}
+        out_row = {'mutation_id' : mutation, 'cluster_id' : int(cluster_id)}
         
         writer.writerow(out_row)
 
