@@ -10,7 +10,7 @@ from pyclone.run import build_input_file, cluster_trace, plot_cellular_frequenci
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.10.0')
+parser.add_argument('--version', action='version', version='PyClone-0.11.0')
 
 subparsers = parser.add_subparsers()
 

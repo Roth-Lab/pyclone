@@ -1,3 +1,16 @@
+# License
+
+PyClone is free for academic/non-profit use. For commercial use please contact sshah@bccrc.ca. Consult the LICENSE.txt 
+file for more details. 
+
+# Versions
+
+## 0.11
+
+* Reverted to PyDP for implementing DP methods.
+
+* Removed dependency on numpy in analysis code.
+
 # Installation
 
 To install PyClone make sure you have the necessary libraries (listed below) installed. After that PyClone installs like
@@ -11,7 +24,7 @@ If the installation worked correctly the `PyClone` command should now be availab
 
 The following packages are required to perform a basic analysis with PyClone.
 
-* [numpy 1.6.2](http://www.numpy.org)
+* [PyDP 0.13](https://bitbucket.org/aroth85/pydp)
 
 * [PyYAML 3.10](http://pyyaml.org)
 
@@ -22,6 +35,8 @@ The following libraries are required to use the clustering and plotting capabili
 * [brewer2mpl 1.0] (https://github.com/jiffyclub/brewer2mpl) - Required for plotting.
 
 * [maplotlib 1.2.0](http://matplotlib.org) - Required for plotting.
+
+* [numpy 1.6.2](http://www.numpy.org) - Required for plotting and clustering.
 
 * [rpy2 2.3.3](http://rpy.sourceforge.net/rpy2.html) - Only necessary to use the dynamic_tree_cut clustering method. The dynamicTreeCut tree cut package should also be installed in R.
 

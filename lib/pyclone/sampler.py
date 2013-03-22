@@ -7,6 +7,7 @@ from __future__ import division
 
 from collections import OrderedDict
 from math import log
+
 from pydp.utils import log_sum_exp
 from pydp.densities import log_binomial_pdf, Density
 from pydp.base_measures import BetaBaseMeasure

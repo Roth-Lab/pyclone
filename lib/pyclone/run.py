@@ -5,13 +5,15 @@ Created on 2012-02-08
 '''
 from __future__ import division
 
+from pydp.trace import DiskTrace
+from collections import OrderedDict
+
 import csv
 import os
 import shutil
 import yaml
 
 from pyclone.sampler import PyCloneSampler, PyCloneData
-from pyclone.trace import TraceDB
 from pyclone.config import load_mutation_from_dict, Mutation, State
 
 def run_dp_model(args):
@@ -20,7 +22,9 @@ def run_dp_model(args):
     '''
     data = load_pyclone_data(args.in_file, args.tumour_content)
     
-    trace = TraceDB(args.out_dir, data.keys())
+    trace = DiskTrace(args.out_dir, ['alpha', 'labels', 'x'], data.keys())
+    
+    trace.open('w')
     
     try:
         sampler = PyCloneSampler(alpha=args.concentration,
@@ -41,7 +45,7 @@ def load_pyclone_data(file_name, tumour_content):
     '''
     Load data from PyClone formatted input file.
     '''
-    data = {}
+    data = OrderedDict()
     
     fh = open(file_name)
     
