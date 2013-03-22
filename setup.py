@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
       name='PyClone',
-      version='0.11.1',
+      version='0.11.2',
       description='Python tools for analysing clonal evolution using NGS data.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
@@ -13,6 +13,5 @@ setup(
                 'pyclone.post_process',
                 'pyclone.post_process.plot'
                 ],
-      scripts=['PyClone'],
-      data_files = [("", ["LICENSE.txt", "examples/simple.tsv", "examples/advanced.yaml"])]
+      scripts=['PyClone']
      )
