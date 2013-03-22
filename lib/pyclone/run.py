@@ -22,7 +22,10 @@ def run_dp_model(args):
     '''
     data = load_pyclone_data(args.in_file, args.tumour_content)
     
-    trace = DiskTrace(args.out_dir, ['alpha', 'labels', 'x'], data.keys())
+    trace = DiskTrace(args.out_dir, 
+                      ['alpha', 'labels', 'x'], 
+                      column_names=data.keys(), 
+                      file_name_map={'x' : 'cellular_frequencies'})
     
     trace.open('w')
     
