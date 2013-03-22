@@ -10,7 +10,7 @@ import os
 import shutil
 import yaml
 
-from pyclone.sampler import DirichletProcessSampler, DataPoint
+from pyclone.sampler import PyCloneSampler, PyCloneData
 from pyclone.trace import TraceDB
 from pyclone.config import load_mutation_from_dict, Mutation, State
 
@@ -18,27 +18,26 @@ def run_dp_model(args):
     '''
     Run a fresh instance of the DP model.
     '''
-    data = load_pyclone_data(args.in_file)
+    data = load_pyclone_data(args.in_file, args.tumour_content)
     
-    trace_db = TraceDB(args.out_dir, data.keys())
+    trace = TraceDB(args.out_dir, data.keys())
     
     try:
-        sampler = DirichletProcessSampler(args.tumour_content,
-                                          alpha=args.concentration,
-                                          alpha_shape=args.concentration_prior_shape,
-                                          alpha_rate=args.concentration_prior_rate)
+        sampler = PyCloneSampler(alpha=args.concentration,
+                                 alpha_shape=args.concentration_prior_shape,
+                                 alpha_rate=args.concentration_prior_rate)
     except:
-        trace_db.close()
+        trace.close()
         
         shutil.rmtree(args.out_dir)
         
         raise
     
-    sampler.sample(data.values(), trace_db, num_iters=args.num_iters, seed=args.seed)
+    sampler.sample(data.values(), trace, num_iters=args.num_iters, seed=args.seed)
 
-    trace_db.close()
+    trace.close()
 
-def load_pyclone_data(file_name):
+def load_pyclone_data(file_name, tumour_content):
     '''
     Load data from PyClone formatted input file.
     '''
@@ -55,17 +54,12 @@ def load_pyclone_data(file_name):
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
 
-        data[mutation.id] = DataPoint(mutation.ref_counts,
-                                      mutation.var_counts,
-                                      mutation.cn_n,
-                                      mutation.cn_r,
-                                      mutation.cn_v,
-                                      mutation.get_mu_n(error_rate),
-                                      mutation.get_mu_r(error_rate),
-                                      mutation.get_mu_v(error_rate),
-                                      mutation.prior_weights)
-                                      
-
+        data[mutation.id] = PyCloneData(mutation.ref_counts, 
+                                        mutation.var_counts, 
+                                        mutation.states, 
+                                        tumour_content, 
+                                        error_rate)
+    
     return data
 
 def cluster_trace(args):
