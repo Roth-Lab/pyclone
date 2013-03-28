@@ -10,7 +10,8 @@ from __future__ import division
 import csv
 import numpy as np
 
-from math import gamma
+from math import exp
+from pydp.densities import log_binomial_coefficient
 
 try:
     from scipy.cluster.hierarchy import average, fcluster, fclusterdata 
@@ -207,7 +208,7 @@ def _get_flat_clustering(Z, number_of_clusters):
 def _compute_mpear(cluster_labels, sim_mat):
     N = sim_mat.shape[0]
     
-    c = binomial_coefficient(N, 2)
+    c = exp(log_binomial_coefficient(N, 2))
     
     num_term_1 = 0
     
@@ -240,9 +241,3 @@ def _compute_mpear(cluster_labels, sim_mat):
     den = den_term_1 - num_term_2
     
     return num / den
-
-def factorial(n):
-    return gamma(n + 1)
-
-def binomial_coefficient(n, k):
-    return factorial(n) / (factorial(n - k) * factorial(k))
