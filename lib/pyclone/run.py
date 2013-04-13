@@ -13,7 +13,7 @@ import os
 import shutil
 import yaml
 
-from pyclone.sampler import PyCloneSampler, PyCloneData
+from pyclone.sampler import PyCloneSampler, PyCloneData, PycloneTumourContentUpdater
 from pyclone.config import load_mutation_from_dict, Mutation, State
 
 def run_dp_model(args):
@@ -22,17 +22,30 @@ def run_dp_model(args):
     '''
     data = load_pyclone_data(args.in_file, args.tumour_content)
     
-    trace = DiskTrace(args.out_dir, 
-                      ['alpha', 'labels', 'x'], 
-                      column_names=data.keys(), 
-                      file_name_map={'x' : 'cellular_frequencies'})
-    
-    trace.open('w')
-    
     try:
+        if args.tumour_content_precision is not None:
+            tumour_content_updater = PycloneTumourContentUpdater(args.tumour_content,
+                                                                 args.tumour_content_precision,
+                                                                 args.tumour_content_mesh_size)
+
+            trace_values = ['alpha', 'labels', 'x']
+        else:
+            tumour_content_updater = None
+            
+            trace_values = ['alpha', 'labels', 'x']
+        
+        trace = DiskTrace(args.out_dir,
+                          trace_values,
+                          column_names=data.keys(),
+                          file_name_map={'x' : 'cellular_frequencies'})
+    
+        trace.open('w')
+        
         sampler = PyCloneSampler(alpha=args.concentration,
                                  alpha_shape=args.concentration_prior_shape,
-                                 alpha_rate=args.concentration_prior_rate)
+                                 alpha_rate=args.concentration_prior_rate,
+                                 cellular_frequency_mesh=args.cellular_frequency_mesh_size,
+                                 tumour_content_updater=tumour_content_updater)
     except:
         trace.close()
         
@@ -61,10 +74,10 @@ def load_pyclone_data(file_name, tumour_content):
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
 
-        data[mutation.id] = PyCloneData(mutation.ref_counts, 
-                                        mutation.var_counts, 
-                                        mutation.states, 
-                                        tumour_content, 
+        data[mutation.id] = PyCloneData(mutation.ref_counts,
+                                        mutation.var_counts,
+                                        mutation.states,
+                                        tumour_content,
                                         error_rate)
     
     return data

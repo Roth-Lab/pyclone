@@ -10,7 +10,7 @@ from pyclone.run import build_input_file, cluster_trace, plot_cellular_frequenci
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.11.3')
+parser.add_argument('--version', action='version', version='PyClone-0.12.0')
 
 subparsers = parser.add_subparsers()
 
@@ -23,19 +23,14 @@ analyse_parser.add_argument('in_file',
 analyse_parser.add_argument('out_dir',
                             help='Path where trace files for MCMC sampler will be written.')
 
-analyse_parser.add_argument('--num_iters', default=10000, type=int,
-                            help='''How many iterations of the MCMC chain will run. Default 10,000.''')
+analyse_parser.add_argument('--cellular_frequency_mesh_size', default=None, type=int,
+                            help='''Number of points to use to approximate the integral for inverse CDF sampling the
+                            cellular frequency. By default this is off and Metropolis Hastings step with a random
+                            proposal is used to update the cellular frequencies.''')
 
 analyse_parser.add_argument('--concentration', default=None, type=int,
                             help='''Concentration (alpha) value for DP sampler. If not set it will be estimated. Default
                             estimated.''')
-
-analyse_parser.add_argument('--tumour_content', default=1, type=float,
-                            help='''The fraction of the cancer cells in the sample. Default 1.''')
-
-analyse_parser.add_argument('--seed', default=None, type=int,
-                            help='''Set random seed so results can be reproduced. By default a random seed is
-                            chosen.''')
 
 analyse_parser.add_argument('--concentration_prior_shape', default=1, type=float,
                             help='''Prior on the shape parameter in the prior for the concentration parameter. Default
@@ -44,6 +39,26 @@ analyse_parser.add_argument('--concentration_prior_shape', default=1, type=float
 analyse_parser.add_argument('--concentration_prior_rate', default=1, type=float,
                             help='''Prior on the rate parameter in the prior for the concentration parameter. Default
                             1.''')
+
+analyse_parser.add_argument('--num_iters', default=10000, type=int,
+                            help='''How many iterations of the MCMC chain will run. Default 10,000.''')
+
+analyse_parser.add_argument('--seed', default=None, type=int,
+                            help='''Set random seed so results can be reproduced. By default a random seed is
+                            chosen.''')
+
+analyse_parser.add_argument('--tumour_content', default=1, type=float,
+                            help='''The fraction of the cancer cells in the sample. If tumour_content precisions is also
+                            set then this will be used as the mean of the prior on tumour content. Default 1.''')
+
+analyse_parser.add_argument('--tumour_content_precision', default=None, type=float,
+                            help='''The precision of the prior on tumour content. Higher values indicate a stronger
+                            belief in the prior predicted tumour content. If this is not set the tumour content will be
+                            treated as fixed.''')
+
+analyse_parser.add_argument('--tumour_content_mesh_size', default=100, type=int,
+                            help='''Number of points to use to approximate the integral for inverse CDF sampling the
+                            tumour content. Default is 100.''')
 
 analyse_parser.set_defaults(func=run_dp_model)
 

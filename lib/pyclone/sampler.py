@@ -8,37 +8,127 @@ from __future__ import division
 from collections import OrderedDict
 from math import log
 
-from pydp.utils import log_sum_exp
-from pydp.densities import log_binomial_pdf, Density
 from pydp.base_measures import BetaBaseMeasure
-from pydp.samplers.atom import BaseMeasureAtomSampler
+from pydp.data import BetaData
+from pydp.densities import log_binomial_pdf, Density
+from pydp.rvs import inverse_sample_rvs
+from pydp.samplers.atom import AtomSampler, BaseMeasureAtomSampler
 from pydp.samplers.dp import DirichletProcessSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
+from pydp.utils import log_sum_exp
 
 import random
 
 class PyCloneSampler(object):
-    def __init__(self, alpha, alpha_shape, alpha_rate):
+    def __init__(self, alpha, alpha_shape, alpha_rate, cellular_frequency_mesh=None, tumour_content_updater=None):
         base_measure = BetaBaseMeasure(1, 1)
         
-        cluster_density = PyCloneDensity()
+        self.cluster_density = PyCloneDensity()
         
-        atom_sampler = BaseMeasureAtomSampler(base_measure, cluster_density)
+        if cellular_frequency_mesh is None:
+            atom_sampler = BaseMeasureAtomSampler(base_measure, self.cluster_density)
+        else:
+            atom_sampler = PyCloneAtomSampler(base_measure, self.cluster_density, cellular_frequency_mesh)
         
-        partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
+        self.tumour_content_updater = tumour_content_updater
         
-        self.sampler = DirichletProcessSampler(atom_sampler, 
-                                               partition_sampler, 
-                                               alpha=alpha, 
-                                               alpha_shape=alpha_shape, 
+        partition_sampler = AuxillaryParameterPartitionSampler(base_measure, self.cluster_density)
+        
+        self.sampler = DirichletProcessSampler(atom_sampler,
+                                               partition_sampler,
+                                               alpha=alpha,
+                                               alpha_shape=alpha_shape,
                                                alpha_rate=alpha_rate)
     
     def sample(self, data, trace, num_iters, seed, print_freq=100):
         random.seed(seed)
         
-        self.sampler.sample(data, trace, num_iters, print_freq)
+        self.sampler.initialise_partition(data)
+        
+        for i in range(num_iters):
+            if i % print_freq == 0:
+                print self.sampler.num_iters, self.sampler.partition.number_of_cells, self.sampler.alpha
+                
+                if self.tumour_content_updater is not None:
+                    print self.tumour_content_updater.tumour_content
+            
+            self.sampler.interactive_sample(data)
+            
+            state = self.sampler.state
+                                    
+            if self.tumour_content_updater is not None:
+                self.tumour_content_updater.update(data, self.sampler.partition, self.cluster_density)
+                
+                #state['tumour_content'] = self.tumour_content_updater.tumour_content
+            
+            trace.update(state)
+            
+            self.sampler.num_iters += 1
+        
+class PycloneTumourContentUpdater(object):
+    def __init__(self, prior_mean, prior_precision, mesh_size):
+        a = prior_mean * prior_precision
+        
+        b = prior_precision - a
+        
+        self.base_measure = BetaBaseMeasure(1, 1)
+        
+        self.tumour_content = prior_mean
+        
+        self.mesh_size = mesh_size
 
+    def update(self, data, partition, cluster_density):
+        def sample_log_p(new_value):
+            log_p = self.base_measure.log_p(BetaData(new_value))
+            
+            for cell in partition.cells:
+                for item in cell.items:
+                    data_point = data[item]
+                    
+                    old_value = data_point.tumour_content
+                    
+                    data_point.tumour_content = new_value
+                    
+                    log_p += cluster_density.log_p(data[item], cell.value)
+                    
+                    data_point.tumour_content = old_value
+            
+            return log_p
+        
+        tumour_content, _ = inverse_sample_rvs(sample_log_p, 0, 1, self.mesh_size)
+        
+        for data_point in data:
+            data_point.tumour_content = tumour_content
+        
+        self.tumour_content = tumour_content
+        
+class PyCloneAtomSampler(AtomSampler):
+    '''
+    Update the partition values using a Gibbs step. 
     
+    Requires a Beta base measure and PyClone data.
+    '''
+    def __init__(self, base_measure, cluster_density, mesh_size):
+        AtomSampler.__init__(self, base_measure, cluster_density)
+        
+        self.mesh_size = mesh_size
+    
+    def sample(self, data, partition):
+        for cell in partition.cells:
+            
+            def partition_log_p(x):
+                params = BetaData(x)
+                
+                log_p = self.base_measure.log_p(params)
+                
+                for item in cell.items:
+                    log_p += self.cluster_density.log_p(data[item], params)
+                
+                return log_p
+            
+            phi = inverse_sample_rvs(partition_log_p, 0, 1, mesh_size=self.mesh_size)
+            
+            return BetaData(phi[0])
 
 class PyCloneData(object):
     def __init__(self, a, b, states, tumour_content, error_rate):
@@ -60,15 +150,6 @@ class PyCloneData(object):
         prior_weights = [x.prior_weight for x in states]
         
         self.log_pi = self._get_log_pi(prior_weights)
-        
-    def log_p(self, params):
-        if params not in self.cache:
-            self.cache[params] = self._compute_log_p(params)
-            
-            if len(self.cache) > self.max_cache_size:
-                self.cache.popitem(last=False)
-        
-        return self.cache[params]
     
     def _get_log_pi(self, weights):
         pi = [x / sum(weights) for x in weights]
@@ -81,16 +162,18 @@ class PyCloneDensity(Density):
         
         self.max_cache_size = 10000
         
-    def log_p(self, data, params):
-        key = (data, params)
-        
-        if key not in self.cache:
-            self.cache[key] = self._log_p(data, params)
-            
-            if len(self.cache) > self.max_cache_size:
-                self.cache.popitem(last=False)
-        
-        return self.cache[key]        
+    def log_p(self, data, params):     
+        return self._log_p(data, params)
+    
+#         key = (data.a, data.b, params)
+#         
+#         if key not in self.cache:
+#             self.cache[key] = self._log_p(data, params)
+#             
+#             if len(self.cache) > self.max_cache_size:
+#                 self.cache.popitem(last=False)
+#         
+#         return self.cache[key]        
     
     def _log_p(self, data, params):
         ll = []
