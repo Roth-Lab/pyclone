@@ -5,70 +5,156 @@ Created on 2012-02-08
 '''
 from __future__ import division
 
-from pydp.trace import DiskTrace
-from collections import OrderedDict
-
 import csv
+import random
 import os
-import shutil
 import yaml
 
-from pyclone.sampler import PyCloneSampler, PyCloneData
-from pyclone.config import load_mutation_from_dict, Mutation, State
+from pyclone.config import get_mutation
+from pyclone.ibmm import run_ibmm_analysis
+from pyclone.igmm import run_igmm_analysis
+from pyclone.utils import make_parent_directory
 
-def run_dp_model(args):
-    '''
-    Run a fresh instance of the DP model.
-    '''
-    data = load_pyclone_data(args.in_file, args.tumour_content)
+#=======================================================================================================================
+# PyClone analysis
+#=======================================================================================================================
+def run_analysis(args):
+    if args.seed is not None:
+        random.seed(args.seed)
     
-    trace = DiskTrace(args.out_dir, 
-                      ['alpha', 'labels', 'x'], 
-                      column_names=data.keys(), 
-                      file_name_map={'x' : 'cellular_frequencies'})
-    
-    trace.open('w')
-    
-    try:
-        sampler = PyCloneSampler(alpha=args.concentration,
-                                 alpha_shape=args.concentration_prior_shape,
-                                 alpha_rate=args.concentration_prior_rate)
-    except:
-        trace.close()
-        
-        shutil.rmtree(args.out_dir)
-        
-        raise
-    
-    sampler.sample(data.values(), trace, num_iters=args.num_iters, seed=args.seed)
-
-    trace.close()
-
-def load_pyclone_data(file_name, tumour_content):
-    '''
-    Load data from PyClone formatted input file.
-    '''
-    data = OrderedDict()
-    
-    fh = open(file_name)
+    fh = open(args.config_file)
     
     config = yaml.load(fh)
     
     fh.close()
     
-    error_rate = config['error_rate']
-
-    for mutation_dict in config['mutations']:
-        mutation = load_mutation_from_dict(mutation_dict)
-
-        data[mutation.id] = PyCloneData(mutation.ref_counts, 
-                                        mutation.var_counts, 
-                                        mutation.states, 
-                                        tumour_content, 
-                                        error_rate)
+    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
     
-    return data
+    alpha = config['concentration']['value']
+    
+    if 'prior' in config['concentration']:
+        alpha_priors = config['concentration']['prior']
+    else:
+        alpha_priors = None
+    
+    num_iters = config['num_iters']
+    
+    density = config['density']
+    
+    if density == 'binomial':
+        run_ibmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
+    
+    elif density =='gaussian':
+        run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
+    
 
+# def run_dp_model(args):
+#     '''
+#     Run a fresh instance of the DP model.
+#     '''
+#     data = load_pyclone_data(args.in_file, args.tumour_content)
+#     
+#     trace = DiskTrace(args.out_dir, 
+#                       ['alpha', 'labels', 'x'], 
+#                       column_names=data.keys(), 
+#                       file_name_map={'x' : 'cellular_frequencies'})
+#     
+#     trace.open('w')
+#     
+#     try:
+#         sampler = PyCloneSampler(alpha=args.concentration,
+#                                  alpha_shape=args.concentration_prior_shape,
+#                                  alpha_rate=args.concentration_prior_rate)
+#     except:
+#         trace.close()
+#         
+#         shutil.rmtree(args.out_dir)
+#         
+#         raise
+#     
+#     sampler.sample(data.values(), trace, num_iters=args.num_iters, seed=args.seed)
+# 
+#     trace.close()
+# 
+# def load_pyclone_data(file_name, tumour_content):
+#     '''
+#     Load data from PyClone formatted input file.
+#     '''
+#     data = OrderedDict()
+#     
+#     fh = open(file_name)
+#     
+#     config = yaml.load(fh)
+#     
+#     fh.close()
+#     
+#     error_rate = config['error_rate']
+# 
+#     for mutation_dict in config['mutations']:
+#         mutation = load_mutation_from_dict(mutation_dict)
+# 
+#         data[mutation.id] = PyCloneData(mutation.ref_counts, 
+#                                         mutation.var_counts, 
+#                                         mutation.states, 
+#                                         tumour_content, 
+#                                         error_rate)
+#     
+#     return data
+# 
+# #=======================================================================================================================
+# # DP Analysis code
+# #=======================================================================================================================
+# def run_dirichlet_process_analysis(args):
+#     '''
+#     Runs a genotype naive analysis using an infinte Gaussian, Binomial, or Beta-Binomial mixture model.
+#     '''
+#     if args.density in ['binomial', 'beta_binomial']:
+#         data = load_count_data(args.in_file)
+#=======================================================================================================================
+# Input file code
+#=======================================================================================================================
+def build_mutation_file(args):
+    config = {}
+    
+    reader = csv.DictReader(open(args.in_file), delimiter='\t')
+    
+    config['mutations'] = []
+
+    for row in reader:
+        mutation_id = row['mutation_id']
+        
+        ref_counts = int(row['ref_counts'])
+        
+        var_counts = int(row['var_counts'])
+        
+        normal_cn = int(row['normal_cn'])
+        
+        minor_cn = int(row['minor_cn'])
+        
+        major_cn = int(row['major_cn'])
+
+        mutation = get_mutation(mutation_id, 
+                                ref_counts, 
+                                var_counts, 
+                                normal_cn, 
+                                minor_cn, 
+                                major_cn, 
+                                args.ref_prior, 
+                                args.var_prior)
+
+        config['mutations'].append(mutation.to_dict())
+    
+    make_parent_directory(args.out_file)
+    
+    fh = open(args.out_file, 'w')
+    
+    yaml.dump(config, fh)
+    
+    fh.close()
+
+#=======================================================================================================================
+# Post processing code
+#=======================================================================================================================
 def cluster_trace(args):
     from pyclone.post_process.cluster import cluster_pyclone_trace
     
@@ -95,82 +181,3 @@ def plot_similarity_matrix(args):
     print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
     
     plot.plot_similarity_matrix(pyclone_file, args.out_file, args.burnin, args.thin)
-    
-
-def build_input_file(args):
-    config = {}
-    
-    config['error_rate'] = args.error_rate
-    
-    reader = csv.DictReader(open(args.in_file), delimiter='\t')
-    
-    config['mutations'] = []
-
-    for row in reader:
-        mutation_id = row['mutation_id']
-        
-        ref_counts = int(row['ref_counts'])
-        
-        var_counts = int(row['var_counts'])
-        
-        mutation = Mutation(mutation_id, ref_counts, var_counts)
-                
-        cn_n = int(row['cn_n'])
-        
-        cn_v = int(row['cn_v'])
-
-        states = _get_states(cn_n, cn_v, args.cn_r, args.g_v)
-        
-        for state in states:
-            mutation.add_state(state)
-
-        config['mutations'].append(mutation.to_dict())
-    
-    fh = open(args.out_file, 'w')
-    
-    yaml.dump(config, fh)
-    
-    fh.close()
-
-def _get_states(cn_n, cn_v, cn_r_method, g_v_method):
-    states = []
-    
-    g_v = []
-    
-    if g_v_method == 'single':
-        g_v.append("A" * (cn_v - 1) + "B")
-    
-    elif g_v_method == 'all':
-        g_v.append("B" * cn_v)
-    
-    elif g_v_method == 'vague':
-        for num_var_alleles in range(1, cn_v + 1):
-            g_v.append("A" *(cn_v - num_var_alleles) + "B" * num_var_alleles)
-            
-    g_n = ["A" * cn_n for _ in g_v]
-    
-    if cn_r_method == 'normal':
-        g_r = ["A" * cn_n for _ in g_v]
-    
-    elif cn_r_method == "variant":
-        g_r = ["A" * cn_v for _ in g_v]
-    
-    elif cn_r_method == "vague":
-        if cn_n == cn_v:
-            g_r = ["A" * cn_n for _ in g_v]
-        else:            
-            g_r = ["A" * cn_n for _ in g_v] + ["A" * cn_v for _ in g_v]
-        
-            g_n = g_n + g_n
-            
-            g_v = g_v + g_v
-
-    prior_weight = [1 for _ in g_v]
-    
-    for n, r, v, w in zip(g_n, g_r, g_v, prior_weight):
-        states.append(State(n, r, v, w))
-    
-    return states
-
-def list_to_csv(l):
-    return ",".join([str(x) for x in l])

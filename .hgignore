@@ -31,3 +31,5 @@ syntax: regexp
 ^examples/data$
 syntax: regexp
 ^examples/results$
+syntax: regexp
+^examples/mixing/trace$

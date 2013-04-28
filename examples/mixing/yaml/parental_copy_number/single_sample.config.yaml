@@ -1,0 +1,29 @@
+########################################################################################################################
+# Example file for running a single sample analysis using PyClone with binomial density.
+#
+# Authour : Andrew Roth
+# Date : 28/04/13
+########################################################################################################################
+# Specify a working directory. All paths in the rest of the file will be relative to this. In practice this should be
+# an absolute path not relative as shown here.
+working_dir: examples/mixing
+
+# Specify a folder where the trace files from the PyClone analysis will be written.
+out_dir: trace/parental_copy_number/SRR385938
+
+# Specifies the density to use for the analysis. Choices are pyclone_binomial, pyclone_beta_binomial, gaussian, binomial
+density: pyclone_binomial
+
+# Specify the samples for the analysis. For this analysis there will be a single entry.
+samples:
+  # Unique sample ID
+  SRR385938:
+    # Path where YAML formatted mutations file for the sample is placed.
+    mutations_file: yaml/parental_copy_number/SRR385938.yaml
+    
+    tumour_content:
+      # The predicted tumour content for the sample. If you have no estimate set this to 1.0.
+      value: 1.0
+    
+    # Expected sequencing error rate for sample
+    error_rate: 0.001

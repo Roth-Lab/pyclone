@@ -1,0 +1,51 @@
+########################################################################################################################
+# Example file for running a multi sample infinite Binomial mixture model analysis
+#
+# Authour : Andrew Roth
+# Date : 28/04/13
+########################################################################################################################
+# Specify a working directory. All paths in the rest of the file will be relative to this. In practice this should be
+# an absolute path not relative as shown here.
+working_dir: examples/mixing
+
+# Specify a folder where the trace files from the PyClone analysis will be written.
+trace_dir: trace/gaussian/all
+
+# Specifies the density to use for the analysis. Choices are pyclone_binomial, pyclone_beta_binomial, gaussian, binomial
+density: gaussian
+
+# Number of MCMC iterations to perform
+num_iters: 10000
+
+# Parameters for GaussianGamma base measure. The following are reasonable vague priors.
+base_measure_params:
+  mean: 0
+  size: 1
+  alpha: 0.001
+  beta: 0.001
+
+# Concentration parameter settings
+concentration:
+  # Initial value
+  value: 1.0
+  
+  # Priors. If these are not specified the initial value will be used
+  prior:
+    shape: 1.0
+    rate: 1.0
+
+# Specify the samples for the analysis. For this analysis there will be a single entry.
+samples:
+  # Unique sample ID
+  SRR385938:
+    # Path where tsv formatted mutations file for the sample is placed.
+    mutations_file: tsv/SRR385938.tsv
+   
+  SRR385939:
+    mutations_file: tsv/SRR385939.tsv
+    
+  SRR385940:
+    mutations_file: tsv/SRR385940.tsv
+    
+  SRR385941:
+    mutations_file: tsv/SRR385941.tsv
