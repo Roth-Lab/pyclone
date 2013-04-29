@@ -6,8 +6,9 @@ Created on 2012-02-08
 from __future__ import division
 
 import csv
-import random
+import glob
 import os
+import random
 import yaml
 
 from pyclone.config import get_mutation
@@ -47,10 +48,10 @@ def run_analysis(args):
     if density == 'binomial':
         run_ibmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
     
-    elif density =='gaussian':
+    elif density == 'gaussian':
         run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
         
-    elif density =='beta_binomial':
+    elif density == 'beta_binomial':
         run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
                 
     elif density == 'pyclone_beta_binomial':
@@ -62,7 +63,7 @@ def run_analysis(args):
 #=======================================================================================================================
 # Input file code
 #=======================================================================================================================
-def build_mutation_file(args):
+def build_mutations_file(args):
     config = {}
     
     reader = csv.DictReader(open(args.in_file), delimiter='\t')
@@ -82,13 +83,13 @@ def build_mutation_file(args):
         
         major_cn = int(row['major_cn'])
 
-        mutation = get_mutation(mutation_id, 
-                                ref_counts, 
-                                var_counts, 
-                                normal_cn, 
-                                minor_cn, 
-                                major_cn, 
-                                args.ref_prior, 
+        mutation = get_mutation(mutation_id,
+                                ref_counts,
+                                var_counts,
+                                normal_cn,
+                                minor_cn,
+                                major_cn,
+                                args.ref_prior,
                                 args.var_prior)
 
         config['mutations'].append(mutation.to_dict())
@@ -116,11 +117,16 @@ def cluster_trace(args):
 def plot_cellular_frequencies(args):
     import pyclone.post_process.plot as plot
     
-    pyclone_file = os.path.join(args.trace_dir, 'cellular_frequencies.tsv.bz2')
+    pyclone_files = glob.glob(os.path.join(args.trace_dir, '*.cellular_frequencies.tsv.bz2'))
     
-    print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
-    
-    plot.plot_cellular_frequencies(pyclone_file, args.out_file, args.burnin, args.thin) 
+    for pyclone_file in pyclone_files:
+        print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
+        
+        out_file = os.path.basename(pyclone_file).replace('tsv.bz2', 'pdf')
+        
+        out_file = os.path.join(args.out_dir, out_file)
+        
+        plot.plot_cellular_frequencies(pyclone_file, out_file, args.burnin, args.thin) 
     
 def plot_similarity_matrix(args):
     import pyclone.post_process.plot as plot

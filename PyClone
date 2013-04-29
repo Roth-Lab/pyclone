@@ -6,7 +6,7 @@
 #=======================================================================================================================
 import argparse
 
-from pyclone.run import build_mutation_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, \
+from pyclone.run import build_mutations_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, \
                         run_analysis
 
 parser = argparse.ArgumentParser(prog='PyClone')
@@ -28,7 +28,7 @@ analyse_parser.add_argument('--seed', default=None, type=int,
 analyse_parser.set_defaults(func=run_analysis)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-build_prior_parser = subparsers.add_parser('build_mutation_file',
+build_prior_parser = subparsers.add_parser('build_mutations_file',
                                            help='''Build a YAML format file with mutation data and states prior to be
                                            used for PyClone analysis.''')
 
@@ -59,7 +59,7 @@ build_prior_parser.add_argument('--var_prior',
                                 available the parental_copy_number method should be chosen. Default is
                                 total_copy_number.''')
 
-build_prior_parser.set_defaults(func=build_mutation_file)
+build_prior_parser.set_defaults(func=build_mutations_file)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
@@ -92,8 +92,8 @@ plot_cf_parser = subparsers.add_parser('plot_cellular_frequencies',
 plot_cf_parser.add_argument('trace_dir',
                             help='Path to directory where the PyClone analysis trace was written.')
 
-plot_cf_parser.add_argument('out_file',
-                            help='Path to file where plot will be saved.')
+plot_cf_parser.add_argument('out_dir',
+                            help='Path to directory where plot files will be saved.')
 
 plot_cf_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')

@@ -9,7 +9,7 @@
 working_dir: examples/mixing
 
 # Specify a folder where the trace files from the PyClone analysis will be written.
-trace_dir: trace/parental_copy_number/SRR385938
+trace_dir: trace/pyclone_beta_binomial/all
 
 # Specifies the density to use for the analysis. Choices are pyclone_binomial, pyclone_beta_binomial, gaussian, binomial
 density: pyclone_beta_binomial

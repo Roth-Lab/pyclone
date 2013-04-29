@@ -66,6 +66,8 @@ class CellularFrequencyPlot(object):
         self._ax.set_xlim(-0.01, 1.01)
 
     def save(self, file_name):
+        self._fig.tight_layout()
+        
         self._fig.savefig(file_name, bbox_inches='tight')
         
     @property
