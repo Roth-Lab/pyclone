@@ -14,6 +14,8 @@ from pyclone.config import get_mutation
 from pyclone.ibmm import run_ibmm_analysis
 from pyclone.ibbmm import run_ibbmm_analysis
 from pyclone.igmm import run_igmm_analysis
+from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
+from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_parent_directory
 
 #=======================================================================================================================
@@ -50,70 +52,13 @@ def run_analysis(args):
         
     elif density =='beta_binomial':
         run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
+                
+    elif density == 'pyclone_beta_binomial':
+        run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
     
+    elif density == 'pyclone_binomial':
+        run_pyclone_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)     
 
-# def run_dp_model(args):
-#     '''
-#     Run a fresh instance of the DP model.
-#     '''
-#     data = load_pyclone_data(args.in_file, args.tumour_content)
-#     
-#     trace = DiskTrace(args.out_dir, 
-#                       ['alpha', 'labels', 'x'], 
-#                       column_names=data.keys(), 
-#                       file_name_map={'x' : 'cellular_frequencies'})
-#     
-#     trace.open('w')
-#     
-#     try:
-#         sampler = PyCloneSampler(alpha=args.concentration,
-#                                  alpha_shape=args.concentration_prior_shape,
-#                                  alpha_rate=args.concentration_prior_rate)
-#     except:
-#         trace.close()
-#         
-#         shutil.rmtree(args.out_dir)
-#         
-#         raise
-#     
-#     sampler.sample(data.values(), trace, num_iters=args.num_iters, seed=args.seed)
-# 
-#     trace.close()
-# 
-# def load_pyclone_data(file_name, tumour_content):
-#     '''
-#     Load data from PyClone formatted input file.
-#     '''
-#     data = OrderedDict()
-#     
-#     fh = open(file_name)
-#     
-#     config = yaml.load(fh)
-#     
-#     fh.close()
-#     
-#     error_rate = config['error_rate']
-# 
-#     for mutation_dict in config['mutations']:
-#         mutation = load_mutation_from_dict(mutation_dict)
-# 
-#         data[mutation.id] = PyCloneData(mutation.ref_counts, 
-#                                         mutation.var_counts, 
-#                                         mutation.states, 
-#                                         tumour_content, 
-#                                         error_rate)
-#     
-#     return data
-# 
-# #=======================================================================================================================
-# # DP Analysis code
-# #=======================================================================================================================
-# def run_dirichlet_process_analysis(args):
-#     '''
-#     Runs a genotype naive analysis using an infinte Gaussian, Binomial, or Beta-Binomial mixture model.
-#     '''
-#     if args.density in ['binomial', 'beta_binomial']:
-#         data = load_count_data(args.in_file)
 #=======================================================================================================================
 # Input file code
 #=======================================================================================================================

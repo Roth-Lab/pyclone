@@ -20,8 +20,7 @@ import yaml
 from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.proposal_functions import GammaProposal
 
-from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler,\
-                                 MultiSampleProposalFunction
+from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
 from pyclone.trace import DiskTrace
 
 def run_ibbmm_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
@@ -33,10 +32,6 @@ def run_ibbmm_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
     
     sample_cluster_densities = OrderedDict()
     
-    sample_proposal_funcs = OrderedDict()
-    
-    sample_global_prior = OrderedDict()
-    
     base_measure_params = _load_base_measure_params(config_file)
     
     for sample_id in sample_ids:
@@ -47,17 +42,9 @@ def run_ibbmm_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
         sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
                                                                  sample_cluster_densities[sample_id])
         
-        sample_proposal_funcs[sample_id] = GammaProposal(1e-2)
-        
-        sample_global_prior[sample_id] = GammaBaseMeasure(1e-2, 1e-2)
-    
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
     
     cluster_density = MultiSampleDensity(sample_cluster_densities, shared_params=True)
-    
-    proposal_func = MultiSampleProposalFunction(sample_proposal_funcs)
-    
-    global_prior = MultiSampleBaseMeasure(sample_global_prior)
     
     atom_sampler = MultiSampleAtomSampler(base_measure, cluster_density, sample_atom_samplers)
     
