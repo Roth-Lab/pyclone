@@ -5,11 +5,12 @@ Created on 2013-04-28
 
 @author: Andrew Roth
 '''
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from pydp.base_measures import BaseMeasure
 from pydp.densities import Density
 from pydp.proposal_functions import ProposalFunction
 from pydp.samplers.atom import AtomSampler
+from pydp.partition import PartitionCell
 
 class MultiSampleAtomSampler(AtomSampler):
     def __init__(self, base_measure, cluster_density, atom_samplers):
@@ -23,7 +24,11 @@ class MultiSampleAtomSampler(AtomSampler):
         for sample_id in self.atom_samplers:
             sample_data = [x[sample_id] for x in data]
             
-            new_atom[sample_id] = self.atom_samplers[sample_id].sample_atom(sample_data, cell)
+            sample_cell = PartitionCell(cell.value[sample_id])
+            
+            sample_cell._items = cell._items
+            
+            new_atom[sample_id] = self.atom_samplers[sample_id].sample_atom(sample_data, sample_cell)
         
         return new_atom
 
@@ -55,26 +60,42 @@ class MultiSampleDensity(Density):
     '''
     Wraps a collection of univariate densities.
     '''
-    def __init__(self, cluster_densities):
+    def __init__(self, cluster_densities, shared_params=False):
         '''
         Args:
             cluster_densities: (dict) A collection of Density objects for each sample.
         '''        
         self.cluster_densities = cluster_densities
+        
+        self.shared_params = shared_params
     
     @property
     def params(self):
-        params = {}
+        if self.shared_params:
+            for cluster_id in self.cluster_densities:
+                return self.cluster_densities[cluster_id].params
         
-        for cluster_id in self.cluster_densities:
-            params[cluster_id] = self.cluster_densities[cluster_id].params
-        
-        return params
+        else:
+            params = OrderedDict()
+            
+            for cluster_id in self.cluster_densities:
+                params[cluster_id] = self.cluster_densities[cluster_id].params
+            
+            return params
     
     @params.setter
     def params(self, value):
-        for cluster_id in self.cluster_densities:
-            self.cluster_densities[cluster_id].params = value[cluster_id]
+        if self.shared_params:
+            for cluster_id in self.cluster_densities:
+                self.cluster_densities[cluster_id].params = value
+
+        elif isinstance(value, namedtuple):
+            for cluster_id in self.cluster_densities:
+                self.cluster_densities[cluster_id].params = value[cluster_id]
+        
+        else:
+            raise Exception('Cannot set object type {0} as a density parameter'.format(type(value)))
+            
     
     def log_p(self, data, params):
         log_p = 0

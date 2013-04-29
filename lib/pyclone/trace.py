@@ -20,12 +20,12 @@ class DiskTrace(object):
         self.attribute_map = attribute_map
     
     def close(self):
-        for fh in self._fhs.values():
-            fh.close()
+        self.alpha_writer.close()
+        
+        self.labels_writer.close()
             
-        self._fhs = {}
-            
-        self._writers = {}
+        for writer in self.cellular_frequency_writers.values():
+            writer.close()
     
     def open(self):
         make_directory(self.trace_dir)

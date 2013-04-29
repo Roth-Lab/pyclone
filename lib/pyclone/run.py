@@ -12,6 +12,7 @@ import yaml
 
 from pyclone.config import get_mutation
 from pyclone.ibmm import run_ibmm_analysis
+from pyclone.ibbmm import run_ibbmm_analysis
 from pyclone.igmm import run_igmm_analysis
 from pyclone.utils import make_parent_directory
 
@@ -46,6 +47,9 @@ def run_analysis(args):
     
     elif density =='gaussian':
         run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
+        
+    elif density =='beta_binomial':
+        run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
     
 
 # def run_dp_model(args):
