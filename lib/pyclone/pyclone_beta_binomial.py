@@ -35,10 +35,12 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
     
     base_measure_params = _load_base_measure_params(config_file)
     
+    precision_params = _load_precision_params(config_file)
+    
     for sample_id in sample_ids:
         sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
         
-        sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(100))
+        sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(precision_params['value']))
         
         sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
                                                                  sample_cluster_densities[sample_id])  
@@ -51,11 +53,13 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
     
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
-    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(1e-2, 1e-2), cluster_density, GammaProposal(1e-2))
+    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], precision_params['prior']['rate']), 
+                                                                     cluster_density, 
+                                                                     GammaProposal(precision_params['proposal']['precision']))
     
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
     
-    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'})
+    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)
     
     trace.open()
     
@@ -204,3 +208,12 @@ class PyCloneBetaBinomialDensity(Density):
         param_b = (1 - mu) * self.params.x
         
         return log_beta_binomial_pdf(b, d, param_a, param_b)
+
+def _load_precision_params(file_name):
+    fh = open(file_name)
+    
+    config = yaml.load(fh)
+    
+    fh.close()
+    
+    return config['beta_binomial_precision_params']    
