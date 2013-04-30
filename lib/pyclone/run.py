@@ -58,7 +58,10 @@ def run_analysis(args):
         run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
     
     elif density == 'pyclone_binomial':
-        run_pyclone_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)     
+        run_pyclone_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
+    
+    else:
+        raise Exception('{0} is not a valid density for PyClone.'.format(density))   
 
 #=======================================================================================================================
 # Input file code
