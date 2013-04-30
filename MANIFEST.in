@@ -1,3 +1,15 @@
-include examples/advanced.yaml
-include examples/simple.tsv
+include examples/mixing/ibmm.yaml
+include examples/mixing/ibbmm.yaml
+include examples/mixing/igmm.yaml
+include examples/mixing/pyclone_beta_binomial.yaml
+include examples/mixing/pyclone_binomial.yaml
+include examples/mixing/tsv/SRR385938.tsv
+include examples/mixing/tsv/SRR385939.tsv
+include examples/mixing/tsv/SRR385940.tsv
+include examples/mixing/tsv/SRR385941.tsv
+include examples/mixing/tsv/README.txt
+include examples/mixing/yaml/parental_copy_number/SRR385938.yaml
+include examples/mixing/yaml/parental_copy_number/SRR385939.yaml
+include examples/mixing/yaml/parental_copy_number/SRR385940.yaml
+include examples/mixing/yaml/parental_copy_number/SRR385941.yaml
 include LICENSE.txt
