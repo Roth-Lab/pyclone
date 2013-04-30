@@ -15,7 +15,7 @@ trace_dir: trace/pyclone_beta_binomial/all
 density: pyclone_beta_binomial
 
 # Number of MCMC iterations to perform
-num_iters: 10000
+num_iters: 1000
 
 # Parameters for Beta base measure. The following are equivalent to a Uniform[0,1] prior.
 base_measure_params:
@@ -29,8 +29,22 @@ concentration:
   
   # Priors. If these are not specified the initial value will be used
   prior:
-    shape: 1.0
-    rate: 1.0
+    shape: 0.001
+    rate: 0.001
+    
+# Beta-Binomial precision (alpha + beta) prior
+beta_binomial_precision_params:
+  # Starting value
+  value: 1000
+  
+  # Parameters for Gamma prior distribution
+  prior:
+    shape: 0.1
+    rate: 0.0001
+  
+  # Precision of Gamma proposal function for MH step
+  proposal:
+    precision: 0.01 
 
 # Specify the samples for the analysis. For this analysis there will be a single entry.
 samples:
