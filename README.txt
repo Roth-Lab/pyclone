@@ -5,6 +5,14 @@ file for more details.
 
 # Versions
 
+## 0.12.1
+
+* Fixed typos in some example files.
+
+* Added command to plot parallel coordinates for multiple samples.
+
+* Updated interface of plotting commands to take configuration files as arguments instead of traced directory.
+
 ## 0.12.0
 
 * Changed input files to work from YAML config instead of command line arguments.
@@ -54,6 +62,8 @@ The following libraries are required to use the clustering and plotting capabili
 
 * [brewer2mpl >= 1.0] (https://github.com/jiffyclub/brewer2mpl) - Required for plotting.
 
+* [eppl >= 0.1.0] (https://bitbucket.org/aroth85/eppl)
+
 * [maplotlib >= 1.2.0](http://matplotlib.org) - Required for plotting.
 
 * [numpy >= 1.6.2](http://www.numpy.org) - Required for plotting and clustering.
@@ -74,7 +84,7 @@ To run a PyClone analysis you need to perform several steps.
 
 3. Run the PyClone analysis using the `analyse` command.
 
-4. (Optional) Plot results using the `plot_cellular_frequencies` and `plot_similarity_matrix` commands.
+4. (Optional) Plot results using the `plot_multi_sample`, `plot_cellular_frequencies` and `plot_similarity_matrix` commands.
 
 5. (Optional) Cluster the PyClone output using the `cluster` command.
 
@@ -206,7 +216,7 @@ Once the required YAML file has been created PyClone can be run using the `analy
 
 ## Plot Results
 
-After running the analyse you can use the `plot_cellular_frequencies` and `plot_similarity_matrix` commands to visualise the results. These commands plot the posterior density estimates of the cellular frequencies and a heatmap of the posterior similarity matrix.
+After running the analyse you can use the `plot_multi_sample`, `plot_cellular_frequencies` and `plot_similarity_matrix` commands to visualise the results. These commands plot the prevalence (allelic or cellular) colour coded by cluster across samples, posterior density estimates of the cellular frequencies and a heatmap of the posterior similarity matrix.
 
 ## Cluster Results
 

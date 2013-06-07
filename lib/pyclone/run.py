@@ -109,36 +109,51 @@ def build_mutations_file(args):
 # Post processing code
 #=======================================================================================================================
 def cluster_trace(args):
-    from pyclone.post_process.cluster import cluster_pyclone_trace
+    from pyclone.post_process.cluster import write_pyclone_cluster_file
     
-    pyclone_file = os.path.join(args.trace_dir, 'labels.tsv.bz2')
+    config = _load_yaml_config(args.config_file)
     
-    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, method=args.method, burnin=args.burnin, thin=args.thin)    
+    labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
-    cluster_pyclone_trace(pyclone_file, args.out_file, args.method, args.burnin, args.thin)
+    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file, 
+                                                                                                                                        method=args.method, 
+                                                                                                                                        burnin=args.burnin, 
+                                                                                                                                        thin=args.thin)    
+    
+    write_pyclone_cluster_file(labels_file, args.out_file, args.method, args.burnin, args.thin)
 
 def plot_cellular_frequencies(args):
     import pyclone.post_process.plot as plot
     
-    pyclone_files = glob.glob(os.path.join(args.trace_dir, '*.cellular_frequencies.tsv.bz2'))
+    config = _load_yaml_config(args.config_file)
     
-    for pyclone_file in pyclone_files:
-        print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
+    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
+    
+    for sample_id in config['samples']:
+        file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
         
-        out_file = os.path.basename(pyclone_file).replace('tsv.bz2', 'pdf')
+        print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=file_name, 
+                                                                                                                                                         burnin=args.burnin, 
+                                                                                                                                                         thin=args.thin)   
+        
+        out_file = os.path.basename(file_name).replace('tsv.bz2', 'pdf')
         
         out_file = os.path.join(args.out_dir, out_file)
         
-        plot.plot_cellular_frequencies(pyclone_file, out_file, args.burnin, args.thin) 
+        plot.plot_cellular_frequencies(file_name, out_file, args.burnin, args.thin) 
     
 def plot_similarity_matrix(args):
     import pyclone.post_process.plot as plot
     
-    pyclone_file = os.path.join(args.trace_dir, 'labels.tsv.bz2')
+    config = _load_yaml_config(args.config_file)
     
-    print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
+    labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
-    plot.plot_similarity_matrix(pyclone_file, args.out_file, args.burnin, args.thin)
+    print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file, 
+                                                                                                                                                  burnin=args.burnin, 
+                                                                                                                                                  thin=args.thin)   
+    
+    plot.plot_similarity_matrix(labels_file, args.out_file, args.burnin, args.thin)
     
 def plot_multi_sample(args):
     from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
@@ -161,4 +176,12 @@ def plot_multi_sample(args):
         
     if args.table_file is not None:
         table.to_csv(args.table_file, sep='\t')
-        
+
+def _load_yaml_config(file_name):
+    fh = open(file_name)
+    
+    config = yaml.load(fh)
+    
+    fh.close()
+    
+    return config        

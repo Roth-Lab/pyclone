@@ -11,7 +11,7 @@ from pyclone.run import build_mutations_file, cluster_trace, plot_cellular_frequ
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.12.0')
+parser.add_argument('--version', action='version', version='PyClone-0.12.1')
 
 subparsers = parser.add_subparsers()
 
@@ -64,8 +64,8 @@ build_prior_parser.set_defaults(func=build_mutations_file)
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
 
-cluster_parser.add_argument('trace_dir',
-                            help='Path to directory where the PyClone analysis trace was written.')
+cluster_parser.add_argument('config_file', 
+                            help='''Path to configuration file used for analysis.''')
 
 cluster_parser.add_argument('out_file',
                             help='Path to file where clustering results will be written.')
@@ -89,8 +89,8 @@ plot_cf_parser = subparsers.add_parser('plot_cellular_frequencies',
                                        help='''Plot the posterior densities of the cellular frequencies of the mutations
                                        from a PyClone analysis.''')
 
-plot_cf_parser.add_argument('trace_dir',
-                            help='Path to directory where the PyClone analysis trace was written.')
+plot_cf_parser.add_argument('config_file', 
+                            help='''Path to configuration file used for analysis.''')
 
 plot_cf_parser.add_argument('out_dir',
                             help='Path to directory where plot files will be saved.')
@@ -109,8 +109,8 @@ plot_sm_parser = subparsers.add_parser('plot_similarity_matrix',
                                        help='''Plot a heat map of the posterior similarity matrix from a PyClone
                                        analysis.''')
 
-plot_sm_parser.add_argument('trace_dir',
-                            help='Path to directory where the PyClone analysis trace was written.')
+plot_sm_parser.add_argument('config_file', 
+                            help='''Path to configuration file used for analysis.''')
 
 plot_sm_parser.add_argument('out_file',
                             help='Path to file where plot will be saved.')
