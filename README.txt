@@ -68,6 +68,8 @@ The following libraries are required to use the clustering and plotting capabili
 
 * [numpy >= 1.6.2](http://www.numpy.org) - Required for plotting and clustering.
 
+* [pandas >= 0.11] (http://pandas.pydata.org) - Required for multi sample plotting.
+
 * [rpy2 >= 2.3.3](http://rpy.sourceforge.net/rpy2.html) - Only necessary to use the dynamic_tree_cut clustering method. The dynamicTreeCut tree cut package should also be installed in R.
 
 * [scikits-learn >= 0.13](http://scikit-learn.org) - Only necessary to use affinity_propogation, dbscan, spectral_clustering clustering methods. 
