@@ -4,7 +4,7 @@ targeted sequencing". These four samples correspond to experiments Cal-A - Cal-D
 
 To generate YAML files for PyClone analysis use 
 
-'PyClone build_input {TSV} {YAML} --reference_prior {REF_PRIOR} --variant_prior {VAR_PRIOR}'. 
+'PyClone build_mutations_file {TSV} {YAML} --reference_prior {REF_PRIOR} --variant_prior {VAR_PRIOR}'. 
 
 Where TSV is one of the .tsv files below, YAML is the .yaml file which will be created, REF_PRIOR is a method of 
 assigning priors for the reference population and VAR_PRIOR is a method for assigning priors for the variant population.
