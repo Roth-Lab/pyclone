@@ -29,7 +29,7 @@ concentration:
   
   # Priors. If these are not specified the initial value will be used
   prior:
-    shape: 0.001
+    shape: 1.0
     rate: 0.001
 
 # Specify the samples for the analysis.
