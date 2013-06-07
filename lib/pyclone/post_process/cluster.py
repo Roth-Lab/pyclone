@@ -21,8 +21,24 @@ except:
 
 from pyclone.post_process.utils import load_cluster_labels_trace
 
-def cluster_pyclone_trace(pyclone_file, cluster_file, method, burnin, thin):    
-    trace = load_cluster_labels_trace(pyclone_file, burnin, thin)
+def write_pyclone_cluster_file(labels_file, cluster_file, method, burnin, thin):
+    labels = cluster_pyclone_trace(labels_file, method, burnin, thin)
+    
+    writer = csv.DictWriter(
+                            open(cluster_file, 'w'),
+                            ['mutation_id', 'cluster_id'],
+                            delimiter='\t'
+                            )
+    
+    writer.writeheader()
+    
+    for mutation_id, cluster_id in labels.items():
+        out_row = {'mutation_id' : mutation_id, 'cluster_id' : int(cluster_id)}
+        
+        writer.writerow(out_row)  
+        
+def cluster_pyclone_trace(labels_file, method, burnin, thin):    
+    trace = load_cluster_labels_trace(labels_file, burnin, thin)
     
     X = trace.values()
     
@@ -45,18 +61,9 @@ def cluster_pyclone_trace(pyclone_file, cluster_file, method, burnin, thin):
     else:
         raise Exception("Clustering method {0} not recognised.".format(method))
     
-    writer = csv.DictWriter(
-                            open(cluster_file, 'w'),
-                            ['mutation_id', 'cluster_id'],
-                            delimiter='\t'
-                            )
+    mutation_ids = trace.keys()
     
-    writer.writeheader()
-    
-    for mutation, cluster_id in zip(trace.keys(), labels):
-        out_row = {'mutation_id' : mutation, 'cluster_id' : int(cluster_id)}
-        
-        writer.writerow(out_row)
+    return dict(zip(mutation_ids, labels))
 
 def cluster_with_affinity_propogation(X):
     try:
