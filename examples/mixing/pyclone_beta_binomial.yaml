@@ -46,7 +46,7 @@ beta_binomial_precision_params:
   proposal:
     precision: 0.01 
 
-# Specify the samples for the analysis. For this analysis there will be a single entry.
+# Specify the samples for the analysis.
 samples:
   # Unique sample ID
   SRR385938:

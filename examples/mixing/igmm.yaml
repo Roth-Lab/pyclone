@@ -34,7 +34,7 @@ concentration:
     shape: 0.001
     rate: 0.001
 
-# Specify the samples for the analysis. For this analysis there will be a single entry.
+# Specify the samples for the analysis.
 samples:
   # Unique sample ID
   SRR385938:
