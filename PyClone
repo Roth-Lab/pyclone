@@ -135,6 +135,9 @@ plot_ms_parser.add_argument('config_file',
 plot_ms_parser.add_argument('plot_file', 
                             help='''Path where plot file will be written.''')
 
+plot_ms_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
 plot_ms_parser.add_argument('--clustering_method', default='mpear',
                             choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
                                     'single_linkage', 'spectral_clustering'],
@@ -147,8 +150,9 @@ plot_ms_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], def
 plot_ms_parser.add_argument('--separate_lines', action='store_true', default=False,
                             help='''If set then each mutation will be plotted with a separate line.''')
 
-plot_ms_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+plot_ms_parser.add_argument('--table_file', default=None,
+                            help='''Path where a table of results used to plot the figure will be written. If this is
+                            not set, no table file will be written.''')
 
 plot_ms_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample

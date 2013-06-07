@@ -144,8 +144,21 @@ def plot_multi_sample(args):
     from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
     
     if args.separate_lines:
-        plot_mutations(args.config_file, args.plot_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+        table = plot_mutations(args.config_file, 
+                               args.plot_file, 
+                               args.prevalence, 
+                               args.clustering_method, 
+                               args.burnin, 
+                               args.thin)
         
     else:
-        plot_clusters(args.config_file, args.plot_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+        table = plot_clusters(args.config_file, 
+                              args.plot_file, 
+                              args.prevalence, 
+                              args.clustering_method, 
+                              args.burnin, 
+                              args.thin)
+        
+    if args.table_file is not None:
+        table.to_csv(args.table_file, sep='\t')
         

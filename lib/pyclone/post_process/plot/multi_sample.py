@@ -42,6 +42,8 @@ def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin,
     ax.legend_.set_title('Cluster ID')
     
     fig.savefig(plot_file, dpi=600)
+    
+    return data
 
 def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin, thin):
     data = _load_plot_data(config_file, prevalence, clustering_method, burnin, thin)
@@ -59,6 +61,8 @@ def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin
     ax.legend_.set_title('Cluster ID')
     
     fig.savefig(plot_file, dpi=600)
+    
+    return data
 
 def _load_yaml_config(file_name):
     fh = open(file_name)
