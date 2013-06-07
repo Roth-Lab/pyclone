@@ -139,3 +139,13 @@ def plot_similarity_matrix(args):
     print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=pyclone_file, burnin=args.burnin, thin=args.thin)   
     
     plot.plot_similarity_matrix(pyclone_file, args.out_file, args.burnin, args.thin)
+    
+def plot_multi_sample(args):
+    from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
+    
+    if args.separate_lines:
+        plot_mutations(args.config_file, args.plot_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+        
+    else:
+        plot_clusters(args.config_file, args.plot_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+        

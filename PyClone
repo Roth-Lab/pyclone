@@ -7,7 +7,7 @@
 import argparse
 
 from pyclone.run import build_mutations_file, cluster_trace, plot_cellular_frequencies, plot_similarity_matrix, \
-                        run_analysis
+                        run_analysis, plot_multi_sample
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
@@ -125,7 +125,38 @@ plot_sm_parser.add_argument('--thin', default=1, type=int,
 plot_sm_parser.set_defaults(func=plot_similarity_matrix)
 
 #---------------------------------------------------------------------------------------------------------------------- 
+plot_ms_parser = subparsers.add_parser('plot_multi_sample',
+                                       help='''Plot a parallel coordinates plot for the variant allelic prevalence or
+                                       cellular prevalence colour code by cluster membership.''')
 
+plot_ms_parser.add_argument('config_file', 
+                            help='''Path to configuration file used for analysis.''')
+
+plot_ms_parser.add_argument('plot_file', 
+                            help='''Path where plot file will be written.''')
+
+plot_ms_parser.add_argument('--clustering_method', default='mpear',
+                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
+                                    'single_linkage', 'spectral_clustering'],
+                            help='''Method used to cluster the PyClone trace. Default is mpear.''')
+
+plot_ms_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], default='cellular',
+                            help='''Determines which prevalence values will be plotted, allelic or cellular. Default is
+                            cellular.''')
+
+plot_ms_parser.add_argument('--separate_lines', action='store_true', default=False,
+                            help='''If set then each mutation will be plotted with a separate line.''')
+
+plot_ms_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
+plot_ms_parser.add_argument('--thin', default=1, type=int,
+                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
+                            after burning will be used for inference. Default is 1.''')
+
+plot_ms_parser.set_defaults(func=plot_multi_sample)
+
+#---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()
 
 args.func(args)
