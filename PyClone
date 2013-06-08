@@ -11,7 +11,7 @@ from pyclone.run import build_mutations_file, cluster_trace, plot_cellular_frequ
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.12.1')
+parser.add_argument('--version', action='version', version='PyClone-0.12.2')
 
 subparsers = parser.add_subparsers()
 

@@ -13,6 +13,8 @@ def make_parent_directory(file_name):
     
     For example, given /some/where/foo.bar make the folder /some/where.
     '''
+    file_name = os.path.abspath(file_name)
+    
     parent_dir = os.path.dirname(file_name)
     
     make_directory(parent_dir)
