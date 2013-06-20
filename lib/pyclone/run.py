@@ -6,7 +6,6 @@ Created on 2012-02-08
 from __future__ import division
 
 import csv
-import glob
 import os
 import random
 import yaml
@@ -18,6 +17,7 @@ from pyclone.igmm import run_igmm_analysis
 from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
 from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_parent_directory
+
 
 #=======================================================================================================================
 # PyClone analysis
@@ -108,6 +108,13 @@ def build_mutations_file(args):
 #=======================================================================================================================
 # Post processing code
 #=======================================================================================================================
+def build_multi_sample_table(args):
+    from pyclone.post_process.plot.multi_sample import load_multi_sample_table
+    
+    table = load_multi_sample_table(args.config_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+
+    table.to_csv(args.out_file, sep='\t')
+        
 def cluster_trace(args):
     from pyclone.post_process.cluster import write_pyclone_cluster_file
     
@@ -159,23 +166,20 @@ def plot_multi_sample(args):
     from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
     
     if args.separate_lines:
-        table = plot_mutations(args.config_file, 
-                               args.plot_file, 
-                               args.prevalence, 
-                               args.clustering_method, 
-                               args.burnin, 
-                               args.thin)
+        plot_mutations(args.config_file, 
+                       args.plot_file, 
+                       args.prevalence, 
+                       args.clustering_method, 
+                       args.burnin, 
+                       args.thin)
         
     else:
-        table = plot_clusters(args.config_file, 
-                              args.plot_file, 
-                              args.prevalence, 
-                              args.clustering_method, 
-                              args.burnin, 
-                              args.thin)
-        
-    if args.table_file is not None:
-        table.to_csv(args.table_file, sep='\t')
+        plot_clusters(args.config_file, 
+                      args.plot_file, 
+                      args.prevalence, 
+                      args.clustering_method, 
+                      args.burnin, 
+                      args.thin)
 
 def _load_yaml_config(file_name):
     fh = open(file_name)

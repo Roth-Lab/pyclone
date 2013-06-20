@@ -26,7 +26,7 @@ from pyclone.post_process.cluster import cluster_pyclone_trace
 from pyclone.post_process.utils import load_cellular_frequencies_trace
 
 def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = _load_plot_data(config_file, prevalence, clustering_method, burnin, thin)
+    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
     
     fig = plot.figure()
     
@@ -46,7 +46,7 @@ def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin,
     return data
 
 def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = _load_plot_data(config_file, prevalence, clustering_method, burnin, thin)
+    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
     
     fig = plot.figure()
     
@@ -73,7 +73,7 @@ def _load_yaml_config(file_name):
     
     return config
 
-def _load_plot_data(config_file, prevalence, clustering_method, burnin, thin):
+def load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin):
     config = _load_yaml_config(config_file)
     
     if prevalence == 'allelic':
