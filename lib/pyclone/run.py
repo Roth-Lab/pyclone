@@ -85,6 +85,8 @@ def build_mutations_file(args):
         minor_cn = int(row['minor_cn'])
         
         major_cn = int(row['major_cn'])
+        
+        segment_prevalence = float(row['SegPrevalence'])
 
         mutation = get_mutation(mutation_id,
                                 ref_counts,
@@ -93,7 +95,8 @@ def build_mutations_file(args):
                                 minor_cn,
                                 major_cn,
                                 args.ref_prior,
-                                args.var_prior)
+                                args.var_prior,
+                                segment_prevalence)
 
         config['mutations'].append(mutation.to_dict())
     

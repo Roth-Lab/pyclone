@@ -179,8 +179,8 @@ class PyCloneBinomialDensity(Density):
         
         return log_sum_exp(ll)
     
-    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_frequency):  
-        f = cellular_frequency
+    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_prevalence):  
+        f = cellular_prevalence
         t = self.params.tumour_content
         
         p_n = (1 - t) * cn_n

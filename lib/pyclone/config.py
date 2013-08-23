@@ -5,10 +5,10 @@ Created on 2013-02-12
 '''
 from __future__ import division
 
-def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, ref_prior, var_prior):
+def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, ref_prior, var_prior, segment_prevalence):
     states = _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior)
     
-    mutation = Mutation(mutation_id, ref_counts, var_counts)
+    mutation = Mutation(mutation_id, ref_counts, var_counts, segment_prevalence)
     
     for (g_n, g_r, g_v) in states:
         state = State(g_n, g_r, g_v, 1)
@@ -36,6 +36,9 @@ def _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior):
      
     elif var_prior == 'BB':
         states = _get_BB_states()
+        
+    elif var_prior == 'apolloh':
+        states = _get_apolloh_states(normal_cn, minor_cn, major_cn)
      
     else:
         raise Exception('{0} is not a recognised method for setting variant priors.'.format(var_prior))
@@ -160,6 +163,23 @@ def _get_no_zygosity_states(normal_cn, total_cn, ref_prior):
     
     return sorted(states)
 
+def _get_apolloh_states(normal_cn, minor_cn, major_cn):
+    g_n = 'A' * normal_cn
+    
+    total_cn = minor_cn + major_cn
+    
+    states = [
+              (g_n, 'A' * total_cn, 'A' * minor_cn + 'B' * major_cn),
+              (g_n, 'A' * total_cn, 'A' * (total_cn - 1) + 'B')         
+              ]    
+    
+    if minor_cn != 0:
+        states.append((g_n, 'A' * total_cn, 'A' * major_cn + 'B' * minor_cn))
+    
+    states = set(states)
+    
+    return sorted(states)
+
 def _get_AB_states():
     return [('AA', 'AA', 'AB'), ]
 
@@ -170,7 +190,7 @@ def _get_BB_states():
 # Helper classes
 #=======================================================================================================================
 class Mutation(object):
-    def __init__(self, mutation_id, ref_counts, var_counts):
+    def __init__(self, mutation_id, ref_counts, var_counts, segment_prevalence):
         self.id = mutation_id
         
         self.ref_counts = ref_counts
@@ -178,6 +198,8 @@ class Mutation(object):
         self.var_counts = var_counts
         
         self.states = []
+        
+        self.segment_prevalence = segment_prevalence
         
     @property
     def cn_n(self):
@@ -212,7 +234,8 @@ class Mutation(object):
                 'id' : self.id,
                 'ref_counts' : self.ref_counts,
                 'var_counts' : self.var_counts,
-                'states' : [x.to_dict() for x in self.states]
+                'states' : [x.to_dict() for x in self.states],
+                'segment_prevalence' : self.segment_prevalence
                 }
 
 class State(object):
@@ -260,6 +283,7 @@ class State(object):
             return error_rate
         
         num_ref_alleles = genotype.count("A")
+        
         num_var_alleles = genotype.count("B")
         
         cn = len(genotype)
@@ -269,8 +293,10 @@ class State(object):
         
         if num_ref_alleles == 0:
             return 1 - error_rate
+        
         elif num_var_alleles == 0:
             return error_rate
+        
         else:
             return num_var_alleles / cn        
 
@@ -283,7 +309,9 @@ def load_mutation_from_dict(d):
     ref_counts = int(d['ref_counts'])
     var_counts = int(d['var_counts'])
     
-    mutation = Mutation(mutation_id, ref_counts, var_counts)
+    segment_prevalence = float(d['segment_prevalence'])
+    
+    mutation = Mutation(mutation_id, ref_counts, var_counts, segment_prevalence)
     
     for state_dict in d['states']:
         state = load_state_from_dict(state_dict)

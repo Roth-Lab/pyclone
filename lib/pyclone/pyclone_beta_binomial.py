@@ -42,7 +42,7 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
         
         sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(precision_params['value']))
         
-        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
+        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id],
                                                                  sample_cluster_densities[sample_id])  
     
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
@@ -53,8 +53,8 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
     
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
-    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], precision_params['prior']['rate']), 
-                                                                     cluster_density, 
+    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], precision_params['prior']['rate']),
+                                                                     cluster_density,
                                                                      GammaProposal(precision_params['proposal']['precision']))
     
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
@@ -132,6 +132,8 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
     a = mutation.ref_counts
     b = mutation.var_counts
     
+    f = mutation.segment_prevalence
+    
     d = a + b 
     
     cn_n = tuple([x.cn_n for x in mutation.states])
@@ -146,7 +148,7 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
     
     log_pi = _get_log_pi(prior_weights)
     
-    return PyCloneBetaBinomialData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+    return PyCloneBetaBinomialData(b, d, tumour_content, f, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
     
 def _get_log_pi(weights):
     pi = [x / sum(weights) for x in weights]
@@ -165,7 +167,7 @@ def _load_base_measure_params(file_name):
     return params
 
 PyCloneBetaBinomialData = namedtuple('PyCloneBetaBinomialData',
-                                     ['b', 'd', 'tumour_content', 'cn_n', 'cn_r', 'cn_v', 'mu_n', 'mu_r', 'mu_v', 'log_pi'])
+                                     ['b', 'd', 'tumour_content', 'segment_prevalence', 'cn_n', 'cn_r', 'cn_v', 'mu_n', 'mu_r', 'mu_v', 'log_pi'])
 
 class PyCloneBetaBinomialDensity(Density):
     def _log_p(self, data, params):
@@ -181,27 +183,31 @@ class PyCloneBetaBinomialDensity(Density):
                                                           mu_r,
                                                           mu_v,
                                                           params.x,
-                                                          data.tumour_content)
+                                                          data.tumour_content,
+                                                          data.segment_prevalence)
             
             ll.append(temp)
         
         return log_sum_exp(ll)
     
-    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_frequency, tumour_content):  
-        f = cellular_frequency
+    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_prevalence, tumour_content, segment_prevalence):  
+        f = segment_prevalence
+        phi = cellular_prevalence
         t = tumour_content
         
         p_n = (1 - t) * cn_n
-        p_r = t * (1 - f) * cn_r
-        p_v = t * f * cn_v
+        p_r = t * (1 - f) * cn_n
+        p_cn = t * f * (1 - phi) * cn_r
+        p_v = t * f * phi * cn_v
         
-        norm_const = p_n + p_r + p_v
+        norm_const = p_n + p_r + p_cn + p_v
         
         p_n = p_n / norm_const
         p_r = p_r / norm_const
+        p_cn = p_cn / norm_const
         p_v = p_v / norm_const
         
-        mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
+        mu = p_n * mu_n + p_r * mu_n + p_cn * mu_r + p_v * mu_v
         
         param_a = mu * self.params.x
         
