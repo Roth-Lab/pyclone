@@ -48,7 +48,7 @@ build_prior_parser.add_argument('--ref_prior', choices=['normal', 'variant', 'no
                                 "no_zygosity is used for the var_prior option. Default normal_variant.''')
 
 build_prior_parser.add_argument('--var_prior',
-                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number'],
+                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number', 'apolloh'],
                                 default='total_copy_number', help='''Method used to set the possible genotypes  of the
                                 variant population. "AB" assumes all mutations have the AB genotype. "BB" assumes all
                                 mutations have the BB genotype. "no_zygosity" assumes all mutation have the genotype
