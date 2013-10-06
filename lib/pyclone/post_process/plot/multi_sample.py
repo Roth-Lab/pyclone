@@ -8,6 +8,7 @@ from __future__ import division
 from collections import OrderedDict
 from eppl.parallel_coordinates import aggregated_parallel_coordinates_plot, parallel_coordinates_plot
 
+import csv
 import os
 import yaml
 
@@ -34,7 +35,7 @@ def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin,
     
     title = 'Cluster {0} Prevalence by Sample'.format(prevalence.capitalize())
 
-    aggregated_parallel_coordinates_plot(data, 'cluster_id', ax=ax, show_class_size=True, 
+    aggregated_parallel_coordinates_plot(data, 'cluster_id', ax=ax, show_class_size=True,
                                          title=title, x_label='Sample ID', y_label='Prevalence')
     
     ax.set_ylim(0, 1.0)
@@ -105,12 +106,18 @@ def load_multi_sample_table(config_file, prevalence, clustering_method, burnin, 
 def _load_allelic_prevalences(config):
     all_data = OrderedDict()
     
+    if 'pyclone' in config['density']:
+        mutations_file_format = 'yaml'
+    
+    else:
+        mutations_file_format = 'tsv'
+    
     for sample_id in config['samples']:
         file_name = config['samples'][sample_id]['mutations_file']
         
         file_name = os.path.join(config['working_dir'], file_name)
         
-        all_data[sample_id] = _load_sample_allelic_prevalences(file_name)       
+        all_data[sample_id] = _load_sample_allelic_prevalences(file_name, mutations_file_format)       
     
     sample_ids = all_data.keys()
     
@@ -126,22 +133,41 @@ def _load_allelic_prevalences(config):
 
     return data
           
-def _load_sample_allelic_prevalences(file_name):
+def _load_sample_allelic_prevalences(file_name, file_format):
     '''
     Load data from PyClone formatted input file.
     '''
     data = OrderedDict()
     
-    fh = open(file_name)
+    if file_format == 'tsv':
+        fh = open(file_name)
+            
+        config = yaml.load(fh)
+        
+        fh.close()
     
-    config = yaml.load(fh)
+        for mutation_dict in config['mutations']:
+            mutation = load_mutation_from_dict(mutation_dict)
     
-    fh.close()
-
-    for mutation_dict in config['mutations']:
-        mutation = load_mutation_from_dict(mutation_dict)
-
-        data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts) 
+            data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+    
+    else:
+        fh = open(file_name)
+        
+        reader = csv.DictReader(fh, delimiter='\t')
+        
+        for row in reader:
+            a = int(row['ref_counts'])
+            
+            b = int(row['var_counts'])
+            
+            d = a + b
+            
+            f = b / d
+            
+            data[row['mutation_id']] = f
+        
+        fh.close()
     
     return data
 
