@@ -139,7 +139,7 @@ def _load_sample_allelic_prevalences(file_name, file_format):
     '''
     data = OrderedDict()
     
-    if file_format == 'tsv':
+    if file_format == 'yaml':
         fh = open(file_name)
             
         config = yaml.load(fh)
