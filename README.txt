@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.4
+
+* Fixed bug in the multi-sample plotting/table code which caused failures for non PyClone densities.
+
 ## 0.12.3
 
 * Added ability to output table used for generating multi-sample plots.
