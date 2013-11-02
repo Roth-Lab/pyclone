@@ -7,11 +7,15 @@ from __future__ import division
 
 from collections import OrderedDict, namedtuple
 from math import log
-from pydp.base_measures import BetaBaseMeasure
-from pydp.densities import log_binomial_pdf, Density
+from pydp.base_measures import BetaBaseMeasure, GammaBaseMeasure
+from pydp.data import GammaData
+from pydp.densities import Density, log_beta_binomial_pdf
+from pydp.proposal_functions import GammaProposal
 from pydp.samplers.atom import BaseMeasureAtomSampler
 from pydp.samplers.dp import DirichletProcessSampler
+from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
+from pydp.utils import log_sum_exp
 
 import os
 import yaml
@@ -19,10 +23,9 @@ import yaml
 from pyclone.config import load_mutation_from_dict
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
 from pyclone.trace import DiskTrace
-from pydp.utils import log_sum_exp
 
-def run_pyclone_binomial_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
-    data, sample_ids, tumour_content = _load_data(config_file)
+def run_pyclone_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
+    data, sample_ids = _load_data(config_file)
     
     sample_atom_samplers = OrderedDict()
     
@@ -32,25 +35,31 @@ def run_pyclone_binomial_analysis(config_file, trace_dir, num_iters, alpha, alph
     
     base_measure_params = _load_base_measure_params(config_file)
     
+    precision_params = _load_precision_params(config_file)
+    
     for sample_id in sample_ids:
         sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
         
-        sample_cluster_densities[sample_id] = PyCloneBinomialDensity(PyCloneBinomialParameter(tumour_content[sample_id]))
+        sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(precision_params['value']))
         
         sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
                                                                  sample_cluster_densities[sample_id])  
     
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
     
-    cluster_density = MultiSampleDensity(sample_cluster_densities)
+    cluster_density = MultiSampleDensity(sample_cluster_densities, shared_params=True)
     
     atom_sampler = MultiSampleAtomSampler(base_measure, cluster_density, sample_atom_samplers)
     
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
-    sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors)
+    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], precision_params['prior']['rate']), 
+                                                                     cluster_density, 
+                                                                     GammaProposal(precision_params['proposal']['precision']))
     
-    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'})
+    sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
+    
+    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)
     
     trace.open()
     
@@ -82,9 +91,9 @@ def _load_data(file_name):
         
         error_rate = config['samples'][sample_id]['error_rate']
         
-        sample_data[sample_id] = _load_sample_data(file_name, error_rate)
+        tumour_content = config['samples'][sample_id]['tumour_content']['value']
         
-        tumour_content[sample_id] = config['samples'][sample_id]['tumour_content']['value']       
+        sample_data[sample_id] = _load_sample_data(file_name, error_rate, tumour_content)
     
     sample_ids = sample_data.keys()
     
@@ -98,9 +107,9 @@ def _load_data(file_name):
         for sample_id in sample_ids:
             data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
     
-    return data, sample_ids, tumour_content
+    return data, sample_ids
 
-def _load_sample_data(file_name, error_rate):
+def _load_sample_data(file_name, error_rate, tumour_content):
     '''
     Load data from PyClone formatted input file.
     '''
@@ -115,11 +124,11 @@ def _load_sample_data(file_name, error_rate):
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
 
-        data[mutation.id] = _get_pyclone_data(mutation, error_rate)
+        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
     
     return data
 
-def _get_pyclone_data(mutation, error_rate):
+def _get_pyclone_data(mutation, error_rate, tumour_content):
     a = mutation.ref_counts
     b = mutation.var_counts
     
@@ -137,7 +146,7 @@ def _get_pyclone_data(mutation, error_rate):
     
     log_pi = _get_log_pi(prior_weights)
     
-    return PyCloneBinomialData(b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+    return PyCloneBetaBinomialData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
     
 def _get_log_pi(weights):
     pi = [x / sum(weights) for x in weights]
@@ -155,12 +164,10 @@ def _load_base_measure_params(file_name):
     
     return params
 
-PyCloneBinomialData = namedtuple('PyCloneBinomialData',
-                                 ['b', 'd', 'cn_n', 'cn_r', 'cn_v', 'mu_n', 'mu_r', 'mu_v', 'log_pi'])
+PyCloneBetaBinomialData = namedtuple('PyCloneBetaBinomialData',
+                                     ['b', 'd', 'tumour_content', 'cn_n', 'cn_r', 'cn_v', 'mu_n', 'mu_r', 'mu_v', 'log_pi'])
 
-PyCloneBinomialParameter = namedtuple('PyCloneBinomialParameter', 'tumour_content')
-
-class PyCloneBinomialDensity(Density):
+class PyCloneBetaBinomialDensity(Density):
     def _log_p(self, data, params):
         ll = []
         
@@ -173,15 +180,16 @@ class PyCloneBinomialDensity(Density):
                                                           mu_n,
                                                           mu_r,
                                                           mu_v,
-                                                          params.x)
+                                                          params.x,
+                                                          data.tumour_content)
             
             ll.append(temp)
         
         return log_sum_exp(ll)
     
-    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_frequency):  
+    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_frequency, tumour_content):  
         f = cellular_frequency
-        t = self.params.tumour_content
+        t = tumour_content
         
         p_n = (1 - t) * cn_n
         p_r = t * (1 - f) * cn_r
@@ -195,4 +203,17 @@ class PyCloneBinomialDensity(Density):
         
         mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
         
-        return log_binomial_pdf(b, d, mu)
+        param_a = mu * self.params.x
+        
+        param_b = (1 - mu) * self.params.x
+        
+        return log_beta_binomial_pdf(b, d, param_a, param_b)
+
+def _load_precision_params(file_name):
+    fh = open(file_name)
+    
+    config = yaml.load(fh)
+    
+    fh.close()
+    
+    return config['beta_binomial_precision_params']    

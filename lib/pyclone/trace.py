@@ -42,7 +42,7 @@ class DiskTrace(object):
         self.cellular_frequency_writers = {}
         
         for sample_id in self.sample_ids:
-            self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(self.trace_dir, 
+            self.cellular_frequency_writers[sample_id] = CellularPrevalencesWriter(self.trace_dir, 
                                                                                    sample_id, 
                                                                                    self.mutation_ids)
         
@@ -58,7 +58,7 @@ class DiskTrace(object):
             row = []
             
             for param in state['params']:
-                attr = self.attribute_map['cellular_frequencies']
+                attr = self.attribute_map['cellular_prevalences']
                 
                 row.append(getattr(param[sample_id], attr))
             
@@ -83,9 +83,9 @@ class ConcentrationParameterWriter(object):
     def write_row(self, row):
         self.writer.writerow(row)
 
-class CellularFrequenciesWriter(object):
+class CellularPrevalencesWriter(object):
     def __init__(self, trace_dir, sample_id, mutation_ids):
-        self.file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+        self.file_name = os.path.join(trace_dir, '{0}.cellular_prevalences.tsv.bz2'.format(sample_id))
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         
@@ -93,7 +93,7 @@ class CellularFrequenciesWriter(object):
         
         self.writer.writerow(mutation_ids)
         
-        self.param_id = (sample_id, 'cellular_frequencies')
+        self.param_id = (sample_id, 'cellular_prevalences')
     
     def close(self):
         self.file_handle.close()

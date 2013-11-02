@@ -25,41 +25,42 @@ analyse_parser.add_argument('--seed', default=None, type=int,
                             help='''Set random seed so results can be reproduced. By default a random seed is
                             chosen.''')
 
+analyse_parser.add_argument('--alpha_init', type=float, default=1.0,
+                            help='''Initial value of DP concentration parameter. Default is 1.0.''')
+
+analyse_parser.add_argument('--alpha_rate', type=float, default=1e-3,
+                            help='''Shape parameter in prior of DP concentration parameter. Default is 1e-3.''')
+
+analyse_parser.add_argument('--alpha_shape', type=float, default=1.0,
+                            help='''Shape parameter in prior of DP concentration parameter. Default is 1.0.''')
+
+analyse_parser.add_argument('--base_measure_alpha', type=float, default=1.0,
+                            help='''Value of alpha parameter in Beta base measure for cellular prevalence. Default is
+                            1.0.''')
+
+analyse_parser.add_argument('--base_measure_beta', type=float, default=1.0,
+                            help='''Value of beta parameter in Beta base measure for cellular prevalence. Default is
+                            1.0.''')
+
+analyse_parser.add_argument('--error_rate', type=float, default=1e-3,
+                            help='''Expected sequencing error rate. Default is 1e-3.''')
+
+analyse_parser.add_argument('--precision_init', type=float, default=1.0,
+                            help='''Initial_value of precision parameter in Beta-Binomial emission distribution.''')
+
+analyse_parser.add_argument('--precision_rate', type=float, default=1e-4,
+                            help='''Rate parameter in prior of Beta-Binomial concentration parameter. Default is
+                            1e-4.''')
+
+analyse_parser.add_argument('--precision_shape', type=float, default=1.0,
+                            help='''Shape parameter in prior of Beta-Binomial concentration parameter. Default is
+                            1.0.''')
+
+analyse_parser.add_argument('--precision_proposal_precision', type=float, default=0.1,
+                            help='''Precision of Gaussian random walk for sampling precision parameter of Beta-Binomial
+                            concentration parameter. Default is 0.1.''')
+
 analyse_parser.set_defaults(func=run_analysis)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-build_prior_parser = subparsers.add_parser('build_mutations_file',
-                                           help='''Build a YAML format file with mutation data and states prior to be
-                                           used for PyClone analysis.''')
-
-build_prior_parser.add_argument('in_file',
-                                help='''Path to tab separated input file. The input file should have header and the
-                                following columns: mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn.
-                                Any additional columns will be ignored. See examples for format.''')
-
-build_prior_parser.add_argument('out_file',
-                                help='''Path where YAML formatted PyClone input file will be written.''')
-
-build_prior_parser.add_argument('--ref_prior', choices=['normal', 'variant', 'normal_variant'], default='normal_variant',
-                                help='''Method for setting the copy number of the reference population. "normal" sets it
-                                to the value of "normal_cn" in the input file. "variant" sets it to the sum of
-                                "minor_cn" and "major_cn" in the input file. "normal_variant" considers both options
-                                with equal prior weight. This option only has an effect if "total_copy_number" or
-                                "no_zygosity is used for the var_prior option. Default normal_variant.''')
-
-build_prior_parser.add_argument('--var_prior',
-                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number'],
-                                default='total_copy_number', help='''Method used to set the possible genotypes  of the
-                                variant population. "AB" assumes all mutations have the AB genotype. "BB" assumes all
-                                mutations have the BB genotype. "no_zygosity" assumes all mutation have the genotype
-                                with the predicted total copy number and one mutant allele i.e. AAB for a copy number 3
-                                mutation. "parental_copy_number" sets considers all possible genotypes compatible with
-                                the predicted parental copy number. "total_copy_number" considers all possible genotypes
-                                compatible with the predicted total copy number. If reliable parental copy number is
-                                available the parental_copy_number method should be chosen. Default is
-                                total_copy_number.''')
-
-build_prior_parser.set_defaults(func=build_mutations_file)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')

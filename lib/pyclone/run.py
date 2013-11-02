@@ -11,13 +11,7 @@ import random
 import yaml
 
 from pyclone.config import get_mutation
-from pyclone.ibmm import run_ibmm_analysis
-from pyclone.ibbmm import run_ibbmm_analysis
-from pyclone.igmm import run_igmm_analysis
-from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
-from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
-from pyclone.utils import make_parent_directory
-
+from pyclone.model import run_pyclone_analysis
 
 #=======================================================================================================================
 # PyClone analysis
@@ -34,7 +28,7 @@ def run_analysis(args):
     
     trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
     
-    alpha = config['concentration']['value']
+    alpha = args.alpha_init
     
     if 'prior' in config['concentration']:
         alpha_priors = config['concentration']['prior']
@@ -42,36 +36,16 @@ def run_analysis(args):
         alpha_priors = None
     
     num_iters = config['num_iters']
-    
-    density = config['density']
-    
-    if density == 'binomial':
-        run_ibmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-    
-    elif density == 'gaussian':
-        run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-        
-    elif density == 'beta_binomial':
-        run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-                
-    elif density == 'pyclone_beta_binomial':
-        run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
-    
-    elif density == 'pyclone_binomial':
-        run_pyclone_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-    
-    else:
-        raise Exception('{0} is not a valid density for PyClone.'.format(density))   
+
+    run_pyclone_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
 
 #=======================================================================================================================
 # Input file code
 #=======================================================================================================================
-def build_mutations_file(args):
-    config = {}
+def get_mutations(file_name):
+    mutations = []
     
-    reader = csv.DictReader(open(args.in_file), delimiter='\t')
-    
-    config['mutations'] = []
+    reader = csv.DictReader(open(file_name), delimiter='\t')
 
     for row in reader:
         mutation_id = row['mutation_id']
@@ -85,6 +59,8 @@ def build_mutations_file(args):
         minor_cn = int(row['minor_cn'])
         
         major_cn = int(row['major_cn'])
+        
+        cn_prevalence = float(row['cn_prevalence'])
 
         mutation = get_mutation(mutation_id,
                                 ref_counts,
@@ -92,18 +68,9 @@ def build_mutations_file(args):
                                 normal_cn,
                                 minor_cn,
                                 major_cn,
-                                args.ref_prior,
-                                args.var_prior)
+                                cn_prevalence)
 
-        config['mutations'].append(mutation.to_dict())
-    
-    make_parent_directory(args.out_file)
-    
-    fh = open(args.out_file, 'w')
-    
-    yaml.dump(config, fh)
-    
-    fh.close()
+        mutations.append(mutation)
 
 #=======================================================================================================================
 # Post processing code
@@ -122,9 +89,9 @@ def cluster_trace(args):
     
     labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
-    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file, 
-                                                                                                                                        method=args.method, 
-                                                                                                                                        burnin=args.burnin, 
+    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file,
+                                                                                                                                        method=args.method,
+                                                                                                                                        burnin=args.burnin,
                                                                                                                                         thin=args.thin)    
     
     write_pyclone_cluster_file(labels_file, args.out_file, args.method, args.burnin, args.thin)
@@ -139,8 +106,8 @@ def plot_cellular_frequencies(args):
     for sample_id in config['samples']:
         file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
         
-        print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=file_name, 
-                                                                                                                                                         burnin=args.burnin, 
+        print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=file_name,
+                                                                                                                                                         burnin=args.burnin,
                                                                                                                                                          thin=args.thin)   
         
         out_file = os.path.basename(file_name).replace('tsv.bz2', 'pdf')
@@ -156,8 +123,8 @@ def plot_similarity_matrix(args):
     
     labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
-    print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file, 
-                                                                                                                                                  burnin=args.burnin, 
+    print '''Plotting similarity matrix from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file,
+                                                                                                                                                  burnin=args.burnin,
                                                                                                                                                   thin=args.thin)   
     
     plot.plot_similarity_matrix(labels_file, args.out_file, args.burnin, args.thin)
@@ -166,19 +133,19 @@ def plot_multi_sample(args):
     from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
     
     if args.separate_lines:
-        plot_mutations(args.config_file, 
-                       args.plot_file, 
-                       args.prevalence, 
-                       args.clustering_method, 
-                       args.burnin, 
+        plot_mutations(args.config_file,
+                       args.plot_file,
+                       args.prevalence,
+                       args.clustering_method,
+                       args.burnin,
                        args.thin)
         
     else:
-        plot_clusters(args.config_file, 
-                      args.plot_file, 
-                      args.prevalence, 
-                      args.clustering_method, 
-                      args.burnin, 
+        plot_clusters(args.config_file,
+                      args.plot_file,
+                      args.prevalence,
+                      args.clustering_method,
+                      args.burnin,
                       args.thin)
 
 def _load_yaml_config(file_name):
