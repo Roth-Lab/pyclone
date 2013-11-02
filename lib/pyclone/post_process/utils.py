@@ -5,39 +5,27 @@ Created on 2013-02-08
 
 @author: Andrew Roth
 '''
-from collections import defaultdict
-
 import bz2
-import csv
+import StringIO
 
-def load_cellular_frequencies_trace(file_name, burnin, thin):
-    return _load_trace(file_name, burnin, thin, float)
+try:
+    import pandas as pd
+except:
+    raise Exception("The multi sample plotting module requires the pandas package. See http://http://pandas.pydata.org.")
 
-def load_cluster_labels_trace(file_name, burnin, thin):
-    return _load_trace(file_name, burnin, thin, int)
-
-def _load_trace(trace_file, burnin, thin, cast_func):
+def load_trace(trace_file, burnin, thin):
     '''
         Args:
             trace_file : (str) Path to file to load.
             burnin : (int) Number of samples from the begining of MCMC chain to discard.
             thin : (int) Number of samples to skip when building trace.
-            cast_func : (function) A function to cast data from string to appropriate type i.e. int, float
-    '''        
-    trace = defaultdict(list)
+    '''
+    fh = open(trace_file)
     
-    fh = bz2.BZ2File(trace_file)
+    data = StringIO.StringIO(bz2.decompress(fh.read()))
     
-    reader = csv.DictReader(fh, delimiter='\t')
+    data = pd.read_csv(data, sep='\t')
     
-    for i, row in enumerate(reader):
-        if i < burnin:
-            continue
-        
-        if i % thin == 0:
-            for mutation in row:
-                trace[mutation].append(cast_func(row[mutation]))
-        
-    fh.close()
+    data = data[burnin::thin]
     
-    return trace
+    return data.T

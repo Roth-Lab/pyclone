@@ -7,11 +7,15 @@ Created on 2013-02-08
 '''
 from __future__ import division
 
-import csv
 import numpy as np
 
 from math import exp
 from pydp.densities import log_binomial_coefficient
+
+try:
+    import pandas as pd
+except:
+    raise Exception("The multi sample plotting module requires the pandas package. See http://http://pandas.pydata.org.")
 
 try:
     from scipy.cluster.hierarchy import average, fcluster 
@@ -19,30 +23,21 @@ try:
 except:
     raise Exception("The clustering module requires the scipy package. See http://www.scipy.org/.")
 
-from pyclone.post_process.utils import load_cluster_labels_trace
+from pyclone.post_process.utils import load_trace
 
-def write_pyclone_cluster_file(labels_file, cluster_file, method, burnin, thin):
-    labels = cluster_pyclone_trace(labels_file, method, burnin, thin)
+def write_pyclone_cluster_file(labels_file, cluster_file, burnin, thin):
+    labels = cluster_pyclone_trace(labels_file, burnin, thin)
     
-    writer = csv.DictWriter(open(cluster_file, 'w'), ['mutation_id', 'cluster_id'], delimiter='\t')
-    
-    writer.writeheader()
-    
-    for mutation_id, cluster_id in labels.items():
-        out_row = {'mutation_id' : mutation_id, 'cluster_id' : int(cluster_id)}
-        
-        writer.writerow(out_row)  
+    labels.to_csv(cluster_file, index_label='mutation_id', sep='\t')
         
 def cluster_pyclone_trace(labels_file, burnin, thin):    
-    trace = load_cluster_labels_trace(labels_file, burnin, thin)
-    
-    X = trace.values()
+    trace = load_trace(labels_file, burnin, thin)
+   
+    labels = cluster_with_mpear(trace)
 
-    labels = cluster_with_mpear(X)
-
-    mutation_ids = trace.keys()
+    labels = pd.Series(labels, index=trace.index)
     
-    return dict(zip(mutation_ids, labels))
+    return pd.DataFrame(labels, columns=['cluster_id'])
 
 def cluster_with_mpear(X):
     X = np.array(X)

@@ -18,7 +18,7 @@ class SimilarityMatrixPlot(object):
     def __init__(self, labels_trace):
         self.trace = labels_trace
         
-        self.genes = labels_trace.keys()
+        self.genes = labels_trace.index
 
         self._init_plot_area()
     
@@ -91,7 +91,7 @@ class SimilarityMatrixPlot(object):
         self.heat_map = HeatMap(self._heat_map_ax)            
 
     def _get_similarity_matrix(self):
-        X = self.trace.values()
+        X = self.trace
         
         dist_mat = pdist(X, 'hamming')
         
