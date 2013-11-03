@@ -4,14 +4,14 @@
 # PyClone
 # Author : Andrew Roth
 #=======================================================================================================================
-from pyclone.run import build_multi_sample_table, build_mutations_file, cluster_trace, plot_cellular_frequencies, \
-                        plot_similarity_matrix, run_analysis, plot_multi_sample
+from pyclone.run import plot_cellular_prevalences, plot_multi_sample, plot_similarity_matrix, run_analysis, \
+                        write_results_table
 
 import argparse
 
-parser = argparse.ArgumentParser(prog='PyClone')
+parser = argparse.ArgumentParser(prog='PyClone-SCN')
 
-parser.add_argument('--version', action='version', version='PyClone-0.12.4')
+parser.add_argument('--version', action='version', version='0.1.0')
 
 subparsers = parser.add_subparsers()
 
@@ -19,11 +19,7 @@ subparsers = parser.add_subparsers()
 analyse_parser = subparsers.add_parser('analyse', help='''Start a new PyClone analysis.''')
 
 analyse_parser.add_argument('config_file',
-                            help='Path to tab separated input file. See examples for format.')
-
-analyse_parser.add_argument('--seed', default=None, type=int,
-                            help='''Set random seed so results can be reproduced. By default a random seed is
-                            chosen.''')
+                            help='Path YAML formatted input file.')
 
 analyse_parser.add_argument('--alpha_init', type=float, default=1.0,
                             help='''Initial value of DP concentration parameter. Default is 1.0.''')
@@ -45,6 +41,9 @@ analyse_parser.add_argument('--base_measure_beta', type=float, default=1.0,
 analyse_parser.add_argument('--error_rate', type=float, default=1e-3,
                             help='''Expected sequencing error rate. Default is 1e-3.''')
 
+analyse_parser.add_argument('--num_iters', type=int, default=int(1e4),
+                            help='''Number of MCMC iterations to perform.''')
+
 analyse_parser.add_argument('--precision_init', type=float, default=1.0,
                             help='''Initial_value of precision parameter in Beta-Binomial emission distribution.''')
 
@@ -60,34 +59,15 @@ analyse_parser.add_argument('--precision_proposal_precision', type=float, defaul
                             help='''Precision of Gaussian random walk for sampling precision parameter of Beta-Binomial
                             concentration parameter. Default is 0.1.''')
 
+analyse_parser.add_argument('--seed', default=None, type=int,
+                            help='''Set random seed so results can be reproduced. By default a random seed is
+                            chosen.''')
+
 analyse_parser.set_defaults(func=run_analysis)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
-
-cluster_parser.add_argument('config_file',
-                            help='''Path to configuration file used for analysis.''')
-
-cluster_parser.add_argument('out_file',
-                            help='Path to file where clustering results will be written.')
-
-cluster_parser.add_argument('--method', default='mpear',
-                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
-                                    'single_linkage', 'spectral_clustering'],
-                            help='''Method used to cluster the PyClone trace file. Default is mpear.''')
-
-cluster_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-cluster_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
-
-cluster_parser.set_defaults(func=cluster_trace)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-plot_cf_parser = subparsers.add_parser('plot_cellular_frequencies',
-                                       help='''Plot the posterior densities of the cellular frequencies of the mutations
+plot_cf_parser = subparsers.add_parser('plot_cellular_prevalences',
+                                       help='''Plot the posterior densities of the cellular prevalences of the mutations
                                        from a PyClone analysis.''')
 
 plot_cf_parser.add_argument('config_file',
@@ -103,7 +83,7 @@ plot_cf_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                             after burning will be used for inference. Default is 1.''')
 
-plot_cf_parser.set_defaults(func=plot_cellular_frequencies)
+plot_cf_parser.set_defaults(func=plot_cellular_prevalences)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 plot_sm_parser = subparsers.add_parser('plot_similarity_matrix',
@@ -139,11 +119,6 @@ plot_ms_parser.add_argument('plot_file',
 plot_ms_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
 
-plot_ms_parser.add_argument('--clustering_method', default='mpear',
-                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
-                                    'single_linkage', 'spectral_clustering'],
-                            help='''Method used to cluster the PyClone trace. Default is mpear.''')
-
 plot_ms_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], default='cellular',
                             help='''Determines which prevalence values will be plotted, allelic or cellular. Default is
                             cellular.''')
@@ -162,9 +137,9 @@ plot_ms_parser.add_argument('--thin', default=1, type=int,
 plot_ms_parser.set_defaults(func=plot_multi_sample)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-build_table_parser = subparsers.add_parser('build_table',
-                                           help='''Build results table which contains cluster ids and (mean) cellular
-                                           prevalence estimates.''')
+build_table_parser = subparsers.add_parser('write_results_table',
+                                           help='''Build results table which contains raw input data long with point
+                                           estimates for cluster IDs and cellular prevalences.''')
 
 build_table_parser.add_argument('config_file',
                                 help='''Path to configuration file used for analysis.''')
@@ -175,20 +150,11 @@ build_table_parser.add_argument('out_file',
 build_table_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
 
-build_table_parser.add_argument('--clustering_method', default='mpear',
-                                choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut',
-                                         'mpear', 'single_linkage', 'spectral_clustering'],
-                                help='''Method used to cluster the PyClone trace. Default is mpear.''')
-
-build_table_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], default='cellular',
-                                help='''Determines which prevalence values will be plotted, allelic or cellular. Default
-                                is cellular.''')
-
 build_table_parser.add_argument('--thin', default=1, type=int,
                                 help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                                 after burning will be used for inference. Default is 1.''')
 
-build_table_parser.set_defaults(func=build_multi_sample_table)
+build_table_parser.set_defaults(func=write_results_table)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()
