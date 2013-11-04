@@ -33,3 +33,5 @@ syntax: regexp
 ^examples/results$
 syntax: regexp
 ^examples/mixing/trace$
+syntax: regexp
+^examples/output$
