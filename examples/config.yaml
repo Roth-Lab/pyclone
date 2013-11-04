@@ -1,0 +1,30 @@
+out_dir : /home/andrew/Code/pyclone/examples/output
+
+samples:
+  -
+    sample_id : A
+    
+    mutations_file : /home/andrew/Code/pyclone/examples/SRR385938.tsv
+    
+    tumour_content : 1.0
+    
+  -
+    sample_id : B
+    
+    mutations_file : /home/andrew/Code/pyclone/examples/SRR385939.tsv
+    
+    tumour_content : 1.0
+  
+  -
+    sample_id : C
+    
+    mutations_file : /home/andrew/Code/pyclone/examples/SRR385940.tsv
+    
+    tumour_content : 1.0
+  
+  -
+    sample_id : D
+    
+    mutations_file : /home/andrew/Code/pyclone/examples/SRR385941.tsv
+    
+    tumour_content : 1.0        
