@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
       name='PyClone-SCN',
-      version='0.1.0',
+      version='0.1.1',
       description='Python tools for analysing clonal evolution using NGS data which accounts for sub-clonal copy number information.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
