@@ -194,8 +194,8 @@ class SubclonalCopyNumberBetaBinomialDensity(Density):
         p = [
              (1 - t) * data.normal_cn,
              t * (1 - s) * data.normal_cn,
-             t * s * (1 - f) * data.total_cn,
-             t * s * f * data.total_cn
+             t * (s - f) * data.total_cn,
+             t * f * data.total_cn
              ]
         
         norm_const = sum(p)
