@@ -9,8 +9,8 @@ import os
 import random
 import yaml
 
-from pyclone.model import run_pyclone_analysis
-from pyclone.utils import make_directory
+from pyclone_scn.model import run_pyclone_analysis
+from pyclone_scn.utils import make_directory
 
 #=======================================================================================================================
 # PyClone analysis
@@ -37,14 +37,14 @@ def run_analysis(args):
 # Post processing code
 #=======================================================================================================================
 def write_results_table(args):
-    from pyclone.post_process.plot.multi_sample import load_results_table
+    from pyclone_scn.post_process.plot.multi_sample import load_results_table
     
     table = load_results_table(args.config_file, args.burnin, args.thin)
 
     table.to_csv(args.out_file, index_label='mutation_id', float_format='%.4f', sep='\t')
  
 def plot_cellular_prevalences(args):
-    import pyclone.post_process.plot as plot
+    import pyclone_scn.post_process.plot as plot
     
     config = _load_yaml_config(args.config_file)
     
@@ -68,7 +68,7 @@ def plot_cellular_prevalences(args):
         plot.plot_cellular_frequencies(file_name, out_file, args.burnin, args.thin) 
     
 def plot_similarity_matrix(args):
-    import pyclone.post_process.plot as plot
+    import pyclone_scn.post_process.plot as plot
     
     config = _load_yaml_config(args.config_file)
     
@@ -81,7 +81,7 @@ def plot_similarity_matrix(args):
     plot.plot_similarity_matrix(labels_file, args.out_file, args.burnin, args.thin)
     
 def plot_multi_sample(args):
-    from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
+    from pyclone_scn.post_process.plot.multi_sample import plot_clusters, plot_mutations
     
     if args.separate_lines:
         plot_mutations(args.config_file,

@@ -9,9 +9,9 @@ setup(
       url='http://compbio.bccrc.ca',
       package_dir = {'': 'lib'},    
       packages=[ 
-                'pyclone',
-                'pyclone.post_process',
-                'pyclone.post_process.plot'
+                'pyclone_scn',
+                'pyclone_scn.post_process',
+                'pyclone_scn.post_process.plot'
                 ],
       scripts=['PyClone-SCN']
      )

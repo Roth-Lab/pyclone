@@ -23,7 +23,7 @@ try:
 except:
     raise Exception("The clustering module requires the scipy package. See http://www.scipy.org/.")
 
-from pyclone.post_process.utils import load_trace
+from pyclone_scn.post_process.utils import load_trace
 
 def write_pyclone_cluster_file(labels_file, cluster_file, burnin, thin):
     labels = cluster_pyclone_trace(labels_file, burnin, thin)

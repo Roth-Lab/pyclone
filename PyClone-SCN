@@ -4,7 +4,7 @@
 # PyClone
 # Author : Andrew Roth
 #=======================================================================================================================
-from pyclone.run import plot_cellular_prevalences, plot_multi_sample, plot_similarity_matrix, run_analysis, \
+from pyclone_scn.run import plot_cellular_prevalences, plot_multi_sample, plot_similarity_matrix, run_analysis, \
                         write_results_table
 
 import argparse

@@ -1,4 +1,4 @@
-from pyclone.post_process.utils import load_trace
+from pyclone_scn.post_process.utils import load_trace
 
 from cellular_frequencies import CellularFrequencyPlot
 from densities import PosteriorDensity
