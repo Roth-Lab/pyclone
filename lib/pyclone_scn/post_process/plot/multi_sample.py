@@ -22,8 +22,8 @@ try:
 except:
     raise Exception("The multi sample plotting module requires the pandas package. See http://http://pandas.pydata.org.")
 
-from pyclone.post_process.cluster import cluster_pyclone_trace
-from pyclone.post_process.utils import load_trace
+from pyclone_scn.post_process.cluster import cluster_pyclone_trace
+from pyclone_scn.post_process.utils import load_trace
 
 def plot_clusters(config_file, plot_file, prevalence, burnin, thin):
     data = load_results_table(config_file, burnin, thin)

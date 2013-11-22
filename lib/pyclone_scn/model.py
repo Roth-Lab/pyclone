@@ -19,9 +19,9 @@ from pydp.utils import log_sum_exp
 
 import yaml
 
-from pyclone.config import load_mutations_from_csv
-from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
-from pyclone.trace import DiskTrace
+from pyclone_scn.config import load_mutations_from_csv
+from pyclone_scn.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
+from pyclone_scn.trace import DiskTrace
 
 def run_pyclone_analysis(args, config_file, trace_dir, num_iters, alpha, alpha_priors):
     data, sample_ids = _load_data(config_file, args.error_rate)
