@@ -37,7 +37,7 @@ def run_pyclone_analysis(args, config_file, trace_dir, num_iters, alpha, alpha_p
         
         sample_cluster_densities[sample_id] = SubclonalCopyNumberBetaBinomialDensity(GammaData(args.precision_init))
         
-        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
+        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id],
                                                                  sample_cluster_densities[sample_id])  
     
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
@@ -126,12 +126,12 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
     
     d = a + b 
     
-    return SubclonalCopyNumberData(b, 
-                                   d, 
-                                   tumour_content, 
-                                   mutation.cn_prevalence, 
-                                   mutation.normal_cn, 
-                                   mutation.major_cn, 
+    return SubclonalCopyNumberData(b,
+                                   d,
+                                   tumour_content,
+                                   mutation.cn_prevalence,
+                                   mutation.normal_cn,
+                                   mutation.major_cn,
                                    mutation.minor_cn,
                                    mutation.total_cn,
                                    error_rate)
@@ -157,12 +157,15 @@ class SubclonalCopyNumberBetaBinomialDensity(Density):
         t = data.tumour_content
         
         f = cellular_frequency
+
+        if s > f:
+            return float('-inf')
         
         p = [
              (1 - t) * data.normal_cn,
              t * (1 - f) * data.normal_cn,
-             t * (1 - s) * f * data.total_cn,
-             t * s * f * data.total_cn
+             t * (f - s) * data.normal_cn,
+             t * s * data.total_cn
              ]
         
         norm_const = sum(p)
@@ -172,7 +175,7 @@ class SubclonalCopyNumberBetaBinomialDensity(Density):
         m = [
              data.error_rate,
              data.error_rate,
-             1 / data.total_cn,
+             1 / data.normal_cn,
              mutation_cn / data.total_cn
              ]
         
@@ -190,6 +193,9 @@ class SubclonalCopyNumberBetaBinomialDensity(Density):
         t = data.tumour_content
         
         f = cellular_frequency
+        
+        if f > s:
+            return float('-inf')
         
         p = [
              (1 - t) * data.normal_cn,
