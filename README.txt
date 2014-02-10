@@ -7,6 +7,12 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.5
+
+* Changed multi sample plot to show error bars
+
+* The `build_table` no outputs the std error of the cellular prevalence trace for each mutation in each sample 
+
 ## 0.12.4
 
 * Fixed bug in the multi-sample plotting/table code which caused failures for non PyClone densities.
