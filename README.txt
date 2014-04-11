@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.6
+
+* Modified plot_cellular_frequencies to accept the `--file_format` flag which sets the output format for plot files.
+
 ## 0.12.5
 
 * Changed multi sample plot to show error bars
