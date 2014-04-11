@@ -101,6 +101,10 @@ plot_cf_parser.add_argument('--burnin', default=0, type=int,
 plot_cf_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                             after burning will be used for inference. Default is 1.''')
+                            
+plot_cf_parser.add_argument('--file_format', default='pdf', choices=['eps', 'jpg', 'pdf', 'png', 'svg'],
+                            help='''File format used for to plot files. Default is `pdf` and `png` is suggested for
+                            large datasets to reduce figure size.''')
 
 plot_cf_parser.set_defaults(func=plot_cellular_frequencies)
 

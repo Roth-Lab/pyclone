@@ -143,7 +143,7 @@ def plot_cellular_frequencies(args):
                                                                                                                                                          burnin=args.burnin, 
                                                                                                                                                          thin=args.thin)   
         
-        out_file = os.path.basename(file_name).replace('tsv.bz2', 'pdf')
+        out_file = os.path.basename(file_name).replace('tsv.bz2', args.file_format)
         
         out_file = os.path.join(args.out_dir, out_file)
         
