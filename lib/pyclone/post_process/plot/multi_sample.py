@@ -29,7 +29,11 @@ from pyclone.post_process.utils import load_cellular_frequencies_trace
 def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin, thin):
     data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
     
-    plot_data, error_data = _load_plot_data(config_file, data)
+    if prevalence == 'cellular':
+        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
+    
+    else:
+        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=False)
     
     fig = plot.figure()
     
@@ -55,8 +59,12 @@ def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin,
 def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin, thin):
     data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
     
-    plot_data, error_data = _load_plot_data(config_file, data)
+    if prevalence == 'cellular':
+        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
     
+    else:
+        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=False)
+        
     fig = plot.figure()
     
     ax = fig.add_subplot(1, 1, 1)
@@ -236,17 +244,21 @@ def _load_sample_cellular_prevalences(file_name, burnin, thin):
     
     return mean_data, std_data
 
-def _load_plot_data(config_file, data):
+def _load_plot_data(config_file, data, get_error_data=False):
     config = _load_yaml_config(config_file)
     
     sample_ids = config['samples'].keys()
 
     plot_cols = sample_ids + ['cluster_id', ]
     
-    error_cols = ['{0}_std'.format(x) for x in sample_ids] + ['cluster_id', ]
-    
     plot_data = data[plot_cols]
     
-    error_data = data[error_cols]
+    if get_error_data:
+        error_cols = ['{0}_std'.format(x) for x in sample_ids] + ['cluster_id', ]
+    
+        error_data = data[error_cols]
+    
+    else:
+        error_data = None
     
     return plot_data, error_data
