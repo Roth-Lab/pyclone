@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.7
+
+* Fixed bug in multi-sample plotting of allelic prevalences. Note this requires an upgrade to eppl 0.2.3 or greater.
+
 ## 0.12.6
 
 * Modified plot_cellular_frequencies to accept the `--file_format` flag which sets the output format for plot files.
