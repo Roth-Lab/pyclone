@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.8
+
+* Fixed a bug causing PyClone BetaBinomial to not support fixed precision parameter.
+
 ## 0.12.7
 
 * Fixed bug in multi-sample plotting of allelic prevalences. Note this requires an upgrade to eppl 0.2.3 or greater.
