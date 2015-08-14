@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.9
+
+* Fixed a bug in the calculation of the mpear code.
+
 ## 0.12.8
 
 * Fixed a bug causing PyClone BetaBinomial to not support fixed precision parameter.
