@@ -10,12 +10,10 @@ from __future__ import division
 import csv
 import numpy as np
 
-from math import exp
-from pydp.densities import log_binomial_coefficient
-
 try:
     from scipy.cluster.hierarchy import average, fcluster, fclusterdata 
     from scipy.spatial.distance import pdist, squareform
+    from scipy.special import binom
 except:
     raise Exception("The clustering module requires the scipy package. See http://www.scipy.org/.")
 
@@ -215,36 +213,35 @@ def _get_flat_clustering(Z, number_of_clusters):
 def _compute_mpear(cluster_labels, sim_mat):
     N = sim_mat.shape[0]
     
-    c = exp(log_binomial_coefficient(N, 2))
+    ind_mat = _get_indicator_matrix(cluster_labels)
     
-    num_term_1 = 0
+    i_s = np.tril(ind_mat * sim_mat, k=-1).sum()
     
-    for j in range(N):
-        for i in range(j):
-            if cluster_labels[i] == cluster_labels[j]:
-                num_term_1 += sim_mat[i][j]
-
-    num_term_2 = 0
+    i = np.tril(ind_mat, k=-1).sum()
     
-    for j in range(N):
-        for i in range(j):
-            if cluster_labels[i] == cluster_labels[j]:
-                num_term_2 += sim_mat[:j - 1, j].sum()
+    s = np.tril(sim_mat, k=-1).sum()
     
-    num_term_2 /= c
+    c = binom(N, 2)
     
-    den_term_1 = 0
+    z = (i * s) / c
     
-    for j in range(N):
-        for i in range(j):
-            den_term_1 += sim_mat[i][j]
-            
-            if cluster_labels[i] == cluster_labels[j]:
-                den_term_1 += 1
+    num = i_s - z
     
-    den_term_1 /= 2
-    
-    num = num_term_1 - num_term_2
-    den = den_term_1 - num_term_2
+    den = 0.5 * (i + s) - z
     
     return num / den
+
+def _get_indicator_matrix(cluster_labels):
+    N = len(cluster_labels)
+    
+    I = np.zeros((N, N))
+    
+    for i in range(N):
+        for j in range(i):
+            if cluster_labels[i] == cluster_labels[j]:
+                I[i, j] = 1
+            
+            else:
+                I[i, j] = 0
+                
+    return I + I.T
