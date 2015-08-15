@@ -11,7 +11,7 @@ import argparse
 
 parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.12.9')
+parser.add_argument('--version', action='version', version='PyClone-0.12.10')
 
 subparsers = parser.add_subparsers()
 

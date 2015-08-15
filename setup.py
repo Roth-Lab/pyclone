@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
       name='PyClone',
-      version='0.12.9',
+      version='0.12.10',
       description='Python tools for analysing clonal evolution using NGS data.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',

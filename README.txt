@@ -7,6 +7,10 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.12.10
+
+* Internal fix to use mpear implementation in PyDP. Requires PyDP >= 0.2.3
+
 ## 0.12.9
 
 * Fixed a bug in the calculation of the mpear code.
