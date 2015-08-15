@@ -7,13 +7,15 @@ Created on 2013-02-08
 '''
 from __future__ import division
 
+from pydp.cluster import cluster_with_mpear
+
 import csv
 import numpy as np
 
 try:
-    from scipy.cluster.hierarchy import average, fcluster, fclusterdata 
+    from scipy.cluster.hierarchy import fclusterdata 
     from scipy.spatial.distance import pdist, squareform
-    from scipy.special import binom
+    
 except:
     raise Exception("The clustering module requires the scipy package. See http://www.scipy.org/.")
 
@@ -176,72 +178,3 @@ def cluster_with_spectral_clustering(X):
     sc.fit(sim_mat)
     
     return sc.labels_
-
-def cluster_with_mpear(X):
-    X = np.array(X)
-    
-    dist_mat = pdist(X, metric='hamming')
-    
-    sim_mat = 1 - squareform(dist_mat)
-    
-    Z = average(dist_mat)
-    
-    max_pear = 0
-
-    best_cluster_labels = _get_flat_clustering(Z, 1)
-    
-    for i in range(1, len(X) + 1):
-        cluster_labels = _get_flat_clustering(Z, i)
-    
-        pear = _compute_mpear(cluster_labels, sim_mat)
-        
-        if pear > max_pear:
-            max_pear = pear
-
-            best_cluster_labels = cluster_labels
-    
-    return best_cluster_labels
-
-def _get_flat_clustering(Z, number_of_clusters):
-    N = len(Z) + 1
-    
-    if number_of_clusters == N:
-        return np.arange(1, N + 1)
-    
-    return fcluster(Z, number_of_clusters, criterion='maxclust')
-
-def _compute_mpear(cluster_labels, sim_mat):
-    N = sim_mat.shape[0]
-    
-    ind_mat = _get_indicator_matrix(cluster_labels)
-    
-    i_s = np.tril(ind_mat * sim_mat, k=-1).sum()
-    
-    i = np.tril(ind_mat, k=-1).sum()
-    
-    s = np.tril(sim_mat, k=-1).sum()
-    
-    c = binom(N, 2)
-    
-    z = (i * s) / c
-    
-    num = i_s - z
-    
-    den = 0.5 * (i + s) - z
-    
-    return num / den
-
-def _get_indicator_matrix(cluster_labels):
-    N = len(cluster_labels)
-    
-    I = np.zeros((N, N))
-    
-    for i in range(N):
-        for j in range(i):
-            if cluster_labels[i] == cluster_labels[j]:
-                I[i, j] = 1
-            
-            else:
-                I[i, j] = 0
-                
-    return I + I.T
