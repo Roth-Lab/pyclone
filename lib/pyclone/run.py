@@ -11,9 +11,6 @@ import random
 import yaml
 
 from pyclone.config import get_mutation
-from pyclone.ibmm import run_ibmm_analysis
-from pyclone.ibbmm import run_ibbmm_analysis
-from pyclone.igmm import run_igmm_analysis
 from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
 from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_parent_directory
@@ -38,23 +35,15 @@ def run_analysis(args):
     
     if 'prior' in config['concentration']:
         alpha_priors = config['concentration']['prior']
+    
     else:
         alpha_priors = None
     
     num_iters = config['num_iters']
     
     density = config['density']
-    
-    if density == 'binomial':
-        run_ibmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-    
-    elif density == 'gaussian':
-        run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-        
-    elif density == 'beta_binomial':
-        run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
                 
-    elif density == 'pyclone_beta_binomial':
+    if density == 'pyclone_beta_binomial':
         run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
     
     elif density == 'pyclone_binomial':
