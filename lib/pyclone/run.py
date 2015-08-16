@@ -43,10 +43,10 @@ def run_analysis(args):
     
     density = config['density']
                 
-    if density == 'pyclone_beta_binomial':
+    if density == 'beta_binomial':
         run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
     
-    elif density == 'pyclone_binomial':
+    elif density == 'binomial':
         run_pyclone_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
     
     else:
