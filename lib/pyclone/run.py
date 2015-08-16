@@ -111,7 +111,7 @@ def build_mutations_file(args):
 def build_multi_sample_table(args):
     from pyclone.post_process.plot.multi_sample import load_multi_sample_table
     
-    table = load_multi_sample_table(args.config_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+    table = load_multi_sample_table(args.config_file, args.prevalence, args.burnin, args.thin)
 
     table.to_csv(args.out_file, sep='\t')
         
@@ -169,15 +169,13 @@ def plot_multi_sample(args):
         plot_mutations(args.config_file, 
                        args.plot_file, 
                        args.prevalence, 
-                       args.clustering_method, 
                        args.burnin, 
                        args.thin)
         
     else:
         plot_clusters(args.config_file, 
                       args.plot_file, 
-                      args.prevalence, 
-                      args.clustering_method, 
+                      args.prevalence,
                       args.burnin, 
                       args.thin)
 

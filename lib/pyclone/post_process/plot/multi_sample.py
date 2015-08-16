@@ -26,8 +26,8 @@ from pyclone.config import load_mutation_from_dict
 from pyclone.post_process.cluster import cluster_pyclone_trace
 from pyclone.post_process.utils import load_cellular_frequencies_trace
 
-def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
+def plot_clusters(config_file, plot_file, prevalence, burnin, thin):
+    data = load_multi_sample_table(config_file, prevalence, burnin, thin)
     
     if prevalence == 'cellular':
         plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
@@ -56,8 +56,8 @@ def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin,
     
     fig.savefig(plot_file, dpi=600)
 
-def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
+def plot_mutations(config_file, plot_file, prevalence, burnin, thin):
+    data = load_multi_sample_table(config_file, prevalence, burnin, thin)
     
     if prevalence == 'cellular':
         plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
@@ -94,7 +94,7 @@ def _load_yaml_config(file_name):
     
     return config
 
-def load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin):
+def load_multi_sample_table(config_file, prevalence, burnin, thin):
     config = _load_yaml_config(config_file)
     
     if prevalence == 'allelic':
@@ -107,7 +107,7 @@ def load_multi_sample_table(config_file, prevalence, clustering_method, burnin, 
     
     labels_file = os.path.join(trace_dir, 'labels.tsv.bz2')
     
-    labels = cluster_pyclone_trace(labels_file, clustering_method, burnin, thin)
+    labels = cluster_pyclone_trace(labels_file, burnin, thin)
     
     for mutation_id, cluster_id in labels.items():
         data[mutation_id]['cluster_id'] = cluster_id
