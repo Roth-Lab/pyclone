@@ -1,32 +1,38 @@
-from pyclone.post_process.utils import load_cellular_frequencies_trace, load_cluster_labels_trace
+from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import average
 
-from cellular_frequencies import CellularFrequencyPlot
-from densities import PosteriorDensity
-from similarity_matrix import SimilarityMatrixPlot
+import pandas as pd
+import seaborn as sb
 
-import brewer2mpl
-
-bmap = brewer2mpl.get_map('Set1', 'qualitative', 9)
-
-colors = bmap.mpl_colormap
-
-def plot_similarity_matrix(trace_file, plot_file, burnin, thin):
-    trace = load_cluster_labels_trace(trace_file, burnin, thin)
+def plot_similarity_matrix(trace, out_file):
+    d = squareform(pdist(trace.T, metric='hamming'))
     
-    if len(trace) < 2:
-        return
+    s = 1 - d
     
-    plotter = SimilarityMatrixPlot(trace)
+    z = average(d)
     
-    plotter.plot()
+    s = pd.DataFrame(s, index=trace.columns, columns=trace.columns)
     
-    plotter.save(plot_file)
+    dim = s.shape[0] * 0.16
 
-def plot_cellular_frequencies(trace_file, plot_file, burnin, thin):
-    trace = load_cellular_frequencies_trace(trace_file, burnin, thin)
+    g = sb.clustermap(s,
+                      figsize=(dim, dim),
+                      col_linkage=z, 
+                      row_linkage=z)
+    
+    for t in g.ax_heatmap.get_xticklabels():
+        t.set_fontsize(8)
         
-    plotter = CellularFrequencyPlot(trace, cmap=colors)
+    for t in g.ax_heatmap.get_yticklabels():
+        t.set_fontsize(8)
+        
+    g.savefig(out_file, bbox_inches='tight')
 
-    plotter.plot()
-    
-    plotter.save(plot_file)
+# def plot_cellular_frequencies(trace_file, plot_file, burnin, thin):
+#     trace = load_cellular_frequencies_trace(trace_file, burnin, thin)
+#         
+#     plotter = CellularFrequencyPlot(trace, cmap=colors)
+# 
+#     plotter.plot()
+#     
+#     plotter.save(plot_file)

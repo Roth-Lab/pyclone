@@ -22,7 +22,7 @@ try:
 except:
     raise Exception("The multi sample plotting module requires the pandas package. See http://http://pandas.pydata.org.")
 
-from pyclone.config import load_mutation_from_dict
+from pyclone.config import load_mutation_from_dict, Config
 from pyclone.post_process.cluster import cluster_pyclone_trace
 from pyclone.post_process.utils import load_cellular_frequencies_trace
 
@@ -77,7 +77,7 @@ def plot_mutations(config_file, plot_file, prevalence, burnin, thin):
                               title=title,
                               x_label='Sample',
                               y_label='Prevalence',
-                              error_data=error_data)
+                              error_df=error_data)
     
     ax.set_ylim(0, 1.0)
     
@@ -95,7 +95,7 @@ def _load_yaml_config(file_name):
     return config
 
 def load_multi_sample_table(config_file, prevalence, burnin, thin):
-    config = _load_yaml_config(config_file)
+    config = Config(config_file)
     
     if prevalence == 'allelic':
         data = _load_allelic_prevalences(config)
@@ -103,11 +103,7 @@ def load_multi_sample_table(config_file, prevalence, burnin, thin):
     elif prevalence == 'cellular':
         data = _load_cellular_prevalences(config, burnin, thin)
     
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
-    
-    labels_file = os.path.join(trace_dir, 'labels.tsv.bz2')
-    
-    labels = cluster_pyclone_trace(labels_file, burnin, thin)
+    labels = cluster_pyclone_trace(config.labels_trace_file, burnin, thin)
     
     for mutation_id, cluster_id in labels.items():
         data[mutation_id]['cluster_id'] = cluster_id
@@ -126,16 +122,10 @@ def load_multi_sample_table(config_file, prevalence, burnin, thin):
 def _load_allelic_prevalences(config):
     all_data = OrderedDict()
     
-    if 'pyclone' in config['density']:
-        mutations_file_format = 'yaml'
-    
-    else:
-        mutations_file_format = 'tsv'
-    
-    for sample_id in config['samples']:
-        file_name = config['samples'][sample_id]['mutations_file']
-        
-        file_name = os.path.join(config['working_dir'], file_name)
+    mutations_file_format = 'yaml'
+  
+    for sample_id in config.samples:
+        file_name = config.get_mutations_file(sample_id)
         
         all_data[sample_id] = _load_sample_allelic_prevalences(file_name, mutations_file_format)       
     
@@ -197,12 +187,10 @@ def _load_sample_allelic_prevalences(file_name, file_format):
 def _load_cellular_prevalences(config, burnin, thin):
     all_data = OrderedDict()
     
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
-    
-    sample_ids = config['samples'].keys()
+    sample_ids = config.samples
     
     for sample_id in sample_ids:
-        file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+        file_name = config.get_cellular_prevalence_trace_file(sample_id)
         
         mean_data, std_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
         

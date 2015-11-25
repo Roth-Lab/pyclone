@@ -5,6 +5,64 @@ Created on 2013-02-12
 '''
 from __future__ import division
 
+import os
+import yaml
+
+class Config(object):
+    def __init__(self, file_name):
+        self._file_name = file_name
+        
+        with open(file_name) as fh:
+            self._config = yaml.load(fh)
+    
+    @property
+    def labels_trace_file(self):
+        return os.path.join(self.trace_dir, 'labels.tsv.bz2')
+    
+    @property
+    def samples(self):
+        return self._config['samples'].keys()
+    
+    @property
+    def trace_dir(self):
+        return os.path.join(self.working_dir, self._config['trace_dir'])
+    
+    @property
+    def working_dir(self):
+        working_dir = self._config['working_dir']
+        
+        if working_dir is None:
+            working_dir = os.path.dirname(self._file_name)
+        
+        elif not os.path.isabs(working_dir):
+            working_dir = os.path.join(os.path.dirname(self._file_name), working_dir)
+    
+        return working_dir
+    
+    def get_cellular_prevalence_trace_file(self, sample_id):
+        return os.path.join(self.trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+    
+    def get_mutations_file(self, sample_id):
+        file_name = self._config['samples'][sample_id]['mutations_file']
+        
+        return os.path.join(self.working_dir, file_name)
+    
+def get_trace_dir(config):
+    working_dir = get_working_dir(config)
+    
+    return os.path.join(working_dir)
+
+def get_working_dir(config):
+    with open(config_file) as fh:
+        config = yaml.load(fh)
+    
+    working_dir = config['working_dir']    
+    
+    if not os.path.isabs(working_dir):
+        working_dir = os.path.join(os.path.dirname(config_file), working_dir)
+    
+    return working_dir
+
 def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, ref_prior, var_prior):
     states = _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior)
     

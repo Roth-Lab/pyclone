@@ -6,7 +6,7 @@
 ########################################################################################################################
 # Specify a working directory. All paths in the rest of the file will be relative to this. In practice this should be
 # an absolute path not relative as shown here.
-working_dir: examples/mixing
+working_dir: 
 
 # Specify a folder where the trace files from the PyClone analysis will be written.
 trace_dir: trace/pyclone_beta_binomial/all

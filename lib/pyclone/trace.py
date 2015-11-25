@@ -6,8 +6,107 @@ Created on 2013-04-23
 import bz2
 import csv
 import os
+import pandas as pd
 
 from pyclone.utils import make_directory
+
+class HDF5Trace(object):
+    def __init__(self, file_name, mutation_ids, sample_ids, store_precision=False):
+        self._file_name = file_name
+        
+        self.mutation_ids = mutation_ids
+        
+        self.sample_ids = sample_ids
+        
+        self.store_precision = store_precision
+    
+    def __enter__(self):
+        self.open()
+        
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+    
+    def open(self):
+        self.trace = pd.HDFStore(self._file_name, 'w')#, complevel=9, complib='blosc')
+        
+        self._init_labels_table()
+        
+        for sample_id in self.sample_ids:
+            self._init_cellular_prevalence_table(sample_id)
+        
+        self._init_parameter_table('alpha')
+        
+        if self.store_precision:
+            self._init_parameters_table('precision')
+    
+    def close(self):
+        self.trace.close()
+    
+    def update(self, state):
+        for sample_id in self.sample_ids:
+            values = []
+             
+            for param in state['params']:
+                values.append(param[sample_id].x)
+             
+            self._update_cellular_prevalence_table(sample_id, values)
+         
+        self._update_labels_table(state['labels'])
+        
+        self._update_parameter_table('alpha', state['alpha'])
+         
+        if self.store_precision:
+            self._update_parameter_table('precision', state['global_params'].x)
+    
+    def _init_labels_table(self):
+        df = pd.DataFrame(columns=self.mutation_ids, dtype='int32')
+        
+        self.trace.append('labels', df)
+    
+    def _init_cellular_prevalence_table(self, sample_id):
+        df = pd.DataFrame(columns=self.mutation_ids, dtype='float64')
+        
+        table_name = 'cellular_prevalences/{0}'.format(sample_id)
+        
+        self.trace.append(table_name, df)
+    
+    def _init_parameter_table(self, parameter_name):
+        df = pd.DataFrame(columns=['value'])
+        
+        df['value'] = df['value'].astype('float64')
+        
+        table_name = 'parameters/{0}'.format(parameter_name)
+        
+        self.trace.append(table_name, df)
+    
+    def _update_cellular_prevalence_table(self, sample_id, values):
+        table_name = 'cellular_prevalences/{0}'.format(sample_id)
+        
+        df = pd.DataFrame(values, index=self.mutation_ids)
+        
+        df = df.T
+        
+        self.trace.append(table_name, df)
+    
+    def _update_labels_table(self, values):
+        table_name = 'labels'
+        
+        df = pd.DataFrame(values, index=self.mutation_ids)
+        
+        df = df.T
+        
+        self.trace.append(table_name, df)
+    
+    def _update_parameter_table(self, parameter_name, value):
+        table_name = 'parameters/{0}'.format(parameter_name)
+        
+        df = pd.DataFrame([value], index=['value'])
+        
+        df = df.T
+        
+        self.trace.append(table_name, df)
 
 class DiskTrace(object):
     def __init__(self, trace_dir, sample_ids, mutation_ids, attribute_map, precision=False):

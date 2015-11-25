@@ -10,7 +10,7 @@ import os
 import random
 import yaml
 
-from pyclone.config import get_mutation
+from pyclone.config import get_mutation, Config
 from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
 from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_parent_directory
