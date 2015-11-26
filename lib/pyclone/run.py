@@ -7,13 +7,11 @@ from __future__ import division
 
 import csv
 import os
+import pandas as pd
 import random
 import yaml
 
 from pyclone.config import get_mutation
-from pyclone.ibmm import run_ibmm_analysis
-from pyclone.ibbmm import run_ibbmm_analysis
-from pyclone.igmm import run_igmm_analysis
 from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
 from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_parent_directory
@@ -44,17 +42,8 @@ def run_analysis(args):
     num_iters = config['num_iters']
     
     density = config['density']
-    
-    if density == 'binomial':
-        run_ibmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-    
-    elif density == 'gaussian':
-        run_igmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
-        
-    elif density == 'beta_binomial':
-        run_ibbmm_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)
                 
-    elif density == 'pyclone_beta_binomial':
+    if density == 'pyclone_beta_binomial':
         run_pyclone_beta_binomial_analysis(args.config_file, trace_dir, num_iters, alpha, alpha_priors)   
     
     elif density == 'pyclone_binomial':
@@ -111,29 +100,50 @@ def build_mutations_file(args):
 def build_multi_sample_table(args):
     from pyclone.post_process.plot.multi_sample import load_multi_sample_table
     
-    table = load_multi_sample_table(args.config_file, args.prevalence, args.clustering_method, args.burnin, args.thin)
+    table = load_multi_sample_table(args.config_file, args.burnin, args.thin)
+    
+    if args.old_style:
+        table = _reformat_multi_sample_table(table)
 
-    table.to_csv(args.out_file, sep='\t')
-        
+    table.to_csv(args.out_file, index=False, sep='\t')
+
+def _reformat_multi_sample_table(df):
+    mean_df = df[['mutation_id', 'sample', 'cellular_prevalence']]
+    
+    mean_df = mean_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence')
+    
+    std_df = df[['mutation_id', 'sample', 'cellular_prevalence_std']]
+    
+    std_df = std_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence_std')
+    
+    std_df = std_df.rename(columns=lambda x: '{0}_std'.format(x))
+
+    cluster_df = df[['mutation_id', 'cluster_id']]
+    
+    cluster_df = cluster_df.groupby('mutation_id')['cluster_id'].apply(lambda x: x.iloc[0])
+    
+    return pd.concat([mean_df, std_df, cluster_df], axis=1).reset_index()
+    
 def cluster_trace(args):
     from pyclone.post_process.cluster import write_pyclone_cluster_file
     
-    config = _load_yaml_config(args.config_file)
-    
+    with open(args.config_file) as fh:
+        config = yaml.load(fh)
+        
     labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
-    print '''Clustering PyClone trace file {in_file} using {method} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file, 
-                                                                                                                                        method=args.method, 
-                                                                                                                                        burnin=args.burnin, 
-                                                                                                                                        thin=args.thin)    
+    print '''Clustering PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=labels_file,
+                                                                                                                         burnin=args.burnin, 
+                                                                                                                         thin=args.thin)    
     
-    write_pyclone_cluster_file(labels_file, args.out_file, args.method, args.burnin, args.thin)
+    write_pyclone_cluster_file(labels_file, args.out_file, args.burnin, args.thin)
 
 def plot_cellular_frequencies(args):
     import pyclone.post_process.plot as plot
     
-    config = _load_yaml_config(args.config_file)
-    
+    with open(args.config_file) as fh:
+        config = yaml.load(fh)
+        
     trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
     
     for sample_id in config['samples']:
@@ -152,7 +162,8 @@ def plot_cellular_frequencies(args):
 def plot_similarity_matrix(args):
     import pyclone.post_process.plot as plot
     
-    config = _load_yaml_config(args.config_file)
+    with open(args.config_file) as fh:
+        config = yaml.load(fh)
     
     labels_file = os.path.join(config['working_dir'], config['trace_dir'], 'labels.tsv.bz2')
     
@@ -163,29 +174,12 @@ def plot_similarity_matrix(args):
     plot.plot_similarity_matrix(labels_file, args.out_file, args.burnin, args.thin)
     
 def plot_multi_sample(args):
-    from pyclone.post_process.plot.multi_sample import plot_clusters, plot_mutations
+    from pyclone.post_process.plot.multi_sample import plot_clusters
     
-    if args.separate_lines:
-        plot_mutations(args.config_file, 
-                       args.plot_file, 
-                       args.prevalence, 
-                       args.clustering_method, 
-                       args.burnin, 
-                       args.thin)
-        
-    else:
-        plot_clusters(args.config_file, 
-                      args.plot_file, 
-                      args.prevalence, 
-                      args.clustering_method, 
-                      args.burnin, 
-                      args.thin)
-
-def _load_yaml_config(file_name):
-    fh = open(file_name)
-    
-    config = yaml.load(fh)
-    
-    fh.close()
-    
-    return config        
+    plot_clusters(args.config_file, 
+                  args.plot_file, 
+                  args.y_value,  
+                  burnin=args.burnin, 
+                  thin=args.thin,
+                  samples=args.samples,
+                  separate_lines=args.separate_lines)

@@ -70,11 +70,6 @@ cluster_parser.add_argument('config_file',
 cluster_parser.add_argument('out_file',
                             help='Path to file where clustering results will be written.')
 
-cluster_parser.add_argument('--method', default='mpear',
-                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
-                                    'single_linkage', 'spectral_clustering'],
-                            help='''Method used to cluster the PyClone trace file. Default is mpear.''')
-
 cluster_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
 
@@ -142,25 +137,20 @@ plot_ms_parser.add_argument('plot_file',
 plot_ms_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
 
-plot_ms_parser.add_argument('--clustering_method', default='mpear',
-                            choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut', 'mpear',
-                                    'single_linkage', 'spectral_clustering'],
-                            help='''Method used to cluster the PyClone trace. Default is mpear.''')
-
-plot_ms_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], default='cellular',
-                            help='''Determines which prevalence values will be plotted, allelic or cellular. Default is
-                            cellular.''')
+plot_ms_parser.add_argument('--samples', default=None, nargs='+',
+                            help='''Samples to plot. Samples will be plotted left to right in the order given.''')
 
 plot_ms_parser.add_argument('--separate_lines', action='store_true', default=False,
                             help='''If set then each mutation will be plotted with a separate line.''')
 
-plot_ms_parser.add_argument('--table_file', default=None,
-                            help='''Path where a table of results used to plot the figure will be written. If this is
-                            not set, no table file will be written.''')
-
 plot_ms_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                             after burning will be used for inference. Default is 1.''')
+
+plot_ms_parser.add_argument('--y_value', 
+                            choices=['variant_allele_frequency', 'cellular_prevalence'], 
+                            default='cellular_prevalence',
+                            help='''Determines which values will be plotted on the y-axis. Default is cellular_prevalence.''')
 
 plot_ms_parser.set_defaults(func=plot_multi_sample)
 
@@ -178,14 +168,8 @@ build_table_parser.add_argument('out_file',
 build_table_parser.add_argument('--burnin', default=0, type=int,
                             help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
 
-build_table_parser.add_argument('--clustering_method', default='mpear',
-                                choices=['affinity_propogation', 'complete_linkage', 'dbscan', 'dynamic_tree_cut',
-                                         'mpear', 'single_linkage', 'spectral_clustering'],
-                                help='''Method used to cluster the PyClone trace. Default is mpear.''')
-
-build_table_parser.add_argument('--prevalence', choices=['allelic', 'cellular'], default='cellular',
-                                help='''Determines which prevalence values will be plotted, allelic or cellular. Default
-                                is cellular.''')
+build_table_parser.add_argument('--old_style',action='store_true', default=False, 
+                                help='''If set old style (pre 0.13) table will be output.''')
 
 build_table_parser.add_argument('--thin', default=1, type=int,
                                 help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
