@@ -13,12 +13,12 @@ import pyclone.paths as paths
 #=======================================================================================================================
 # Load data for sampler
 #=======================================================================================================================
-PyClonelData = namedtuple(
-    'PyCloneBinomialData',
+PyCloneData = namedtuple(
+    'PyCloneData',
     [
         'b', 
         'd', 
-        'tumour_conten', 
+        'tumour_content', 
         'cn_n', 
         'cn_r', 
         'cn_v', 
@@ -105,7 +105,7 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
     
     log_pi = _get_log_pi(prior_weights)
     
-    return PyClonelData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+    return PyCloneData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
 
 def _get_log_pi(weights):
     pi = [x / sum(weights) for x in weights]
