@@ -125,7 +125,7 @@ def plot_cellular_prevalence_posteriors(args):
     labels_trace_file = os.path.join(trace_dir, 'labels.tsv.bz2')
     
     for sample_id in config['samples']:    
-        prevalence_trace_file = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+        prevalence_trace_file = os.path.join(trace_dir, '{0}.cellular_prevalence.tsv.bz2'.format(sample_id))
         
         print '''Plotting cellular frequencies from the PyClone trace file {in_file} with a burnin of {burnin} and using every {thin}th sample'''.format(in_file=prevalence_trace_file, 
                                                                                                                                                          burnin=args.burnin, 

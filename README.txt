@@ -26,9 +26,12 @@ Most changes in this release are internal refactoring of the code and should be 
 
 - Switched to using pandas for data wrangling
 
-## 0.12.10
-
-* Internal fix to use mpear implementation in PyDP. Requires PyDP >= 0.2.3
+- Changed nomenclature.
+	- Variant allele frequency (VAF): proportion of reads with variant
+	- Cellular prevalence: proportion of cancer cells harbouring a mutation
+	- The name of the trace files have been altered
+	- The name of some function calls have been altered
+	- Plot labels have been altered
 
 ## 0.12.9
 

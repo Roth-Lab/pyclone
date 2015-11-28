@@ -85,7 +85,7 @@ class ConcentrationParameterWriter(object):
 
 class CellularFrequenciesWriter(object):
     def __init__(self, trace_dir, sample_id, mutation_ids):
-        self.file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+        self.file_name = os.path.join(trace_dir, '{0}.cellular_prevalence.tsv.bz2'.format(sample_id))
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         

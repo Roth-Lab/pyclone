@@ -3,6 +3,8 @@ Created on Nov 27, 2015
 
 @author: Andrew Roth
 '''
+from __future__ import division
+
 import os
 import pandas as pd
 import yaml
@@ -112,7 +114,7 @@ def _load_cellular_prevalences(config, burnin, thin):
     sample_ids = config['samples'].keys()
     
     for sample_id in sample_ids:
-        file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
+        file_name = os.path.join(trace_dir, '{0}.cellular_prevalence.tsv.bz2'.format(sample_id))
     
         sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
     
