@@ -7,6 +7,25 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.13.0
+
+Most changes in this release are internal refactoring of the code and should be invisble to the user.
+
+- Removed IGMM, IBMM, and IBBMM methods
+
+- Changed plotting code to use seaborn
+	- Removed eppl dependency
+	- Removed brewer2mpl dependency
+
+- Changed output of build_table to a tidy data frame
+	- Old style table available with the --old_style flag
+	
+- Re-wrote the multi-sample plotting code
+	- Should fix issues with too many clusters
+	- Slightly nicer looking plots
+
+- Switched to using pandas for data wrangling
+
 ## 0.12.10
 
 * Internal fix to use mpear implementation in PyDP. Requires PyDP >= 0.2.3

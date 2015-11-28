@@ -4,8 +4,7 @@
 # PyClone
 # Author : Andrew Roth
 #=======================================================================================================================
-from pyclone.run import build_multi_sample_table, build_mutations_file, cluster_trace, plot_cellular_frequencies, \
-                        plot_similarity_matrix, run_analysis, plot_multi_sample
+import pyclone.run as run                        
 
 import argparse
 
@@ -25,7 +24,7 @@ analyse_parser.add_argument('--seed', default=None, type=int,
                             help='''Set random seed so results can be reproduced. By default a random seed is
                             chosen.''')
 
-analyse_parser.set_defaults(func=run_analysis)
+analyse_parser.set_defaults(func=run.run_analysis)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 build_prior_parser = subparsers.add_parser('build_mutations_file',
@@ -59,7 +58,7 @@ build_prior_parser.add_argument('--var_prior',
                                 available the parental_copy_number method should be chosen. Default is
                                 total_copy_number.''')
 
-build_prior_parser.set_defaults(func=build_mutations_file)
+build_prior_parser.set_defaults(func=run.build_mutations_file)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
@@ -77,10 +76,10 @@ cluster_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                             after burning will be used for inference. Default is 1.''')
 
-cluster_parser.set_defaults(func=cluster_trace)
+cluster_parser.set_defaults(func=run.write_clusters_trace)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-plot_cf_parser = subparsers.add_parser('plot_cellular_frequencies',
+plot_cf_parser = subparsers.add_parser('plot_cellular_prevalence_posteriors',
                                        help='''Plot the posterior densities of the cellular frequencies of the mutations
                                        from a PyClone analysis.''')
 
@@ -101,7 +100,7 @@ plot_cf_parser.add_argument('--file_format', default='pdf', choices=['eps', 'jpg
                             help='''File format used for to plot files. Default is `pdf` and `png` is suggested for
                             large datasets to reduce figure size.''')
 
-plot_cf_parser.set_defaults(func=plot_cellular_frequencies)
+plot_cf_parser.set_defaults(func=run.plot_cellular_prevalence_posteriors)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 plot_sm_parser = subparsers.add_parser('plot_similarity_matrix',
@@ -121,7 +120,7 @@ plot_sm_parser.add_argument('--thin', default=1, type=int,
                             help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                             after burning will be used for inference. Default is 1.''')
 
-plot_sm_parser.set_defaults(func=plot_similarity_matrix)
+plot_sm_parser.set_defaults(func=run.plot_similarity_matrix)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 plot_ms_parser = subparsers.add_parser('plot_multi_sample',
@@ -152,7 +151,7 @@ plot_ms_parser.add_argument('--y_value',
                             default='cellular_prevalence',
                             help='''Determines which values will be plotted on the y-axis. Default is cellular_prevalence.''')
 
-plot_ms_parser.set_defaults(func=plot_multi_sample)
+plot_ms_parser.set_defaults(func=run.plot_multi_sample)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 build_table_parser = subparsers.add_parser('build_table',
@@ -175,7 +174,7 @@ build_table_parser.add_argument('--thin', default=1, type=int,
                                 help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
                                 after burning will be used for inference. Default is 1.''')
 
-build_table_parser.set_defaults(func=build_multi_sample_table)
+build_table_parser.set_defaults(func=run.write_multi_sample_table)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()

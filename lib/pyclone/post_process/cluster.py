@@ -9,12 +9,7 @@ from pydp.cluster import cluster_with_mpear
 
 import pandas as pd
 
-from pyclone.post_process.utils import load_cluster_labels_trace
-
-def write_pyclone_cluster_file(labels_file, cluster_file, burnin, thin):
-    labels = cluster_pyclone_trace(labels_file, burnin, thin)
-    
-    labels.to_csv(cluster_file, sep='\t')
+from .utils import load_cluster_labels_trace
 
 def cluster_pyclone_trace(labels_file, burnin, thin):    
     trace = load_cluster_labels_trace(labels_file, burnin, thin)
