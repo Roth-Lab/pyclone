@@ -48,8 +48,8 @@ class DiskTrace(object):
         for sample_id, file_name in paths.get_cellular_prevalence_trace_files(self.config_file).items():
             self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(
                                                             file_name,
-                                                            sample_id,
-                                                            self.mutation_ids
+                                                            self.mutation_ids,
+                                                            sample_id
                                                         )
         
         if self.update_precision:
