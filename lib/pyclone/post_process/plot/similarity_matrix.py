@@ -33,7 +33,7 @@ def plot_similarity_matrix(config_file, plot_file, burnin, thin):
     
     N = sim_mat.shape[0]
     
-    labels = cluster_pyclone_trace(trace_file, burnin, thin)
+    labels = cluster_pyclone_trace(config_file, burnin, thin)
     
     labels = labels.set_index('mutation_id')
     

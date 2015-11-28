@@ -11,8 +11,14 @@ import pandas as pd
 
 from pyclone.trace import load_cluster_labels_trace
 
-def cluster_pyclone_trace(labels_file, burnin, thin):    
-    trace = load_cluster_labels_trace(labels_file, burnin, thin)
+import pyclone.paths as paths
+
+def cluster_pyclone_trace(config_file, burnin, thin):   
+    trace = load_cluster_labels_trace(
+        paths.get_labels_trace_file(config_file), 
+        burnin, 
+        thin
+    )
     
     X = trace.values
 

@@ -24,7 +24,7 @@ def load_multi_sample_table(config_file, burnin, thin, old_style=False):
     )
     
     labels = cluster_pyclone_trace(
-        paths.get_labels_trace_file(config_file), 
+        config_file, 
         burnin, 
         thin
     )

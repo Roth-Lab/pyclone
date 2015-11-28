@@ -19,24 +19,22 @@ from .utils import get_clusters_color_map, setup_axes, setup_plot
 import pyclone.paths as paths
 
 def plot_cellular_prevalence_posteriors(config_file, file_format, out_dir, burnin, thin):
-    labels_trace_file = paths.get_labels_trace_file(config_file)
-    
-    for prevalence_trace_file in paths.get_cellular_prevalence_trace_files(config_file).values():    
-        out_file = os.path.basename(prevalence_trace_file).replace('tsv.bz2', file_format)
-        
-        out_file = os.path.join(out_dir, out_file)
-        
-        _plot_sample_cellular_prevalence_posteriors(labels_trace_file, prevalence_trace_file, out_file, burnin, thin) 
-
-def _plot_sample_cellular_prevalence_posteriors(labels_trace_file, prevalence_trace_file, plot_file, burnin, thin):  
-    labels = cluster_pyclone_trace(labels_trace_file, burnin, thin)
+    labels = cluster_pyclone_trace(config_file, burnin, thin)
     
     labels = labels.set_index('mutation_id')
     
     labels = labels.sort_values(by='cluster_id')
     
     labels = labels['cluster_id']
-  
+    
+    for prevalence_trace_file in paths.get_cellular_prevalence_trace_files(config_file).values():    
+        out_file = os.path.basename(prevalence_trace_file).replace('tsv.bz2', file_format)
+        
+        out_file = os.path.join(out_dir, out_file)
+        
+        _plot_sample_cellular_prevalence_posteriors(labels, prevalence_trace_file, out_file, burnin, thin) 
+
+def _plot_sample_cellular_prevalence_posteriors(labels, prevalence_trace_file, plot_file, burnin, thin):  
     prevalence_trace = load_cellular_frequencies_trace(prevalence_trace_file, burnin, thin)
   
     plotter = CellularFrequencyPlot(labels, prevalence_trace)
