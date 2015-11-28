@@ -12,6 +12,16 @@ def load_config(file_name):
         
     return config
 
+def get_error_rates(config_file):
+    values = {}
+    
+    config = load_config(config_file)
+    
+    for sample_id in get_sample_ids(config_file):
+        values[sample_id] = config['samples'][sample_id]['error_rate']
+    
+    return values
+
 def get_mutations_files(config_file):
     files = {}
     
@@ -26,6 +36,16 @@ def get_sample_ids(config_file):
     config = load_config(config_file)
     
     return config['samples'].keys()
+
+def get_tumour_contents(config_file):
+    values = {}
+    
+    config = load_config(config_file)
+    
+    for sample_id in get_sample_ids(config_file):
+        values[sample_id] = config['samples'][sample_id]['tumour_content']['value']
+    
+    return values
 
 def get_cellular_prevalence_trace_files(config_file):
     trace_files = {}

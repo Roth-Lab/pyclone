@@ -5,8 +5,7 @@ Created on 2013-04-28
 '''
 from __future__ import division
 
-from collections import OrderedDict, namedtuple
-from math import log
+from collections import OrderedDict
 from pydp.base_measures import BetaBaseMeasure, GammaBaseMeasure
 from pydp.data import GammaData
 from pydp.densities import Density, log_beta_binomial_pdf
@@ -17,17 +16,13 @@ from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 from pydp.utils import log_sum_exp
 
-import os
-import yaml
-
-from pyclone.config import load_mutation_from_dict
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
 from pyclone.trace import DiskTrace
 
-import pyclone.paths as paths
+import pyclone.config as config
 
 def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
-    data, sample_ids = _load_data(config_file)
+    data, sample_ids = config.load_data(config_file)
     
     sample_atom_samplers = OrderedDict()
     
@@ -35,9 +30,9 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
     
     sample_cluster_densities = OrderedDict()
     
-    base_measure_params = _load_base_measure_params(config_file)
+    base_measure_params = config.load_base_measure_params(config_file)
     
-    precision_params = _load_precision_params(config_file)
+    precision_params = config.load_precision_params(config_file)
     
     for sample_id in sample_ids:
         sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
@@ -73,106 +68,6 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
     sampler.sample(data.values(), trace, num_iters)
     
     trace.close()
-
-def _load_data(file_name):
-    '''
-    Load data for all samples.
-    
-    Args:
-        file_name : (str) Path to YAML format configuration file.
-    '''
-    fh = open(file_name)
-    
-    config = yaml.load(fh)
-    
-    fh.close()
-    
-    sample_data = OrderedDict()
-    
-    tumour_content = OrderedDict()
-    
-    for sample_id in config['samples']:
-        file_name = config['samples'][sample_id]['mutations_file']
-        
-        file_name = os.path.join(config['working_dir'], file_name)
-        
-        error_rate = config['samples'][sample_id]['error_rate']
-        
-        tumour_content = config['samples'][sample_id]['tumour_content']['value']
-        
-        sample_data[sample_id] = _load_sample_data(file_name, error_rate, tumour_content)
-    
-    sample_ids = sample_data.keys()
-    
-    common_mutations = set.intersection(*[set(x.keys()) for x in sample_data.values()])
-    
-    data = OrderedDict()
-    
-    for mutation_id in common_mutations:
-        data[mutation_id] = OrderedDict()
-        
-        for sample_id in sample_ids:
-            data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
-    
-    return data, sample_ids
-
-def _load_sample_data(file_name, error_rate, tumour_content):
-    '''
-    Load data from PyClone formatted input file.
-    '''
-    data = OrderedDict()
-    
-    fh = open(file_name)
-    
-    config = yaml.load(fh)
-    
-    fh.close()
-
-    for mutation_dict in config['mutations']:
-        mutation = load_mutation_from_dict(mutation_dict)
-
-        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
-    
-    return data
-
-def _get_pyclone_data(mutation, error_rate, tumour_content):
-    a = mutation.ref_counts
-    b = mutation.var_counts
-    
-    d = a + b 
-    
-    cn_n = tuple([x.cn_n for x in mutation.states])
-    cn_r = tuple([x.cn_r for x in mutation.states])
-    cn_v = tuple([x.cn_v for x in mutation.states])
-    
-    mu_n = tuple([x.get_mu_n(error_rate) for x in mutation.states])
-    mu_r = tuple([x.get_mu_r(error_rate) for x in mutation.states])
-    mu_v = tuple([x.get_mu_v(error_rate) for x in mutation.states])
-    
-    prior_weights = tuple([x.prior_weight for x in mutation.states])
-    
-    log_pi = _get_log_pi(prior_weights)
-    
-    return PyCloneBetaBinomialData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
-    
-def _get_log_pi(weights):
-    pi = [x / sum(weights) for x in weights]
-    
-    return tuple([log(x) for x in pi])  
-
-def _load_base_measure_params(file_name):
-    fh = open(file_name)
-    
-    config = yaml.load(fh)
-    
-    fh.close()
-    
-    params = config['base_measure_params']
-    
-    return params
-
-PyCloneBetaBinomialData = namedtuple('PyCloneBetaBinomialData',
-                                     ['b', 'd', 'tumour_content', 'cn_n', 'cn_r', 'cn_v', 'mu_n', 'mu_r', 'mu_v', 'log_pi'])
 
 class PyCloneBetaBinomialDensity(Density):
     def _log_p(self, data, params):
@@ -215,12 +110,4 @@ class PyCloneBetaBinomialDensity(Density):
         param_b = (1 - mu) * self.params.x
         
         return log_beta_binomial_pdf(b, d, param_a, param_b)
-
-def _load_precision_params(file_name):
-    fh = open(file_name)
     
-    config = yaml.load(fh)
-    
-    fh.close()
-    
-    return config['beta_binomial_precision_params']    

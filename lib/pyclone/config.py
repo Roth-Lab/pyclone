@@ -5,6 +5,116 @@ Created on 2013-02-12
 '''
 from __future__ import division
 
+from collections import namedtuple, OrderedDict
+from math import log
+
+import pyclone.paths as paths
+
+#=======================================================================================================================
+# Load data for sampler
+#=======================================================================================================================
+PyClonelData = namedtuple(
+    'PyCloneBinomialData',
+    [
+        'b', 
+        'd', 
+        'tumour_conten', 
+        'cn_n', 
+        'cn_r', 
+        'cn_v', 
+        'mu_n', 
+        'mu_r', 
+        'mu_v', 
+        'log_pi'
+    ]
+)
+
+def load_base_measure_params(config_file):
+    config = paths.load_config(config_file)    
+    
+    params = config['base_measure_params']
+    
+    return params
+
+
+def load_precision_params(config_file):
+    config = paths.load_config(config_file)
+        
+    return config['beta_binomial_precision_params']    
+
+def load_data(config_file):
+    '''
+    Load data for all samples.
+    
+    Args:
+        config_file : (str) Path to YAML format configuration file.
+    '''
+    sample_data = OrderedDict()
+    
+    error_rate = paths.get_error_rates(config_file)
+    
+    tumour_content = paths.get_tumour_contents(config_file)
+    
+    for sample_id, file_name in paths.get_mutations_files(config_file).items():
+        sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], tumour_content[sample_id])
+    
+    sample_ids = sample_data.keys()
+    
+    common_mutations = set.intersection(*[set(x.keys()) for x in sample_data.values()])
+    
+    data = OrderedDict()
+    
+    for mutation_id in common_mutations:
+        data[mutation_id] = OrderedDict()
+        
+        for sample_id in sample_ids:
+            data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
+    
+    return data, sample_ids
+
+def _load_sample_data(file_name, error_rate, tumour_content):
+    '''
+    Load data from PyClone formatted input file.
+    '''
+    data = OrderedDict()
+    
+    config = paths.load_config(file_name)
+  
+    for mutation_dict in config['mutations']:
+        mutation = load_mutation_from_dict(mutation_dict)
+
+        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
+    
+    return data
+
+def _get_pyclone_data(mutation, error_rate, tumour_content):
+    a = mutation.ref_counts
+    b = mutation.var_counts
+    
+    d = a + b 
+    
+    cn_n = tuple([x.cn_n for x in mutation.states])
+    cn_r = tuple([x.cn_r for x in mutation.states])
+    cn_v = tuple([x.cn_v for x in mutation.states])
+    
+    mu_n = tuple([x.get_mu_n(error_rate) for x in mutation.states])
+    mu_r = tuple([x.get_mu_r(error_rate) for x in mutation.states])
+    mu_v = tuple([x.get_mu_v(error_rate) for x in mutation.states])
+    
+    prior_weights = tuple([x.prior_weight for x in mutation.states])
+    
+    log_pi = _get_log_pi(prior_weights)
+    
+    return PyClonelData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+
+def _get_log_pi(weights):
+    pi = [x / sum(weights) for x in weights]
+    
+    return tuple([log(x) for x in pi])
+
+#=======================================================================================================================
+# Parse mutation dict
+#=======================================================================================================================
 def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, ref_prior, var_prior):
     states = _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior)
     
