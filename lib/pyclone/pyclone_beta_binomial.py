@@ -53,10 +53,15 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
     
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
-    global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], precision_params['prior']['rate']), 
-                                                                     cluster_density, 
-                                                                     GammaProposal(precision_params['proposal']['precision']))
+    if 'prior' in precision_params:
+        global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], 
+                                                                                          precision_params['prior']['rate']), 
+                                                                         cluster_density, 
+                                                                         GammaProposal(precision_params['proposal']['precision']))
     
+    else:
+        global_params_sampler = None
+        
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
     
     trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)

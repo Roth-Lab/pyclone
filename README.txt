@@ -7,6 +7,40 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.13.0
+
+Most changes in this release are internal refactoring of the code and should be invisble to the user.
+
+- Removed IGMM, IBMM, and IBBMM methods
+
+- Changed plotting code to use seaborn
+	- Removed eppl dependency
+	- Removed brewer2mpl dependency
+
+- Changed output of build_table to a tidy data frame
+	- Old style table available with the --old_style flag
+	
+- Re-wrote the multi-sample plotting code
+	- Should fix issues with too many clusters
+	- Slightly nicer looking plots
+
+- Switched to using pandas for data wrangling
+
+- Changed nomenclature.
+	- Variant allele frequency (VAF): proportion of reads with variant
+	- Cellular prevalence: proportion of cancer cells harbouring a mutation
+	- The name of the trace files have been altered
+	- The name of some function calls have been altered
+	- Plot labels have been altered
+
+## 0.12.9
+
+* Fixed a bug in the calculation of the mpear code.
+
+## 0.12.8
+
+* Fixed a bug causing PyClone BetaBinomial to not support fixed precision parameter.
+
 ## 0.12.7
 
 * Fixed bug in multi-sample plotting of allelic prevalences. Note this requires an upgrade to eppl 0.2.3 or greater.

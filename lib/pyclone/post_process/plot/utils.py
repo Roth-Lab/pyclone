@@ -3,24 +3,35 @@ Created on 2012-08-20
 
 @author: Andrew Roth
 '''
-import csv
-csv.field_size_limit(10000000)
+import seaborn as sb
 
-def load_trace(trace_file, burnin, thin, cast_func):
-    '''
-        Args:
-            trace_file : (str) Path to file to load.
-            burnin : (int) Number of samples from the begining of MCMC chain to discard.
-            thin : (int) Number of samples to skip when building trace.
-            cast_func : (function) A function to cast data from string to appropriate type i.e. int, float
-    '''    
-    trace = {}
+def get_clusters_color_map(labels, palette='husl'):
+    clusters = sorted(labels.unique())
     
-    reader = csv.DictReader(open(trace_file), delimiter='\t')
-    
-    for row in reader:
-        gene = row['gene']
+    num_clusters = len(clusters)
         
-        trace[gene] = [cast_func(x) for x in row['trace'].split(',')][burnin::thin]
+    color_map = dict(zip(clusters, sb.color_palette(palette, num_clusters)))
     
-    return trace
+    return color_map
+
+def setup_plot():    
+    sb.set_style('ticks', {'font.sans-serif':['Helvetica']})
+
+def setup_axes(ax):
+    ax.spines['left'].set_position(('outward', 10))
+    
+    ax.spines['bottom'].set_position(('outward', 10))
+    
+    ax.spines['top'].set_visible(False)
+    
+    ax.spines['right'].set_visible(False)
+    
+    ax.xaxis.tick_bottom()
+    
+    ax.yaxis.tick_left()
+    
+    ax.xaxis.grid(True, which="major", linestyle=':')
+    
+    ax.yaxis.grid(True, which="major", linestyle=':')
+
+    return ax

@@ -5,260 +5,117 @@ Created on 2013-06-06
 '''
 from __future__ import division
 
-from collections import OrderedDict
-from eppl.parallel_coordinates import aggregated_parallel_coordinates_plot, parallel_coordinates_plot
-
-import csv
-import os
+import matplotlib.pyplot as pp
+import seaborn as sb
 import yaml
 
-try:
-    import matplotlib.pyplot as plot
-except:
-    raise Exception("The multi sample plotting module requires the matplotlib package. See http://matplotlib.org.")
+from pyclone.post_process import load_multi_sample_table
 
-try:
-    import pandas as pd
-except:
-    raise Exception("The multi sample plotting module requires the pandas package. See http://http://pandas.pydata.org.")
+from .utils import setup_axes, setup_plot
 
-from pyclone.config import load_mutation_from_dict
-from pyclone.post_process.cluster import cluster_pyclone_trace
-from pyclone.post_process.utils import load_cellular_frequencies_trace
-
-def plot_clusters(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
+def plot_multi_sample_parallel_coordinates(config_file, plot_file, y_value, burnin=0, thin=1, samples=None, separate_lines=False):
+    setup_plot()
     
-    if prevalence == 'cellular':
-        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
+    if samples is None:
+        with open(config_file) as fh:
+            samples = yaml.load(fh)['samples'].keys()
     
+    df = load_multi_sample_table(config_file, burnin, thin)
+    
+    if separate_lines:
+        plot_df = df
+        
     else:
-        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=False)
+        plot_df = df.groupby(['sample', 'cluster_id']).mean().reset_index()
     
-    fig = plot.figure()
+    plot_df['sample_index'] = plot_df['sample'].apply(lambda x: samples.index(x))
     
-    ax = fig.add_subplot(1, 1, 1)
-    
-    title = 'Cluster {0} Prevalence by Sample'.format(prevalence.capitalize())
+    plot_df = plot_df.sort_values(by='sample_index')
 
-    aggregated_parallel_coordinates_plot(plot_data,
-                                         'cluster_id',
-                                         ax=ax,
-                                         show_class_size=True,
-                                         title=title,
-                                         x_label='Sample',
-                                         y_label='Prevalence',
-                                         error_data=error_data)
+    xticks = range(len(samples))
     
-    ax.set_ylim(0, 1.0)
-    
-    ax.legend_.set_title('Cluster')
-    
-    fig.savefig(plot_file, dpi=600)
-
-def plot_mutations(config_file, plot_file, prevalence, clustering_method, burnin, thin):
-    data = load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin)
-    
-    if prevalence == 'cellular':
-        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=True)
-    
+    if separate_lines:
+        fig = pp.figure()
+        
+        ax = fig.add_subplot(1, 1, 1)
+        
+        sb.tsplot(
+            ax=ax,
+            
+            data=df,
+            condition='cluster_id',
+            unit='mutation_id',
+            time='sample_index', 
+            value=y_value,
+            
+            err_style='unit_traces',
+            marker="o",
+            markersize=4
+        )
+        
     else:
-        plot_data, error_data = _load_plot_data(config_file, data, get_error_data=False)
+        grid = sb.FacetGrid(
+            plot_df,
+            hue='cluster_id',
+            hue_order=sorted(plot_df['cluster_id'].unique()),
+            palette='husl'
+        )
         
-    fig = plot.figure()
-    
-    ax = fig.add_subplot(1, 1, 1)
-    
-    title = 'Mutation {0} Prevalence by Sample'.format(prevalence.capitalize())
-    
-    parallel_coordinates_plot(plot_data,
-                              'cluster_id',
-                              ax=ax,
-                              title=title,
-                              x_label='Sample',
-                              y_label='Prevalence',
-                              error_data=error_data)
-    
-    ax.set_ylim(0, 1.0)
-    
-    ax.legend_.set_title('Cluster')
-    
-    fig.savefig(plot_file, dpi=600)
+        ax = grid.ax
+        
+        fig = grid.fig 
+        
+        if y_value == 'cellular_prevalence':
+            grid.map(
+                pp.errorbar, 
+                'sample_index', 
+                'cellular_prevalence', 
+                'cellular_prevalence_std', 
+                marker="o",
+                markersize=4
+            )
+        
+        elif y_value == 'variant_allele_frequency':
+            grid.map(
+                pp.plot, 
+                'sample_index', 
+                'variant_allele_frequency', 
+                marker="o",
+                markersize=4
+            )
 
-def _load_yaml_config(file_name):
-    fh = open(file_name)
+    setup_axes(ax)
+        
+    ax.set_xlim(min(xticks) - 0.1, max(xticks) + 0.1)
     
-    config = yaml.load(fh)
+    ax.set_ylim(0, 1)
     
-    fh.close()
+    ax.set_xlabel('Sample')
     
-    return config
+    if y_value == 'cellular_prevalence':
+        ax.set_ylabel('Cellular prevalence')
+    
+    elif y_value == 'variant_allele_frequency':
+        ax.set_ylabel('VAF')
+    
+    ax.set_xticks(xticks)
+    
+    ax.set_xticklabels(samples, size=8, rotation=90)
+    
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), title='Cluster')
 
-def load_multi_sample_table(config_file, prevalence, clustering_method, burnin, thin):
-    config = _load_yaml_config(config_file)
+    height = 4
     
-    if prevalence == 'allelic':
-        data = _load_allelic_prevalences(config)
-    
-    elif prevalence == 'cellular':
-        data = _load_cellular_prevalences(config, burnin, thin)
-    
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
-    
-    labels_file = os.path.join(trace_dir, 'labels.tsv.bz2')
-    
-    labels = cluster_pyclone_trace(labels_file, clustering_method, burnin, thin)
-    
-    for mutation_id, cluster_id in labels.items():
-        data[mutation_id]['cluster_id'] = cluster_id
-    
-    data = pd.DataFrame(data)
-    
-    data = data.T
-    
-    data.cluster_id = data.cluster_id.astype(int)
-    
-    return data 
-
-#=======================================================================================================================
-# Load allelic prevalences for all samples
-#=======================================================================================================================
-def _load_allelic_prevalences(config):
-    all_data = OrderedDict()
-    
-    if 'pyclone' in config['density']:
-        mutations_file_format = 'yaml'
-    
-    else:
-        mutations_file_format = 'tsv'
-    
-    for sample_id in config['samples']:
-        file_name = config['samples'][sample_id]['mutations_file']
+    width = 1 * len(samples) + 2
         
-        file_name = os.path.join(config['working_dir'], file_name)
-        
-        all_data[sample_id] = _load_sample_allelic_prevalences(file_name, mutations_file_format)       
+    fig.set_figheight(height)
     
-    sample_ids = all_data.keys()
+    fig.set_figwidth(width)
     
-    common_mutations = set.intersection(*[set(x.keys()) for x in all_data.values()])
-    
-    data = OrderedDict()
-    
-    for mutation_id in common_mutations:
-        data[mutation_id] = OrderedDict()
-        
-        for sample_id in sample_ids:
-            data[mutation_id][sample_id] = all_data[sample_id][mutation_id]
-
-    return data
-          
-def _load_sample_allelic_prevalences(file_name, file_format):
-    '''
-    Load data from PyClone formatted input file.
-    '''
-    data = OrderedDict()
-    
-    if file_format == 'yaml':
-        fh = open(file_name)
-            
-        config = yaml.load(fh)
-        
-        fh.close()
-    
-        for mutation_dict in config['mutations']:
-            mutation = load_mutation_from_dict(mutation_dict)
-    
-            data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
-    
-    else:
-        fh = open(file_name)
-        
-        reader = csv.DictReader(fh, delimiter='\t')
-        
-        for row in reader:
-            a = int(row['ref_counts'])
-            
-            b = int(row['var_counts'])
-            
-            d = a + b
-            
-            f = b / d
-            
-            data[row['mutation_id']] = f
-        
-        fh.close()
-    
-    return data
-
-#=======================================================================================================================
-# Load cellular prevalences for all samples
-#=======================================================================================================================
-def _load_cellular_prevalences(config, burnin, thin):
-    all_data = OrderedDict()
-    
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
-    
-    sample_ids = config['samples'].keys()
-    
-    for sample_id in sample_ids:
-        file_name = os.path.join(trace_dir, '{0}.cellular_frequencies.tsv.bz2'.format(sample_id))
-        
-        mean_data, std_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
-        
-        all_data[sample_id] = mean_data
-        
-        all_data['{0}_std'.format(sample_id)] = std_data       
-
-    common_mutations = set.intersection(*[set(all_data[x].keys()) for x in sample_ids])
-    
-    data = OrderedDict()
-    
-    for mutation_id in sorted(common_mutations):
-        data[mutation_id] = OrderedDict()
-        
-        for sample_id in sample_ids:
-            mean_key = sample_id
-            
-            std_key = '{0}_std'.format(sample_id)
-            
-            data[mutation_id][mean_key] = all_data[mean_key][mutation_id]
-            
-            data[mutation_id][std_key] = all_data[std_key][mutation_id]
-
-    return data 
-
-def _load_sample_cellular_prevalences(file_name, burnin, thin):
-    mean_data = OrderedDict()
-    
-    std_data = OrderedDict()
-    
-    trace = load_cellular_frequencies_trace(file_name, burnin, thin)
-    
-    for mutation_id in trace:
-        mutation_trace = pd.Series(trace[mutation_id])
-
-        mean_data[mutation_id] = mutation_trace.mean()
-        
-        std_data[mutation_id] = mutation_trace.std()
-    
-    return mean_data, std_data
-
-def _load_plot_data(config_file, data, get_error_data=False):
-    config = _load_yaml_config(config_file)
-    
-    sample_ids = config['samples'].keys()
-
-    plot_cols = sample_ids + ['cluster_id', ]
-    
-    plot_data = data[plot_cols]
-    
-    if get_error_data:
-        error_cols = ['{0}_std'.format(x) for x in sample_ids] + ['cluster_id', ]
-    
-        error_data = data[error_cols]
-    
-    else:
-        error_data = None
-    
-    return plot_data, error_data
+    fig.savefig(plot_file, bbox_inches='tight')

@@ -5,10 +5,7 @@ Created on 2013-02-08
 
 @author: Andrew Roth
 '''
-from collections import defaultdict
-
-import bz2
-import csv
+import pandas as pd
 
 def load_cellular_frequencies_trace(file_name, burnin, thin):
     return _load_trace(file_name, burnin, thin, float)
@@ -24,20 +21,8 @@ def _load_trace(trace_file, burnin, thin, cast_func):
             thin : (int) Number of samples to skip when building trace.
             cast_func : (function) A function to cast data from string to appropriate type i.e. int, float
     '''        
-    trace = defaultdict(list)
+    trace = pd.read_csv(trace_file, compression='bz2', sep='\t')
     
-    fh = bz2.BZ2File(trace_file)
+    trace = trace.iloc[burnin::thin]
     
-    reader = csv.DictReader(fh, delimiter='\t')
-    
-    for i, row in enumerate(reader):
-        if i < burnin:
-            continue
-        
-        if i % thin == 0:
-            for mutation in row:
-                trace[mutation].append(cast_func(row[mutation]))
-        
-    fh.close()
-    
-    return trace
+    return trace.astype(cast_func)
