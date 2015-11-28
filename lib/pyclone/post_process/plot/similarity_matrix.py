@@ -10,14 +10,14 @@ import pandas as pd
 import seaborn as sb
 
 from pyclone.post_process import cluster_pyclone_trace
-from pyclone.post_process.utils import load_cluster_labels_trace
+from pyclone.trace import load_cluster_labels_trace
 
 from .utils import get_clusters_color_map
 
 import pyclone.paths as paths
 
 def plot_similarity_matrix(config_file, plot_file, burnin, thin):
-    trace_file = paths.load_config(config_file)
+    trace_file = paths.get_labels_trace_file(config_file)
     
     trace = load_cluster_labels_trace(trace_file, burnin, thin)
 

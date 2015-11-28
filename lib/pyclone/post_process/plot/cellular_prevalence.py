@@ -11,7 +11,7 @@ import matplotlib.pyplot as pp
 import os
 
 from pyclone.post_process import cluster_pyclone_trace
-from pyclone.post_process.utils import load_cellular_frequencies_trace
+from pyclone.trace import load_cellular_frequencies_trace
 
 from .densities import PosteriorDensity
 from .utils import get_clusters_color_map, setup_axes, setup_plot

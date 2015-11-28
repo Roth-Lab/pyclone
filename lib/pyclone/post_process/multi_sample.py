@@ -11,17 +11,14 @@ import yaml
 from pyclone.config import load_mutation_from_dict
 
 from .cluster import cluster_pyclone_trace
-from .utils import load_cellular_frequencies_trace
+from pyclone.trace import load_cellular_frequencies_trace
 
 import pyclone.paths as paths
 
 def load_multi_sample_table(config_file, burnin, thin, old_style=False):
-    with open(config_file) as fh:
-        config = yaml.load(fh)
-    
     data = pd.merge(
-        _load_variant_allele_frequencies(config),
-        _load_cellular_prevalences(config, burnin, thin),
+        _load_variant_allele_frequencies(config_file),
+        _load_cellular_prevalences(config_file, burnin, thin),
         how='inner',
         on=['mutation_id', 'sample']
     )
@@ -75,7 +72,7 @@ def _load_variant_allele_frequencies(config_file):
     
     # Filter for mutations in all samples
     data = data.groupby('mutation_id').filter(lambda x: len(x) == num_samples)
-    
+
     return data
           
 def _load_sample_variant_allele_frequencies(file_name):
@@ -106,7 +103,7 @@ def _load_sample_variant_allele_frequencies(file_name):
 def _load_cellular_prevalences(config_file, burnin, thin):
     data = []
   
-    for sample_id, file_name in paths.get_cellular_prevalence_trace_files(config_file):
+    for sample_id, file_name in paths.get_cellular_prevalence_trace_files(config_file).items():
         sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
     
         sample_data['sample'] = sample_id
