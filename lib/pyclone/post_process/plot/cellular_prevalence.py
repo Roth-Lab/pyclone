@@ -8,6 +8,7 @@ from __future__ import division
 from collections import OrderedDict
 
 import matplotlib.pyplot as pp
+import os
 
 from pyclone.post_process import cluster_pyclone_trace
 from pyclone.post_process.utils import load_cellular_frequencies_trace
@@ -15,7 +16,19 @@ from pyclone.post_process.utils import load_cellular_frequencies_trace
 from .densities import PosteriorDensity
 from .utils import get_clusters_color_map, setup_axes, setup_plot
 
-def plot_cellular_prevalence_posteriors(labels_trace_file, prevalence_trace_file, plot_file, burnin, thin):  
+import pyclone.paths as paths
+
+def plot_cellular_prevalence_posteriors(config_file, file_format, out_dir, burnin, thin):
+    labels_trace_file = paths.get_labels_trace_file(config_file)
+    
+    for prevalence_trace_file in paths.get_cellular_prevalence_trace_files(config_file).values():    
+        out_file = os.path.basename(prevalence_trace_file).replace('tsv.bz2', file_format)
+        
+        out_file = os.path.join(out_dir, out_file)
+        
+        _plot_sample_cellular_prevalence_posteriors(labels_trace_file, prevalence_trace_file, out_file, burnin, thin) 
+
+def _plot_sample_cellular_prevalence_posteriors(labels_trace_file, prevalence_trace_file, plot_file, burnin, thin):  
     labels = cluster_pyclone_trace(labels_trace_file, burnin, thin)
     
     labels = labels.set_index('mutation_id')

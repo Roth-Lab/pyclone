@@ -24,7 +24,9 @@ from pyclone.config import load_mutation_from_dict
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
 from pyclone.trace import DiskTrace
 
-def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
+import pyclone.paths as paths
+
+def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     data, sample_ids = _load_data(config_file)
     
     sample_atom_samplers = OrderedDict()
@@ -64,7 +66,7 @@ def run_pyclone_beta_binomial_analysis(config_file, trace_dir, num_iters, alpha,
         
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
     
-    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)
+    trace = DiskTrace(config_file, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)
     
     trace.open()
     

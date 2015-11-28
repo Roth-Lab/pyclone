@@ -21,7 +21,7 @@ from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, Mul
 from pyclone.trace import DiskTrace
 from pydp.utils import log_sum_exp
 
-def run_pyclone_binomial_analysis(config_file, trace_dir, num_iters, alpha, alpha_priors):
+def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     data, sample_ids, tumour_content = _load_data(config_file)
     
     sample_atom_samplers = OrderedDict()
@@ -50,7 +50,7 @@ def run_pyclone_binomial_analysis(config_file, trace_dir, num_iters, alpha, alph
     
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors)
     
-    trace = DiskTrace(trace_dir, sample_ids, data.keys(), {'cellular_frequencies' : 'x'})
+    trace = DiskTrace(config_file, data.keys(), {'cellular_frequencies' : 'x'})
     
     trace.open()
     

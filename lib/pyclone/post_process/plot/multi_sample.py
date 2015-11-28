@@ -7,18 +7,18 @@ from __future__ import division
 
 import matplotlib.pyplot as pp
 import seaborn as sb
-import yaml
 
 from pyclone.post_process import load_multi_sample_table
 
 from .utils import setup_axes, setup_plot
 
+import pyclone.paths as paths
+
 def plot_multi_sample_parallel_coordinates(config_file, plot_file, y_value, burnin=0, thin=1, samples=None, separate_lines=False):
     setup_plot()
     
     if samples is None:
-        with open(config_file) as fh:
-            samples = yaml.load(fh)['samples'].keys()
+        samples = paths.get_sample_ids(config_file)
     
     df = load_multi_sample_table(config_file, burnin, thin)
     

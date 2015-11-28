@@ -14,7 +14,11 @@ from pyclone.post_process.utils import load_cluster_labels_trace
 
 from .utils import get_clusters_color_map
 
-def plot_similarity_matrix(trace_file, plot_file, burnin, thin):
+import pyclone.paths as paths
+
+def plot_similarity_matrix(config_file, plot_file, burnin, thin):
+    trace_file = paths.load_config(config_file)
+    
     trace = load_cluster_labels_trace(trace_file, burnin, thin)
 
     dist_mat = pdist(trace.values.T, 'hamming')
