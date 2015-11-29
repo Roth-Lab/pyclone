@@ -45,7 +45,6 @@ def run_analysis_pipeline(args):
         _build_mutations_file(
             in_file, 
             mutations_files[sample_id], 
-            args.ref_prior, 
             args.var_prior
         )
         
@@ -98,9 +97,9 @@ def run_analysis_pipeline(args):
         cellular_prevalence_posteriors_dir, 
         args.burnin, 
         args.thin, 
-        args.file_format)
+        args.plot_file_format)
     
-    sim_mat_file = os.path.join(plots_dir, 'similarity_matrix.{0}'.format(args.file_format))
+    sim_mat_file = os.path.join(plots_dir, 'similarity_matrix.{0}'.format(args.plot_file_format))
     
     _plot_similarity_matrix(
         config_file, 
@@ -111,7 +110,7 @@ def run_analysis_pipeline(args):
     
     cellular_prevalence_parallel_coordinates_file = os.path.join(
         plots_dir, 
-        'cellular_prevalence_parallel_coordinates.{0}'.format(args.file_format)
+        'cellular_prevalence_parallel_coordinates.{0}'.format(args.plot_file_format)
     )
     
     _plot_multi_sample(
@@ -126,7 +125,7 @@ def run_analysis_pipeline(args):
     
     vaf_parallel_coordinates_file = os.path.join(
         plots_dir, 
-        'vaf_parallel_coordinates.{0}'.format(args.file_format)
+        'vaf_parallel_coordinates.{0}'.format(args.plot_file_format)
     )
     
     _plot_multi_sample(
@@ -230,12 +229,11 @@ def _run_analysis(config_file, seed):
 def build_mutations_file(args):
     _build_mutations_file(
         args.in_file, 
-        args.out_file, 
-        args.ref_prior, 
+        args.out_file,  
         args.var_prior
     )
 
-def _build_mutations_file(in_file, out_file, ref_prior, var_prior):
+def _build_mutations_file(in_file, out_file, var_prior):
     config = {}
     
     reader = csv.DictReader(open(in_file), delimiter='\t')
@@ -261,7 +259,6 @@ def _build_mutations_file(in_file, out_file, ref_prior, var_prior):
                                 normal_cn,
                                 minor_cn,
                                 major_cn,
-                                ref_prior,
                                 var_prior)
 
         config['mutations'].append(mutation.to_dict())

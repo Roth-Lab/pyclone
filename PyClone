@@ -8,227 +8,318 @@ import pyclone.run as run
 
 import argparse
 
-parser = argparse.ArgumentParser(prog='PyClone')
 
-parser.add_argument('--version', action='version', version='PyClone-0.12.10')
-
-subparsers = parser.add_subparsers()
+def main():
+    parser = argparse.ArgumentParser(prog='PyClone')
+    
+    parser.add_argument('--version', action='version', version='PyClone-0.13.0')
+    
+    subparsers = parser.add_subparsers()
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+    analyse_parser = subparsers.add_parser(
+        'analyse',
+        help='''Run an MCMC sampler to sample from the posterior of the PyClone model.'''
+    )
+    
+    _setup_analyse_parser(analyse_parser)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-analyse_parser = subparsers.add_parser('analyse', help='''Start a new PyClone analysis.''')
-
-analyse_parser.add_argument('config_file',
-                            help='Path to tab separated input file. See examples for format.')
-
-analyse_parser.add_argument('--seed', default=None, type=int,
-                            help='''Set random seed so results can be reproduced. By default a random seed is
-                            chosen.''')
-
-analyse_parser.set_defaults(func=run.run_analysis)
+    analysis_pipeline_parser = subparsers.add_parser(
+        'run_analysis_pipeline',
+        help='''Run a full PyClone analysis.'''
+    )
+    
+    _setup_analysis_pipeline_parser(analysis_pipeline_parser)
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+    build_prior_parser = subparsers.add_parser(
+        'build_mutations_file',
+        help='''Build a YAML format file with mutation data and states prior to be used for PyClone analysis.'''
+    )
+    
+    _setup_build_prior_parser(build_prior_parser)
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+    cluster_parser = subparsers.add_parser(
+        'cluster',
+        help='''Cluster the results of a PyClone analysis.'''
+    )
+    
+    _setup_cluster_parser(cluster_parser)
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+    plot_cf_parser = subparsers.add_parser(
+        'plot_cellular_prevalence_posteriors',
+        help='''Plot the posterior densities of the cellular frequencies of the mutations from a PyClone analysis.'''
+    )
+    
+    _setup_plot_cf_parser(plot_cf_parser)
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+    plot_sm_parser = subparsers.add_parser(
+        'plot_similarity_matrix',
+        help='''Plot a heat map of the posterior similarity matrix from a PyClone analysis.'''
+    )
+    
+    _setup_plot_sm_parser(plot_sm_parser)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-analysis_pipeline_parser = subparsers.add_parser('run_analysis_pipeline',
-                                                 help='''Run a full PyClone analysis.''')
-
-analysis_pipeline_parser.add_argument('--in_files', nargs='+', required=True)
-
-analysis_pipeline_parser.add_argument('--working_dir', required=True)
-
-analysis_pipeline_parser.add_argument('--density', 
-                                      choices=['pyclone_binomial', 'pyclone_beta_binomial'],
-                                      default='pyclone_beta_binomial')
-
-analysis_pipeline_parser.add_argument('--ref_prior', choices=['normal', 'variant', 'normal_variant'], default='normal_variant',
-                                help='''Method for setting the copy number of the reference population. "normal" sets it
-                                to the value of "normal_cn" in the input file. "variant" sets it to the sum of
-                                "minor_cn" and "major_cn" in the input file. "normal_variant" considers both options
-                                with equal prior weight. This option only has an effect if "total_copy_number" or
-                                "no_zygosity is used for the var_prior option. Default normal_variant.''')
-
-analysis_pipeline_parser.add_argument('--var_prior',
-                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number'],
-                                default='total_copy_number', help='''Method used to set the possible genotypes  of the
-                                variant population. "AB" assumes all mutations have the AB genotype. "BB" assumes all
-                                mutations have the BB genotype. "no_zygosity" assumes all mutation have the genotype
-                                with the predicted total copy number and one mutant allele i.e. AAB for a copy number 3
-                                mutation. "parental_copy_number" sets considers all possible genotypes compatible with
-                                the predicted parental copy number. "total_copy_number" considers all possible genotypes
-                                compatible with the predicted total copy number. If reliable parental copy number is
-                                available the parental_copy_number method should be chosen. Default is
-                                total_copy_number.''')
-
-analysis_pipeline_parser.add_argument('--num_iters', default=1000, type=int)
-
-analysis_pipeline_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-analysis_pipeline_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
-
-analysis_pipeline_parser.add_argument('--seed', default=None, type=int,
-                            help='''Set random seed so results can be reproduced. By default a random seed is
-                            chosen.''')
-
-analysis_pipeline_parser.add_argument('--file_format', default='pdf', choices=['pdf', 'svg'])
-
-analysis_pipeline_parser.add_argument('--tumour_contents', nargs='+', type=float, default=None)
-
-analysis_pipeline_parser.add_argument('--samples', nargs='+', default=None)
-
-analysis_pipeline_parser.set_defaults(func=run.run_analysis_pipeline)
-
+    plot_ms_parser = subparsers.add_parser(
+        'plot_multi_sample',
+        help='''Plot a parallel coordinates plot for the variant allelic prevalence or cellular prevalence colour code 
+        by cluster membership.'''
+    )
+    
+    _setup_plot_ms_parser(plot_ms_parser)
+    
+#----------------------------------------------------------------------------------------------------------------------
+    build_table_parser = subparsers.add_parser(
+        'build_table',
+        help='''Build results table which contains cluster ids and (mean) cellular prevalence estimates.''')
+    
+    _setup_build_table_parser(build_table_parser)
+    
 #---------------------------------------------------------------------------------------------------------------------- 
-build_prior_parser = subparsers.add_parser('build_mutations_file',
-                                           help='''Build a YAML format file with mutation data and states prior to be
-                                           used for PyClone analysis.''')
+    args = parser.parse_args()
+    
+    args.func(args)
 
-build_prior_parser.add_argument('in_file',
-                                help='''Path to tab separated input file. The input file should have header and the
-                                following columns: mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn.
-                                Any additional columns will be ignored. See examples for format.''')
+def _setup_analyse_parser(parser):
+   
+    parser.add_argument(
+        'config_file',
+        help='''Path to tab separated input file. See examples for format.'''
+    )
+    
+    _add_seed_args(parser)
+    
+    parser.set_defaults(func=run.run_analysis)
 
-build_prior_parser.add_argument('out_file',
-                                help='''Path where YAML formatted PyClone input file will be written.''')
+def _setup_analysis_pipeline_parser(parser):
+   
+    parser.add_argument(
+        '--in_files',
+        nargs='+',
+        required=True,
+        help='''Space delimited list of tsv format files with copy number and allele count information. See 
+        build_mutations_file command for information.'''
+    )
+    
+    parser.add_argument(
+        '--working_dir',
+        required=True,
+        help='''Path of directory where analysis pipeline files will be placed.'''
+    )
+    
+     
+    parser.add_argument(
+        '--tumour_contents',
+        nargs='+',
+        type=float,
+        default=None,
+        help='''Space delimited list of tumour contents. Should match the order of --in_files. If not given tumour 
+        content is assumed to 1.0 in all samples.'''
+    )
+    
+    parser.add_argument(
+        '--samples',
+        nargs='+', default=None, help='''Space delimited list of sample names. Should be in the same order as
+        --in_files. If not set sample name will be inferred from file names and ordering in plots will be arbitrary.''')
+    
+    
+    parser.add_argument(
+        '--density',
+        choices=['pyclone_binomial', 'pyclone_beta_binomial'],
+        default='pyclone_beta_binomial',
+        help='''Emission density for the model. Default is pyclone_beta_binomial.'''
+    )
 
-build_prior_parser.add_argument('--ref_prior', choices=['normal', 'variant', 'normal_variant'], default='normal_variant',
-                                help='''Method for setting the copy number of the reference population. "normal" sets it
-                                to the value of "normal_cn" in the input file. "variant" sets it to the sum of
-                                "minor_cn" and "major_cn" in the input file. "normal_variant" considers both options
-                                with equal prior weight. This option only has an effect if "total_copy_number" or
-                                "no_zygosity is used for the var_prior option. Default normal_variant.''')
+    parser.add_argument(
+        '--num_iters',
+        default=10000,
+        type=int,
+        help='''Number of iterations of the MCMC sampler to perform. Default is 10,000.'''
+    )
+    
+    _add_prior_args(parser)
+    
+    _add_post_process_args(parser)
+    
+    _add_seed_args(parser)
+    
+    parser.add_argument(
+        '--plot_file_format',
+        default='pdf',
+        choices=['pdf', 'svg'],
+        help='''File format for plots. Default is pdf.'''
+    )
+   
+    parser.set_defaults(func=run.run_analysis_pipeline)
 
-build_prior_parser.add_argument('--var_prior',
-                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number'],
-                                default='total_copy_number', help='''Method used to set the possible genotypes  of the
-                                variant population. "AB" assumes all mutations have the AB genotype. "BB" assumes all
-                                mutations have the BB genotype. "no_zygosity" assumes all mutation have the genotype
-                                with the predicted total copy number and one mutant allele i.e. AAB for a copy number 3
-                                mutation. "parental_copy_number" sets considers all possible genotypes compatible with
-                                the predicted parental copy number. "total_copy_number" considers all possible genotypes
-                                compatible with the predicted total copy number. If reliable parental copy number is
-                                available the parental_copy_number method should be chosen. Default is
-                                total_copy_number.''')
+def _setup_build_prior_parser(parser):    
+    
+    parser.add_argument(
+        'in_file',
+        help='''Path to tab separated input file. The input file should have header and the following columns: 
+        mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn. Any additional columns will be ignored. 
+        See examples for format.'''
+    )
+    
+    parser.add_argument(
+        'out_file',
+        help='''Path where YAML formatted PyClone input file will be written.'''
+    )
+    
+    _add_prior_args(parser)
+    
+    parser.set_defaults(func=run.build_mutations_file)
 
-build_prior_parser.set_defaults(func=run.build_mutations_file)
+def _setup_cluster_parser(parser):
+    
+    parser.add_argument(
+        'config_file',
+        help='''Path to configuration file used for analysis.'''
+    )
+    
+    parser.add_argument(
+        'out_file',
+        help='Path to file where clustering results will be written.'
+    )
+    
+    _add_post_process_args(parser)
+    
+    parser.set_defaults(func=run.write_clusters_trace)
 
-#---------------------------------------------------------------------------------------------------------------------- 
-cluster_parser = subparsers.add_parser('cluster', help='''Cluster the results of a PyClone analysis.''')
+def _setup_plot_cf_parser(parser):
+    
+    _add_config_file_args(parser)
+  
+    parser.add_argument(
+        'out_dir',
+        help='Path to directory where plot files will be saved.'
+    )
+    
+    _add_post_process_args(parser)
 
-cluster_parser.add_argument('config_file',
-                            help='''Path to configuration file used for analysis.''')
+    parser.add_argument(
+        '--file_format',
+        default='pdf',
+        choices=['pdf', 'png', 'svg'],
+        help='''File format used for to plot files. Default is `pdf` and `png` is suggested for large datasets to reduce
+         figure size.''')
+    
+    parser.set_defaults(func=run.plot_cellular_prevalence_posteriors)
 
-cluster_parser.add_argument('out_file',
-                            help='Path to file where clustering results will be written.')
+def _setup_plot_sm_parser(parser):
+    
+    _add_config_file_args(parser)
+    
+    _add_plot_out_file_args(parser)
+    
+    _add_post_process_args(parser)
+     
+    parser.set_defaults(func=run.plot_similarity_matrix)
 
-cluster_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+def _setup_plot_ms_parser(parser):
+    
+    _add_config_file_args(parser)
+    
+    _add_plot_out_file_args(parser)
+    
+    _add_post_process_args(parser)
+    
+    parser.add_argument(
+        '--samples',
+        default=None,
+        nargs='+',
+        help='''Samples to plot. Samples will be plotted left to right in the order given.'''
+    )
+    
+    parser.add_argument(
+        '--separate_lines',
+        action='store_true',
+        default=False,
+        help='''If set then each mutation will be plotted with a separate line.'''
+    )
+    
+    parser.add_argument(
+        '--y_value',
+        choices=['cellular_prevalence', 'variant_allele_frequency'],
+        default='cellular_prevalence',
+        help='''Determines which values will be plotted on the y-axis. Default is cellular_prevalence.'''
+    )
+    
+    parser.set_defaults(func=run.plot_multi_sample)
 
-cluster_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
+def _setup_build_table_parser(parser):
+    
+    _add_config_file_args(parser)
+  
+    parser.add_argument(
+        'out_file',
+        help='''Path where table will be written in tsv format.'''
+    )
+  
+    parser.add_argument(
+        '--old_style', 
+        action='store_true', 
+        default=False,
+        help='''If set old style (0.12.x) table will be output.'''
+    )
+    
+    _add_post_process_args(parser)
+ 
+    parser.set_defaults(func=run.write_multi_sample_table)    
 
-cluster_parser.set_defaults(func=run.write_clusters_trace)
+def _add_config_file_args(parser):
+     
+     parser.add_argument(
+        'config_file',
+        help='''Path to configuration file used for analysis.'''
+    )
+     
+def _add_plot_out_file_args(parser):
+    
+    parser.add_argument(
+        'out_file',
+        help='Path to file where plot will be saved. Format can be controlled by changing file extension.'
+    )
+    
+def _add_seed_args(parser):
+    
+    parser.add_argument(
+        '--seed',
+        default=None,
+        type=int,
+        help='''Set random seed so results can be reproduced. By default a random seed is chosen.'''
+    )
+    
+def _add_prior_args(parser):  
+    
+    parser.add_argument(
+        '--var_prior',
+        choices=['major_copy_number', 'parental_copy_number', 'total_copy_number'],
+        default='major_copy_number',
+        help='''Method used to set the possible genotypes. See online help for description. Default is major_copy_number.'''
+    )
 
-#---------------------------------------------------------------------------------------------------------------------- 
-plot_cf_parser = subparsers.add_parser('plot_cellular_prevalence_posteriors',
-                                       help='''Plot the posterior densities of the cellular frequencies of the mutations
-                                       from a PyClone analysis.''')
+def _add_post_process_args(parser):
+    
+    parser.add_argument(
+        '--burnin',
+        default=0,
+        type=int,
+        help='''Number of samples to discard as burning for the MCMC chain. Default is 0.'''
+    )
+    
+    parser.add_argument(
+        '--thin',
+        default=1,
+        type=int,
+        help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be 
+        used for inference. Default is 1.'''
+    )
 
-plot_cf_parser.add_argument('config_file',
-                            help='''Path to configuration file used for analysis.''')
-
-plot_cf_parser.add_argument('out_dir',
-                            help='Path to directory where plot files will be saved.')
-
-plot_cf_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-plot_cf_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
-                            
-plot_cf_parser.add_argument('--file_format', default='pdf', choices=['eps', 'jpg', 'pdf', 'png', 'svg'],
-                            help='''File format used for to plot files. Default is `pdf` and `png` is suggested for
-                            large datasets to reduce figure size.''')
-
-plot_cf_parser.set_defaults(func=run.plot_cellular_prevalence_posteriors)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-plot_sm_parser = subparsers.add_parser('plot_similarity_matrix',
-                                       help='''Plot a heat map of the posterior similarity matrix from a PyClone
-                                       analysis.''')
-
-plot_sm_parser.add_argument('config_file',
-                            help='''Path to configuration file used for analysis.''')
-
-plot_sm_parser.add_argument('out_file',
-                            help='Path to file where plot will be saved.')
-
-plot_sm_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-plot_sm_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
-
-plot_sm_parser.set_defaults(func=run.plot_similarity_matrix)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-plot_ms_parser = subparsers.add_parser('plot_multi_sample',
-                                       help='''Plot a parallel coordinates plot for the variant allelic prevalence or
-                                       cellular prevalence colour code by cluster membership.''')
-
-plot_ms_parser.add_argument('config_file',
-                            help='''Path to configuration file used for analysis.''')
-
-plot_ms_parser.add_argument('plot_file',
-                            help='''Path where plot file will be written.''')
-
-plot_ms_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-plot_ms_parser.add_argument('--samples', default=None, nargs='+',
-                            help='''Samples to plot. Samples will be plotted left to right in the order given.''')
-
-plot_ms_parser.add_argument('--separate_lines', action='store_true', default=False,
-                            help='''If set then each mutation will be plotted with a separate line.''')
-
-plot_ms_parser.add_argument('--thin', default=1, type=int,
-                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                            after burning will be used for inference. Default is 1.''')
-
-plot_ms_parser.add_argument('--y_value', 
-                            choices=['variant_allele_frequency', 'cellular_prevalence'], 
-                            default='cellular_prevalence',
-                            help='''Determines which values will be plotted on the y-axis. Default is cellular_prevalence.''')
-
-plot_ms_parser.set_defaults(func=run.plot_multi_sample)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-build_table_parser = subparsers.add_parser('build_table',
-                                           help='''Build results table which contains cluster ids and (mean) cellular
-                                           prevalence estimates.''')
-
-build_table_parser.add_argument('config_file',
-                                help='''Path to configuration file used for analysis.''')
-
-build_table_parser.add_argument('out_file',
-                                help='''Path where table will be written in tsv format.''')
-
-build_table_parser.add_argument('--burnin', default=0, type=int,
-                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
-
-build_table_parser.add_argument('--old_style',action='store_true', default=False, 
-                                help='''If set old style (pre 0.13) table will be output.''')
-
-build_table_parser.add_argument('--thin', default=1, type=int,
-                                help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
-                                after burning will be used for inference. Default is 1.''')
-
-build_table_parser.set_defaults(func=run.write_multi_sample_table)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-args = parser.parse_args()
-
-args.func(args)
+if __name__ == '__main__':
+    main()
