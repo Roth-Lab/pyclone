@@ -17,6 +17,8 @@ from .utils import get_clusters_color_map
 import pyclone.paths as paths
 
 def plot_similarity_matrix(config_file, plot_file, burnin, thin):
+    sb.set_style("whitegrid")
+    
     trace_file = paths.get_labels_trace_file(config_file)
     
     trace = load_cluster_labels_trace(trace_file, burnin, thin)
