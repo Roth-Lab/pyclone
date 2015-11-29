@@ -5,6 +5,8 @@ Created on 2012-02-08
 '''
 from __future__ import division
 
+from collections import OrderedDict
+
 import csv
 import os
 import random
@@ -27,12 +29,16 @@ def run_analysis_pipeline(args):
     
     make_directory(os.path.join(args.working_dir, 'yaml'))
     
-    mutations_files = {}
+    mutations_files = OrderedDict()
     
     tumour_contents = {}
     
     for i, in_file in enumerate(args.in_files):
-        sample_id = os.path.splitext(os.path.basename(in_file))[0]
+        if args.samples is not None:
+            sample_id = args.samples[i]
+            
+        else:
+            sample_id = os.path.splitext(os.path.basename(in_file))[0]
         
         mutations_files[sample_id] = os.path.join(args.working_dir, 'yaml', '{0}.yaml'.format(sample_id))
         
@@ -132,8 +138,6 @@ def run_analysis_pipeline(args):
         True, 
         'variant_allele_frequency'
     )
-    
-    
 
 def _write_config_file(config_file, density, mutations_files, num_iters, tumour_contents, working_dir):
     config = {}

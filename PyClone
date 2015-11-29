@@ -74,6 +74,8 @@ analysis_pipeline_parser.add_argument('--file_format', default='pdf', choices=['
 
 analysis_pipeline_parser.add_argument('--tumour_contents', nargs='+', type=float, default=None)
 
+analysis_pipeline_parser.add_argument('--samples', nargs='+', default=None)
+
 analysis_pipeline_parser.set_defaults(func=run.run_analysis_pipeline)
 
 #---------------------------------------------------------------------------------------------------------------------- 
