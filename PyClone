@@ -27,6 +27,56 @@ analyse_parser.add_argument('--seed', default=None, type=int,
 analyse_parser.set_defaults(func=run.run_analysis)
 
 #---------------------------------------------------------------------------------------------------------------------- 
+analysis_pipeline_parser = subparsers.add_parser('run_analysis_pipeline',
+                                                 help='''Run a full PyClone analysis.''')
+
+analysis_pipeline_parser.add_argument('--in_files', nargs='+', required=True)
+
+analysis_pipeline_parser.add_argument('--working_dir', required=True)
+
+analysis_pipeline_parser.add_argument('--density', 
+                                      choices=['pyclone_binomial', 'pyclone_beta_binomial'],
+                                      default='pyclone_beta_binomial')
+
+analysis_pipeline_parser.add_argument('--ref_prior', choices=['normal', 'variant', 'normal_variant'], default='normal_variant',
+                                help='''Method for setting the copy number of the reference population. "normal" sets it
+                                to the value of "normal_cn" in the input file. "variant" sets it to the sum of
+                                "minor_cn" and "major_cn" in the input file. "normal_variant" considers both options
+                                with equal prior weight. This option only has an effect if "total_copy_number" or
+                                "no_zygosity is used for the var_prior option. Default normal_variant.''')
+
+analysis_pipeline_parser.add_argument('--var_prior',
+                                choices=['AB', 'BB', 'no_zygosity', 'parental_copy_number', 'total_copy_number'],
+                                default='total_copy_number', help='''Method used to set the possible genotypes  of the
+                                variant population. "AB" assumes all mutations have the AB genotype. "BB" assumes all
+                                mutations have the BB genotype. "no_zygosity" assumes all mutation have the genotype
+                                with the predicted total copy number and one mutant allele i.e. AAB for a copy number 3
+                                mutation. "parental_copy_number" sets considers all possible genotypes compatible with
+                                the predicted parental copy number. "total_copy_number" considers all possible genotypes
+                                compatible with the predicted total copy number. If reliable parental copy number is
+                                available the parental_copy_number method should be chosen. Default is
+                                total_copy_number.''')
+
+analysis_pipeline_parser.add_argument('--num_iters', default=1000, type=int)
+
+analysis_pipeline_parser.add_argument('--burnin', default=0, type=int,
+                            help='''Number of samples to discard as burning for the MCMC chain. Default is 0.''')
+
+analysis_pipeline_parser.add_argument('--thin', default=1, type=int,
+                            help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample
+                            after burning will be used for inference. Default is 1.''')
+
+analysis_pipeline_parser.add_argument('--seed', default=None, type=int,
+                            help='''Set random seed so results can be reproduced. By default a random seed is
+                            chosen.''')
+
+analysis_pipeline_parser.add_argument('--file_format', default='pdf', choices=['pdf', 'svg'])
+
+analysis_pipeline_parser.add_argument('--tumour_contents', nargs='+', type=float, default=None)
+
+analysis_pipeline_parser.set_defaults(func=run.run_analysis_pipeline)
+
+#---------------------------------------------------------------------------------------------------------------------- 
 build_prior_parser = subparsers.add_parser('build_mutations_file',
                                            help='''Build a YAML format file with mutation data and states prior to be
                                            used for PyClone analysis.''')
