@@ -1,3 +1,3 @@
 from .cluster import cluster_pyclone_trace
-from .cluster_posteriors import load_cluster_posteriors_table
+from .cluster_posteriors import load_cluster_posteriors_table, load_cluster_posteriors_summary_table
 from .multi_sample import load_multi_sample_table

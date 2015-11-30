@@ -384,12 +384,23 @@ def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_clus
         )
     
     elif plot_type == 'parallel_coordinates':
-        plot.cluster_posteriors.parallel_coordinates(
+        plot.cluster_posteriors.parallel_coordinates_plot(
             config_file, 
             plot_file, 
             burnin=burnin, 
             mesh_size=mesh_size,
             min_cluster_size=min_cluster_size,
+            samples=samples, 
+            thin=thin
+        )
+    
+    elif plot_type == 'scatter':
+        plot.cluster_posteriors.scatter_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin, 
+            mesh_size=mesh_size, 
+            min_cluster_size=min_cluster_size, 
             samples=samples, 
             thin=thin
         )

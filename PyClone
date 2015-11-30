@@ -305,7 +305,7 @@ def _setup_plot_cluster_posteriors_parser(parser):
     parser.add_argument(
         '--plot_type',
         default='density',
-        choices=['density', 'parallel_coordinates'],
+        choices=['density', 'parallel_coordinates', 'scatter'],
         help='''Determines which style of plot will be done.'''
     )
        

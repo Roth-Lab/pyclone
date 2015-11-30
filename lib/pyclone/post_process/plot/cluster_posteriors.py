@@ -3,13 +3,15 @@ Created on Nov 30, 2015
 
 @author: Andrew Roth
 '''
+from matplotlib.patches import Ellipse
+
 import matplotlib.gridspec as gs
 import matplotlib.pyplot as pp
 import numpy as np
 import pandas as pd
 import seaborn as sb
 
-from pyclone.post_process import load_cluster_posteriors_table
+from pyclone.post_process import load_cluster_posteriors_table, load_cluster_posteriors_summary_table
 
 import defaults
 import utils
@@ -123,7 +125,7 @@ def density_plot(
     
     utils.save_figure(fig, plot_file)
     
-def parallel_coordinates(
+def parallel_coordinates_plot(
     config_file,
     plot_file,
     axis_label_font_size=defaults.axis_label_font_size,
@@ -136,37 +138,13 @@ def parallel_coordinates(
     
     utils.setup_plot()
     
-    df = load_cluster_posteriors_table(
+    plot_df = load_cluster_posteriors_summary_table(
         config_file, 
         burnin=burnin,
         mesh_size=mesh_size,
         min_size=min_cluster_size,
         thin=thin, 
-    )
-    
-    df = df.set_index(['sample_id', 'cluster_id', 'size'])
-    
-    x = df.columns.astype(float).values[np.newaxis, :]
-
-    p = np.exp(df.values)
-    
-    m_1 = np.sum(x * p, axis=1)
-    
-    m_2 = np.sum(np.power(x, 2) * p, axis=1)
-    
-    var = m_2 - np.power(m_1, 2)
-    
-    std = np.sqrt(var)
-    
-    mean = pd.DataFrame(m_1, index=df.index)
-    
-    std = pd.DataFrame(std, index=df.index)
-    
-    plot_df = pd.concat([mean, std], axis=1)
-
-    plot_df.columns = 'mean', 'std'
-    
-    plot_df = plot_df.reset_index()
+    )   
     
     if samples is None:
         samples = sorted(plot_df['sample_id'].unique())
@@ -232,3 +210,114 @@ def parallel_coordinates(
     fig.set_size_inches(*utils.get_parallel_coordinates_figure_size(samples))
     
     utils.save_figure(fig, plot_file)
+    
+def scatter_plot(
+    config_file,
+    plot_file,
+    axis_label_font_size=defaults.axis_label_font_size,
+    burnin=0,
+    mesh_size=101,
+    min_cluster_size=0,
+    samples=None,
+    thin=1,
+    tick_font_size=defaults.tick_font_size):
+    
+    utils.setup_plot()
+    
+    df = load_cluster_posteriors_summary_table(
+        config_file, 
+        burnin=burnin,
+        mesh_size=mesh_size,
+        min_size=min_cluster_size,
+        thin=thin, 
+    )   
+    
+    if samples is None:
+        samples = sorted(df['sample_id'].unique())
+    
+    else:
+        df = df[df['sample_id'].isin(samples)]
+        
+    color_map = utils.get_clusters_color_map(pd.Series(df['cluster_id']))
+    
+    num_samples = len(samples)
+    
+    grid = gs.GridSpec(nrows=num_samples, ncols=num_samples)
+    
+    size = max(2 * num_samples, 4)
+    
+    fig = pp.figure(figsize=(size, size))
+
+    for i in range(num_samples):
+        for j in range(i):
+            ax = fig.add_subplot(grid[i, j])
+            
+            target_samples = [samples[j], samples[i]]
+            
+            plot_df = df[df['sample_id'].isin(target_samples)]
+    
+            _scatter_plot(ax, color_map, plot_df, target_samples[0], target_samples[1])
+            
+            utils.setup_axes(ax)
+            
+            ax.set_xlim(defaults.cellular_prevalence_limits)
+            
+            ax.set_ylim(defaults.cellular_prevalence_limits)
+
+            utils.set_tick_font_sizes(ax, tick_font_size)
+            
+            if i != (num_samples - 1):
+                ax.set_xticklabels([])
+                
+                ax.spines['bottom'].set_visible(False)
+                
+                ax.xaxis.set_ticks_position('none')
+                
+            else:
+                ax.set_xlabel(target_samples[0], fontsize=axis_label_font_size)
+                
+            if j != 0:
+                ax.set_yticklabels([])
+            
+                ax.spines['left'].set_visible(False)
+                
+                ax.yaxis.set_ticks_position('none')
+                
+            else:
+                ax.set_ylabel(target_samples[1], fontsize=axis_label_font_size)
+
+    grid.tight_layout(fig)
+    
+    utils.save_figure(fig, plot_file)
+    
+def _scatter_plot(ax, color_map, df, x_sample, y_sample):
+    coords = df.pivot(index='cluster_id', columns='sample_id', values='mean')
+
+    error_bars = df.pivot(index='cluster_id', columns='sample_id', values='std')
+    
+    error_bars = error_bars.loc[coords.index]
+    
+    colors = [color_map[x] for x in coords.index]
+    
+    x = coords[x_sample].values
+    
+    y = coords[y_sample].values
+    
+    x_err = error_bars[x_sample].values
+    
+    y_err = error_bars[y_sample].values
+   
+    ax.scatter(x, y, s=20, c=colors)
+    
+    for i in range(len(x)):
+        e = Ellipse(
+            (x[i], y[i]),
+            width=x_err[i],
+            height=y_err[i],
+        )
+        
+        e.set_facecolor(colors[i])
+        
+        e.set_alpha(0.2)
+        
+        ax.add_artist(e)
