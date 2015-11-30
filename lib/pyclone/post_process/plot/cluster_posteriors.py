@@ -4,6 +4,7 @@ Created on Nov 30, 2015
 @author: Andrew Roth
 '''
 from matplotlib.patches import Ellipse
+from matplotlib.lines import Line2D
 
 import matplotlib.gridspec as gs
 import matplotlib.pyplot as pp
@@ -247,10 +248,14 @@ def scatter_plot(
     size = max(2 * num_samples, 4)
     
     fig = pp.figure(figsize=(size, size))
+    
+    axes = []
 
     for i in range(num_samples):
         for j in range(i):
             ax = fig.add_subplot(grid[i, j])
+            
+            axes.append(ax)
             
             target_samples = [samples[j], samples[i]]
             
@@ -285,7 +290,32 @@ def scatter_plot(
                 
             else:
                 ax.set_ylabel(target_samples[1], fontsize=axis_label_font_size)
+    
+    legend_handles = []
 
+    for cluster_id in color_map:
+        legend_handles.append(
+            Line2D(
+                [0], 
+                [0], 
+                linestyle="none", 
+                marker="o", 
+                markersize=4, 
+                markerfacecolor=color_map[cluster_id]
+            )
+        )
+    
+    legend = axes[0].legend(
+        legend_handles, 
+        [str(x) for x in color_map],
+        bbox_to_anchor=(1.1, 0.5),
+        fontsize=6,
+        loc='center left',
+        title='Cluster'
+    )
+        
+    legend.get_title().set_fontsize(8)
+ 
     grid.tight_layout(fig)
     
     utils.save_figure(fig, plot_file)
@@ -307,7 +337,7 @@ def _scatter_plot(ax, color_map, df, x_sample, y_sample):
     
     y_err = error_bars[y_sample].values
    
-    ax.scatter(x, y, s=20, c=colors)
+    ax.scatter(x, y, alpha=0.8, c=colors, s=10)
     
     for i in range(len(x)):
         e = Ellipse(
