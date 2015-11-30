@@ -337,7 +337,7 @@ def _scatter_plot(ax, color_map, df, x_sample, y_sample):
     
     y_err = error_bars[y_sample].values
    
-    ax.scatter(x, y, alpha=0.8, c=colors, s=10)
+    ax.scatter(x, y, alpha=0.8, c=colors, s=15)
     
     for i in range(len(x)):
         e = Ellipse(
