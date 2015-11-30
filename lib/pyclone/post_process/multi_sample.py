@@ -20,7 +20,7 @@ def load_multi_sample_table(config_file, burnin, thin, old_style=False):
         _load_variant_allele_frequencies(config_file),
         _load_cellular_prevalences(config_file, burnin, thin),
         how='inner',
-        on=['mutation_id', 'sample']
+        on=['mutation_id', 'sample_id']
     )
     
     labels = cluster_pyclone_trace(
@@ -37,13 +37,13 @@ def load_multi_sample_table(config_file, burnin, thin, old_style=False):
     return data
 
 def _reformat_multi_sample_table(df):
-    mean_df = df[['mutation_id', 'sample', 'cellular_prevalence']]
+    mean_df = df[['mutation_id', 'sample_id', 'cellular_prevalence']]
     
-    mean_df = mean_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence')
+    mean_df = mean_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence')
     
-    std_df = df[['mutation_id', 'sample', 'cellular_prevalence_std']]
+    std_df = df[['mutation_id', 'sample_id', 'cellular_prevalence_std']]
     
-    std_df = std_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence_std')
+    std_df = std_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence_std')
     
     std_df = std_df.rename(columns=lambda x: '{0}_std'.format(x))
 
@@ -62,7 +62,7 @@ def _load_variant_allele_frequencies(config_file):
     for sample_id, file_name in paths.get_mutations_files(config_file).items():
         sample_data = _load_sample_variant_allele_frequencies(file_name)
         
-        sample_data['sample'] = sample_id
+        sample_data['sample_id'] = sample_id
         
         data.append(sample_data)   
     
@@ -106,7 +106,7 @@ def _load_cellular_prevalences(config_file, burnin, thin):
     for sample_id, file_name in paths.get_cellular_prevalence_trace_files(config_file).items():
         sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
     
-        sample_data['sample'] = sample_id
+        sample_data['sample_id'] = sample_id
     
         data.append(sample_data)
     

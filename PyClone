@@ -55,7 +55,15 @@ def main():
     )
     
     _setup_plot_cf_parser(plot_cf_parser)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+    plot_cluster_posteriors_parser = subparsers.add_parser(
+        'plot_cluster_posteriors',
+        help='''Plot the posterior densities of the clusters from a PyClone analysis.'''
+    )
     
+    _setup_plot_cluster_posteriors_parser(plot_cluster_posteriors_parser)
+
 #---------------------------------------------------------------------------------------------------------------------- 
     plot_sm_parser = subparsers.add_parser(
         'plot_similarity_matrix',
@@ -270,7 +278,31 @@ def _setup_build_table_parser(parser):
     
     _add_post_process_args(parser)
  
-    parser.set_defaults(func=run.write_multi_sample_table)    
+    parser.set_defaults(func=run.write_multi_sample_table)
+
+def _setup_plot_cluster_posteriors_parser(parser):
+
+    _add_config_file_args(parser)
+    
+    _add_plot_out_file_args(parser)
+    
+    _add_post_process_args(parser)
+    
+    parser.add_argument(
+        '--samples',
+        default=None,
+        nargs='+',
+        help='''Samples to plot. Samples will be vertically in the order given.'''
+    )
+    
+    parser.add_argument(
+        '--mesh_size',
+        default=101,
+        type=int,
+        help='''Number of points to use for approximating the cluster posteriors. Default is 101.'''
+    )
+    
+    parser.set_defaults(func=run.plot_cluster_cellular_prevalence_posteriors)
 
 def _add_config_file_args(parser):
      
@@ -282,7 +314,7 @@ def _add_config_file_args(parser):
 def _add_plot_out_file_args(parser):
     
     parser.add_argument(
-        'out_file',
+        'plot_file',
         help='Path to file where plot will be saved. Format can be controlled by changing file extension.'
     )
     

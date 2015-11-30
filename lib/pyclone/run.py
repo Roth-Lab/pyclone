@@ -86,6 +86,15 @@ def run_analysis_pipeline(args):
         args.thin
     )
     
+    cluster_posteriors_file = os.path.join(args.working_dir, 'cluster_posteriors.tsv')
+    
+    _write_cluster_posteriors_table(
+        config_file, 
+        cluster_posteriors_file, 
+        args.burnin, 
+        args.thin, 
+        101)
+    
     plots_dir = os.path.join(args.working_dir, 'plots')
     
     cellular_prevalence_posteriors_dir = os.path.join(plots_dir, 'cellular_prevalence_posteriors')
@@ -122,6 +131,13 @@ def run_analysis_pipeline(args):
         False, 
         'cellular_prevalence'
     )
+    
+    cluster_posteriors_plot_file = os.path.join(
+        plots_dir,
+        'cluster_cellular_prevalence_posteriors.{0}'.format(args.plot_file_format)
+    )
+    
+    
     
     vaf_parallel_coordinates_file = os.path.join(
         plots_dir, 
@@ -299,7 +315,26 @@ def _write_clusters_trace(config_file, out_file, burnin, thin):
     labels = post_process.cluster_pyclone_trace(config_file, burnin, thin)
     
     labels.to_csv(out_file, index=False, sep='\t')
+
+def write_cluster_posteriors_table(args):
+    _write_cluster_posteriors_table(
+        args.config_file, 
+        args.out_file, 
+        args.burnin, 
+        args.thin, 
+        args.mesh_size
+    )
+
+def _write_cluster_posteriors_table(config_file, out_file, burnin, thin, mesh_size):
+    df = post_process.load_cluster_posteriors_table(
+        config_file, 
+        burnin=burnin, 
+        thin=thin, 
+        mesh_size=mesh_size
+    )
     
+    df.to_csv(out_file, index=False, sep='\t')
+
 def plot_cellular_prevalence_posteriors(args):
     _plot_cellular_prevalence_posteriors(
         args.config_file, 
@@ -315,20 +350,40 @@ def _plot_cellular_prevalence_posteriors(config_file, out_dir, burnin, thin, fil
         out_dir, 
         burnin, 
         thin
-    ) 
+    )
+    
+def plot_cluster_cellular_prevalence_posteriors(args):
+    _plot_cluster_cellular_prevalence_posteriors(
+        args.config_file, 
+        args.plot_file, 
+        args.burnin, 
+        args.thin, 
+        args.mesh_size, 
+        args.samples
+    )
+
+def _plot_cluster_cellular_prevalence_posteriors(config_file, plot_file, burnin, thin, mesh_size, samples):
+    plot.plot_cluster_posteriors(
+        config_file, 
+        plot_file, 
+        burnin=burnin, 
+        thin=thin, 
+        mesh_size=mesh_size, 
+        samples=samples, 
+    )
 
 def plot_similarity_matrix(args):
     _plot_similarity_matrix(
         args.config_file, 
-        args.out_file, 
+        args.plot_file, 
         args.burnin, 
         args.thin
     )
 
-def _plot_similarity_matrix(config_file, out_file, burnin, thin):
+def _plot_similarity_matrix(config_file, plot_file, burnin, thin):
     plot.plot_similarity_matrix(
         config_file, 
-        out_file, 
+        plot_file, 
         burnin, 
         thin
     )
