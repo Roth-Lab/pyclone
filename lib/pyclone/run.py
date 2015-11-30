@@ -137,7 +137,14 @@ def run_analysis_pipeline(args):
         'cluster_cellular_prevalence_posteriors.{0}'.format(args.plot_file_format)
     )
     
-    
+    _plot_cluster_cellular_prevalence_posteriors(
+        config_file, 
+        cluster_posteriors_plot_file, 
+        args.burnin, 
+        args.thin, 
+        101, 
+        mutations_files.keys()
+    )
     
     vaf_parallel_coordinates_file = os.path.join(
         plots_dir, 
@@ -181,7 +188,7 @@ def _write_config_file(config_file, density, mutations_files, num_iters, tumour_
             'proposal' : {'precision' : 0.01}
         }
     
-    config['working_dir'] = working_dir
+    config['working_dir'] = os.path.abspath(working_dir)
     
     config['trace_dir'] = 'trace'
     

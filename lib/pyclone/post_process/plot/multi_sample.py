@@ -26,9 +26,9 @@ def plot_multi_sample_parallel_coordinates(config_file, plot_file, y_value, burn
         plot_df = df
         
     else:
-        plot_df = df.groupby(['sample', 'cluster_id']).mean().reset_index()
+        plot_df = df.groupby(['sample_id', 'cluster_id']).mean().reset_index()
     
-    plot_df['sample_index'] = plot_df['sample'].apply(lambda x: samples.index(x))
+    plot_df['sample_index'] = plot_df['sample_id'].apply(lambda x: samples.index(x))
     
     plot_df = plot_df.sort_values(by='sample_index')
 
