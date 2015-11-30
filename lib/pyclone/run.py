@@ -137,7 +137,7 @@ def run_analysis_pipeline(args):
         'cluster_cellular_prevalence_posteriors.{0}'.format(args.plot_file_format)
     )
     
-    _plot_cluster_cellular_prevalence_posteriors(
+    _plot_cluster_posteriors(
         config_file, 
         cluster_posteriors_plot_file, 
         args.burnin, 
@@ -359,25 +359,40 @@ def _plot_cellular_prevalence_posteriors(config_file, out_dir, burnin, thin, fil
         thin
     )
     
-def plot_cluster_cellular_prevalence_posteriors(args):
-    _plot_cluster_cellular_prevalence_posteriors(
+def plot_cluster_posteriors(args):
+    _plot_cluster_posteriors(
         args.config_file, 
         args.plot_file, 
         args.burnin, 
+        args.mesh_size,
+        args.min_cluster_size,
+        args.plot_type, 
+        args.samples,
         args.thin, 
-        args.mesh_size, 
-        args.samples
     )
 
-def _plot_cluster_cellular_prevalence_posteriors(config_file, plot_file, burnin, thin, mesh_size, samples):
-    plot.plot_cluster_posteriors(
-        config_file, 
-        plot_file, 
-        burnin=burnin, 
-        thin=thin, 
-        mesh_size=mesh_size, 
-        samples=samples, 
-    )
+def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_cluster_size, plot_type, samples, thin):
+    if plot_type == 'density':
+        plot.cluster_posteriors.density_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin, 
+            thin=thin, 
+            mesh_size=mesh_size,
+            min_cluster_size=min_cluster_size,
+            samples=samples, 
+        )
+    
+    elif plot_type == 'parallel_coordinates':
+        plot.cluster_posteriors.parallel_coordinates(
+            config_file, 
+            plot_file, 
+            burnin=burnin, 
+            mesh_size=mesh_size,
+            min_cluster_size=min_cluster_size,
+            samples=samples, 
+            thin=thin
+        )
 
 def plot_similarity_matrix(args):
     _plot_similarity_matrix(

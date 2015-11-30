@@ -14,6 +14,23 @@ def get_clusters_color_map(labels, palette='husl'):
     
     return color_map
 
+def get_parallel_coordinates_figure_size(samples):
+    width = 1 * len(samples) + 2
+    
+    height = 4
+    
+    return width, height
+
+def save_figure(fig, file_name):
+    fig.savefig(file_name, bbox_inches='tight')
+
+def set_tick_font_sizes(ax, size):
+    for t in ax.get_xticklabels():
+        t.set_size(size)
+    
+    for t in ax.get_yticklabels():
+        t.set_size(size)
+
 def setup_plot():    
     sb.set_style('ticks', {'font.sans-serif':['Helvetica']})
 

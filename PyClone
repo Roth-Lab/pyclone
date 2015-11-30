@@ -287,14 +287,7 @@ def _setup_plot_cluster_posteriors_parser(parser):
     _add_plot_out_file_args(parser)
     
     _add_post_process_args(parser)
-    
-    parser.add_argument(
-        '--samples',
-        default=None,
-        nargs='+',
-        help='''Samples to plot. Samples will be vertically in the order given.'''
-    )
-    
+ 
     parser.add_argument(
         '--mesh_size',
         default=101,
@@ -302,7 +295,28 @@ def _setup_plot_cluster_posteriors_parser(parser):
         help='''Number of points to use for approximating the cluster posteriors. Default is 101.'''
     )
     
-    parser.set_defaults(func=run.plot_cluster_cellular_prevalence_posteriors)
+    parser.add_argument(
+        '--min_cluster_size',
+        default=0,
+        type=int,
+        help='''Clusters with fewer mutations than this value will not be plotted.'''
+    )
+    
+    parser.add_argument(
+        '--plot_type',
+        default='density',
+        choices=['density', 'parallel_coordinates'],
+        help='''Determines which style of plot will be done.'''
+    )
+       
+    parser.add_argument(
+        '--samples',
+        default=None,
+        nargs='+',
+        help='''Samples to plot. Samples will be vertically in the order given.'''
+    )
+    
+    parser.set_defaults(func=run.plot_cluster_posteriors)
 
 def _add_config_file_args(parser):
      

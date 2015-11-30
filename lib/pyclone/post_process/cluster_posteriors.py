@@ -17,7 +17,7 @@ import pyclone.paths as paths
 
 from .cluster import cluster_pyclone_trace
 
-def load_cluster_posteriors_table(config_file, burnin=0, thin=1, mesh_size=101):
+def load_cluster_posteriors_table(config_file, burnin=0, min_size=0, mesh_size=101, thin=1):
     config = paths.load_config(config_file)
 
     if config['density'] == 'pyclone_beta_binomial':
@@ -66,6 +66,8 @@ def load_cluster_posteriors_table(config_file, burnin=0, thin=1, mesh_size=101):
     df = df.set_index(['sample_id', 'cluster_id', 'size'])  
     
     df = df.reset_index()
+    
+    df = df[df['size'] >= min_size]
     
     return df
 

@@ -7,27 +7,30 @@ import matplotlib.gridspec as gs
 import matplotlib.pyplot as pp
 import numpy as np
 import pandas as pd
+import seaborn as sb
 
 from pyclone.post_process import load_cluster_posteriors_table
 
-from .utils import get_clusters_color_map, setup_axes, setup_plot
+import defaults
+import utils
 
-def plot_cluster_posteriors(
+def density_plot(
     config_file, 
     plot_file, 
-    burnin, 
-    thin,
-    label_font_size=12,
+    axis_label_font_size=defaults.axis_label_font_size,
+    burnin=0, 
     mesh_size=101,
+    min_cluster_size=0,
     samples=None,
-    sample_label_font_size=12,
-    tick_font_size=8):
+    thin=1,
+    tick_font_size=defaults.tick_font_size):
     
     df = load_cluster_posteriors_table(
         config_file, 
-        burnin, 
-        thin, 
-        mesh_size=mesh_size
+        burnin=burnin, 
+        thin=thin, 
+        mesh_size=mesh_size,
+        min_size=min_cluster_size
     )
 
     sizes = df[['cluster_id', 'size']].drop_duplicates().set_index('cluster_id').to_dict()['size']
@@ -41,7 +44,7 @@ def plot_cluster_posteriors(
     
     postions = range(1, len(clusters) + 1)
     
-    setup_plot()
+    utils.setup_plot()
     
     width = 8
     
@@ -51,7 +54,7 @@ def plot_cluster_posteriors(
     
     grid = gs.GridSpec(nrows=num_samples, ncols=1)
     
-    colors = get_clusters_color_map(pd.Series(clusters))
+    colors = utils.get_clusters_color_map(pd.Series(clusters))
         
     for ax_index, sample_id in enumerate(samples):
         plot_df = df[df['sample_id'] == sample_id]
@@ -60,13 +63,13 @@ def plot_cluster_posteriors(
         
         ax = fig.add_subplot(grid[ax_index])
                 
-        setup_axes(ax)
+        utils.setup_axes(ax)
     
         ax.annotate(
             sample_id,
             xy=(1.01, 0.5),
             xycoords='axes fraction', 
-            fontsize=sample_label_font_size
+            fontsize=axis_label_font_size
         )
     
         for i, (cluster_id, log_pdf) in enumerate(plot_df.iterrows()):
@@ -87,32 +90,30 @@ def plot_cluster_posteriors(
             
             ax.set_xticklabels(
                 x_tick_labels,
-                fontsize=tick_font_size,
                 rotation=90
             )
             
-            ax.set_xlabel('Cluster', fontsize=label_font_size)
+            ax.set_xlabel(defaults.cluster_label, fontsize=axis_label_font_size)
         
         else:
             ax.set_xticklabels([])
         
-        for t in ax.get_yticklabels():
-            t.set_size(tick_font_size)
+        utils.set_tick_font_sizes(ax, tick_font_size)
         
-        ax.set_ylim(-0.01, 1.01)
+        ax.set_ylim(defaults.cellular_prevalence_limits)
     
     if num_samples == 1:
         ax.set_ylabel(
-            'Cellular prevalence',
-            fontsize=label_font_size
+            defaults.cellular_prevalence_label,
+            fontsize=axis_label_font_size
         )    
     
     else:
         fig.text(
             -0.01, 
             0.5, 
-            'Cellular prevalence',
-            fontsize=label_font_size,
+            defaults.cellular_prevalence_label,
+            fontsize=axis_label_font_size,
             ha='center',
             rotation=90,
             va='center'
@@ -120,4 +121,114 @@ def plot_cluster_posteriors(
         
     grid.tight_layout(fig)
     
-    fig.savefig(plot_file, bbox_inches='tight')
+    utils.save_figure(fig, plot_file)
+    
+def parallel_coordinates(
+    config_file,
+    plot_file,
+    axis_label_font_size=defaults.axis_label_font_size,
+    burnin=0,
+    mesh_size=101,
+    min_cluster_size=0,
+    samples=None,
+    thin=1,
+    tick_font_size=defaults.tick_font_size):
+    
+    utils.setup_plot()
+    
+    df = load_cluster_posteriors_table(
+        config_file, 
+        burnin=burnin,
+        mesh_size=mesh_size,
+        min_size=min_cluster_size,
+        thin=thin, 
+    )
+    
+    df = df.set_index(['sample_id', 'cluster_id', 'size'])
+    
+    x = df.columns.astype(float).values[np.newaxis, :]
+
+    p = np.exp(df.values)
+    
+    m_1 = np.sum(x * p, axis=1)
+    
+    m_2 = np.sum(np.power(x, 2) * p, axis=1)
+    
+    var = m_2 - np.power(m_1, 2)
+    
+    std = np.sqrt(var)
+    
+    mean = pd.DataFrame(m_1, index=df.index)
+    
+    std = pd.DataFrame(std, index=df.index)
+    
+    plot_df = pd.concat([mean, std], axis=1)
+
+    plot_df.columns = 'mean', 'std'
+    
+    plot_df = plot_df.reset_index()
+    
+    if samples is None:
+        samples = sorted(plot_df['sample_id'].unique())
+    
+    else:
+        plot_df = plot_df[plot_df['sample_id'].isin(samples)]
+    
+    clusters = sorted(plot_df['cluster_id'].unique())
+    
+    plot_df['sample_index'] = plot_df['sample_id'].apply(lambda x: samples.index(x))
+    
+    plot_df = plot_df.sort_values(by='sample_index')
+    
+    grid = sb.FacetGrid(
+        plot_df,
+        hue='cluster_id',
+        hue_order=clusters,
+        palette='husl'
+    )
+    
+    grid.map(
+        pp.errorbar, 
+        'sample_index', 
+        'mean', 
+        'std', 
+        marker=defaults.line_plot_marker,
+        markersize=defaults.line_plot_marker_size
+    )
+    
+    ax = grid.ax
+    
+    utils.setup_axes(ax)
+    
+    fig = grid.fig
+    
+    # Legend
+    box = ax.get_position()
+    
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), title='Cluster')
+    
+    # Axis formatting
+    ax.set_xticks(sorted(plot_df['sample_index'].unique()))
+    
+    ax.set_xticklabels(samples)
+    
+    ax.set_xlabel(defaults.sample_label, fontsize=axis_label_font_size)
+    
+    ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=axis_label_font_size)
+    
+    utils.set_tick_font_sizes(ax, tick_font_size)
+    
+    # Plot limits
+    ax.set_xlim(
+        plot_df['sample_index'].min() - 0.1,
+        plot_df['sample_index'].max() + 0.1
+    )
+    
+    ax.set_ylim(*defaults.cellular_prevalence_limits)
+    
+    # Resize and save figure    
+    fig.set_size_inches(*utils.get_parallel_coordinates_figure_size(samples))
+    
+    utils.save_figure(fig, plot_file)
