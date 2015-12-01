@@ -24,12 +24,19 @@ def get_parallel_coordinates_figure_size(samples):
 def save_figure(fig, file_name):
     fig.savefig(file_name, bbox_inches='tight')
 
-def set_tick_font_sizes(ax, size):
+def set_tick_label_font_sizes(ax, size):
     for t in ax.get_xticklabels():
         t.set_size(size)
     
     for t in ax.get_yticklabels():
         t.set_size(size)
+
+def set_tick_label_rotations(ax):
+    for t in ax.get_xticklabels():
+        t.set_rotation(90)
+        
+    for t in ax.get_yticklabels():
+        t.set_rotation(0)
 
 def setup_plot():    
     sb.set_style('ticks', {'font.sans-serif':['Helvetica']})

@@ -57,13 +57,21 @@ def main():
     _setup_plot_cf_parser(plot_cf_parser)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-    plot_cluster_posteriors_parser = subparsers.add_parser(
-        'plot_cluster_posteriors',
-        help='''Plot the posterior densities of the clusters from a PyClone analysis.'''
+    cluster_plot_parser = subparsers.add_parser(
+        'cluster_plot',
+        help='''Plot features of the clusters.'''
     )
     
-    _setup_plot_cluster_posteriors_parser(plot_cluster_posteriors_parser)
+    _setup_cluster_plot_parser(cluster_plot_parser)
 
+#---------------------------------------------------------------------------------------------------------------------- 
+    loci_plot_parser = subparsers.add_parser(
+        'loci_plot',
+        help='''Plot features of the loci.'''
+    )
+    
+    _setup_loci_plot_parser(loci_plot_parser)
+    
 #---------------------------------------------------------------------------------------------------------------------- 
     plot_sm_parser = subparsers.add_parser(
         'plot_similarity_matrix',
@@ -280,11 +288,19 @@ def _setup_build_table_parser(parser):
  
     parser.set_defaults(func=run.write_multi_sample_table)
 
-def _setup_plot_cluster_posteriors_parser(parser):
+def _setup_cluster_plot_parser(parser):
 
     _add_config_file_args(parser)
     
     _add_plot_out_file_args(parser)
+        
+    parser.add_argument(
+        '--plot_type',
+        choices=['density', 'parallel_coordinates', 'scatter'],
+        default='density',
+        required=True,
+        help='''Determines which style of plot will be done.'''
+    )    
     
     _add_post_process_args(parser)
  
@@ -301,34 +317,54 @@ def _setup_plot_cluster_posteriors_parser(parser):
         type=int,
         help='''Clusters with fewer mutations than this value will not be plotted.'''
     )
-    
-    parser.add_argument(
-        '--plot_type',
-        default='density',
-        choices=['density', 'parallel_coordinates', 'scatter'],
-        help='''Determines which style of plot will be done.'''
-    )
        
     parser.add_argument(
         '--samples',
         default=None,
         nargs='+',
-        help='''Samples to plot. Samples will be vertically in the order given.'''
+        help='''Samples to plot and order to plot them in.'''
     )
     
-    parser.set_defaults(func=run.plot_cluster_posteriors)
+    parser.set_defaults(func=run.cluster_plot)
 
+def _setup_loci_plot_parser(parser):
+    
+    _add_config_file_args(parser)
+    
+    _add_plot_out_file_args(parser)
+    
+    parser.add_argument(
+        '--plot_type',
+        choices=['density', 'scatter', 'similarity_matrix', 'vaf_scatter'],
+        default='density',
+        required=True,
+        help='''Determines which style of plot will be done.'''
+    )
+       
+    _add_post_process_args(parser)
+    
+    _add_min_cluster_size_args(parser)
+
+    parser.add_argument(
+        '--samples',
+        default=None,
+        nargs='+',
+        help='''Samples to plot and order to plot them in.'''
+    )
+    
+    parser.set_defaults(func=run.loci_plot)
+    
 def _add_config_file_args(parser):
      
      parser.add_argument(
-        'config_file',
+        '--config_file', required=True,
         help='''Path to configuration file used for analysis.'''
     )
      
 def _add_plot_out_file_args(parser):
     
     parser.add_argument(
-        'plot_file',
+        '--plot_file', required=True,
         help='Path to file where plot will be saved. Format can be controlled by changing file extension.'
     )
     
@@ -366,6 +402,14 @@ def _add_post_process_args(parser):
         help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be 
         used for inference. Default is 1.'''
     )
+
+def _add_min_cluster_size_args(parser):
+    parser.add_argument(
+        '--min_cluster_size',
+        default=0,
+        type=int,
+        help='''Clusters with fewer mutations than this value will not be plotted.'''
+    )    
 
 if __name__ == '__main__':
     main()

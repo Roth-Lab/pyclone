@@ -101,7 +101,7 @@ def density_plot(
         else:
             ax.set_xticklabels([])
         
-        utils.set_tick_font_sizes(ax, tick_font_size)
+        utils.set_tick_label_font_sizes(ax, tick_font_size)
         
         ax.set_ylim(defaults.cellular_prevalence_limits)
     
@@ -197,7 +197,7 @@ def parallel_coordinates_plot(
     
     ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=axis_label_font_size)
     
-    utils.set_tick_font_sizes(ax, tick_font_size)
+    utils.set_tick_label_font_sizes(ax, tick_font_size)
     
     # Plot limits
     ax.set_xlim(
@@ -269,7 +269,7 @@ def scatter_plot(
             
             ax.set_ylim(defaults.cellular_prevalence_limits)
 
-            utils.set_tick_font_sizes(ax, tick_font_size)
+            utils.set_tick_label_font_sizes(ax, tick_font_size)
             
             if i != (num_samples - 1):
                 ax.set_xticklabels([])

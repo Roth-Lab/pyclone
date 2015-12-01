@@ -3,3 +3,4 @@ from .multi_sample import plot_multi_sample_parallel_coordinates
 from .similarity_matrix import plot_similarity_matrix
 
 import cluster_posteriors
+import loci

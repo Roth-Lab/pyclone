@@ -14,7 +14,7 @@ cluster_label = 'Cluster'
 
 sample_label = 'Sample'
 
-cellular_prevalence_limits = (-0.01, 1.01)
+cellular_prevalence_limits = (-0.05, 1.05)
 
 line_plot_marker = 'o'
 

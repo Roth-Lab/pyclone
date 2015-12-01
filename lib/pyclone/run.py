@@ -137,7 +137,7 @@ def run_analysis_pipeline(args):
         'cluster_cellular_prevalence_posteriors.{0}'.format(args.plot_file_format)
     )
     
-    _plot_cluster_posteriors(
+    _cluster_plot(
         config_file, 
         cluster_posteriors_plot_file, 
         args.burnin, 
@@ -359,8 +359,8 @@ def _plot_cellular_prevalence_posteriors(config_file, out_dir, burnin, thin, fil
         thin
     )
     
-def plot_cluster_posteriors(args):
-    _plot_cluster_posteriors(
+def cluster_plot(args):
+    _cluster_plot(
         args.config_file, 
         args.plot_file, 
         args.burnin, 
@@ -371,8 +371,10 @@ def plot_cluster_posteriors(args):
         args.thin, 
     )
 
-def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_cluster_size, plot_type, samples, thin):
+def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, plot_type, samples, thin):
+    
     if plot_type == 'density':
+        
         plot.cluster_posteriors.density_plot(
             config_file, 
             plot_file, 
@@ -384,6 +386,7 @@ def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_clus
         )
     
     elif plot_type == 'parallel_coordinates':
+        
         plot.cluster_posteriors.parallel_coordinates_plot(
             config_file, 
             plot_file, 
@@ -395,6 +398,7 @@ def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_clus
         )
     
     elif plot_type == 'scatter':
+        
         plot.cluster_posteriors.scatter_plot(
             config_file, 
             plot_file, 
@@ -404,7 +408,69 @@ def _plot_cluster_posteriors(config_file, plot_file, burnin, mesh_size, min_clus
             samples=samples, 
             thin=thin
         )
+        
+def loci_plot(args):
+    _loci_plot(
+        args.config_file, 
+        args.plot_file, 
+        args.plot_type, 
+        burnin=args.burnin,
+        min_cluster_size=args.min_cluster_size,
+        samples=args.samples, 
+        thin=args.thin)
 
+def _loci_plot(
+    config_file, 
+    plot_file, 
+    plot_type, 
+    burnin=0, 
+    min_cluster_size=0, 
+    samples=None, 
+    thin=1):
+    
+    if plot_type == 'density':
+        plot.loci.density_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin, 
+            min_cluster_size=min_cluster_size, 
+            samples=samples, 
+            thin=thin
+        )
+        
+    elif plot_type == 'scatter':
+        
+        plot.loci.scatter_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin,
+            min_cluster_size=min_cluster_size,
+            samples=samples, 
+            thin=thin
+        )
+    
+    elif plot_type == 'similarity_matrix':
+        
+        plot.loci.similarity_matrix_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin,
+            min_cluster_size=min_cluster_size, 
+            thin=thin
+        )
+        
+    elif plot_type == 'vaf_scatter':
+        
+        plot.loci.scatter_plot(
+            config_file, 
+            plot_file, 
+            burnin=burnin,
+            min_cluster_size=min_cluster_size,
+            samples=samples, 
+            thin=thin,
+            value='variant_allele_frequency'
+        )
+        
 def plot_similarity_matrix(args):
     _plot_similarity_matrix(
         args.config_file, 
