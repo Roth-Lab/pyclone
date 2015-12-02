@@ -42,20 +42,20 @@ def main():
     
 
 #---------------------------------------------------------------------------------------------------------------------- 
-    cluster_plot_parser = subparsers.add_parser(
-        'cluster_plot',
+    plot_clusters_parser = subparsers.add_parser(
+        'plot_clusters',
         help='''Plot features of the clusters.'''
     )
     
-    _setup_cluster_plot_parser(cluster_plot_parser)
+    _setup_cluster_plot_parser(plot_clusters_parser)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-    loci_plot_parser = subparsers.add_parser(
-        'loci_plot',
+    plot_loci_parser = subparsers.add_parser(
+        'plot_loci',
         help='''Plot features of the loci.'''
     )
     
-    _setup_loci_plot_parser(loci_plot_parser)
+    _setup_loci_plot_parser(plot_loci_parser)
     
 #----------------------------------------------------------------------------------------------------------------------
     build_table_parser = subparsers.add_parser(
