@@ -12,6 +12,8 @@ legend_font_size = 6
 
 tick_font_size = 8
 
+small_tick_font_size = 6
+
 cellular_prevalence_label = 'Cellular prevalence'
 
 variant_allele_frequency_label = 'VAF'

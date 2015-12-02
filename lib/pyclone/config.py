@@ -115,8 +115,8 @@ def _get_log_pi(weights):
 #=======================================================================================================================
 # Parse mutation dict
 #=======================================================================================================================
-def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, var_prior):
-    states = _get_states(normal_cn, minor_cn, major_cn, var_prior)
+def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, prior):
+    states = _get_states(normal_cn, minor_cn, major_cn, prior)
     
     mutation = Mutation(mutation_id, ref_counts, var_counts)
     
@@ -127,18 +127,18 @@ def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major
     
     return mutation
 
-def _get_states(normal_cn, minor_cn, major_cn, var_prior): 
-    if var_prior == 'major_copy_number':
+def _get_states(normal_cn, minor_cn, major_cn, prior): 
+    if prior == 'major_copy_number':
         states = _get_major_copy_states(normal_cn, minor_cn, major_cn)
    
-    elif var_prior == 'parental_copy_number':
+    elif prior == 'parental_copy_number':
         states = _get_parental_copy_number_states(normal_cn, minor_cn, major_cn)
      
-    elif var_prior == 'total_copy_number':
+    elif prior == 'total_copy_number':
         states = _get_total_copy_number_states(normal_cn, minor_cn, major_cn)
    
     else:
-        raise Exception('{0} is not a recognised method for setting variant priors.'.format(var_prior))
+        raise Exception('{0} is not a recognised method for setting variant priors.'.format(prior))
      
     return states
 

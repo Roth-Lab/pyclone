@@ -134,113 +134,6 @@ def _load_density_df(config_file, burnin, thin):
     df = pd.concat(df)
     
     return df
-
-#=======================================================================================================================
-# Factor
-#=======================================================================================================================
-def factor_plot(
-    config_file,
-    plot_file,
-    axis_label_font_size=defaults.axis_label_font_size,
-    burnin=0,
-    min_cluster_size=0,
-    samples=None,
-    thin=1,
-    tick_font_size=defaults.tick_font_size):
-    
-    utils.setup_plot()
-    
-    df = post_process.load_multi_sample_table(config_file, burnin, thin, min_cluster_size=min_cluster_size)
-    
-    color_map = utils.get_clusters_color_map(df['cluster_id'])
-    
-    if samples is None:
-        samples = sorted(df['sample_id'].unique())
-    
-    else:
-        df = df[df['sample_id'].isin(samples)]
-   
-    plot_df = _load_factor_plot_df(df)
-    
-    fig = pp.figure(figsize=utils.get_parallel_coordinates_figure_size(samples))
-    
-    ax = fig.add_subplot(1, 1, 1)
-        
-    utils.setup_axes(ax)
-    
-    for cluster_id, cluster_df in plot_df.groupby('cluster_id'):
-        x = cluster_df['sample_index'].values
-        
-        y = cluster_df['cellular_prevalence_mean'].values
-        
-        yerr = cluster_df['cellular_prevalence_std'].values
-        
-        ax.errorbar(
-            x, 
-            y, 
-            c=color_map[cluster_id],
-            yerr=yerr,
-            marker=defaults.line_plot_marker,
-            markersize=defaults.line_plot_marker_size
-        )
-    
-    ax.set_xlabel(defaults.sample_label, fontsize=axis_label_font_size)
-    
-    ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=axis_label_font_size)
-    
-    ax.set_xlim(plot_df['sample_index'].min() - 0.1, plot_df['sample_index'].max() + 0.1)
-    
-    ax.set_ylim(*defaults.cellular_prevalence_limits)
-    
-    ax.set_xticks(sorted(plot_df['sample_index'].unique()))
-    
-    ax.set_xticklabels(samples)
-        
-    utils.set_tick_label_font_sizes(ax, tick_font_size)
-    
-    box = ax.get_position()
-    
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-
-    legend_handles = utils.get_legend_handles(color_map)
-    
-    legend = ax.legend(
-        legend_handles.values(),
-        legend_handles.keys(),
-        bbox_to_anchor=(1, 0.5),
-        fontsize=defaults.legend_font_size,
-        loc='center left',
-        title=defaults.cluster_label
-    )
-        
-    legend.get_title().set_fontsize(defaults.legend_title_font_size)
-    
-    utils.save_figure(fig, plot_file)
-
-def _load_factor_plot_df(df):
-    mean_df = df.groupby(['sample_id', 'cluster_id']).mean()
-
-    mean_df = mean_df.reset_index()
-    
-    mean_df = mean_df[['sample_id', 'cluster_id', 'cellular_prevalence']]
-    
-    std_df = df.groupby(['sample_id', 'cluster_id']).std()
-    
-    std_df = std_df.reset_index()
-    
-    std_df = std_df[['sample_id', 'cluster_id', 'cellular_prevalence']]
-    
-    plot_df = pd.merge(mean_df, std_df, on=['sample_id', 'cluster_id'], suffixes=['_mean', '_std'])
-    
-    plot_df = plot_df.fillna(0)
-    
-    samples = sorted(plot_df['sample_id'].unique())
-    
-    plot_df['sample_index'] = plot_df['sample_id'].apply(lambda x: samples.index(x))
-    
-    plot_df = plot_df.sort_values(by='sample_index')
-    
-    return plot_df
     
 #=======================================================================================================================
 # Parallel coordinates
@@ -258,7 +151,7 @@ def parallel_coordinates_plot(
     
     utils.setup_plot()
     
-    df = post_process.load_multi_sample_table(config_file, burnin, thin, min_cluster_size=min_cluster_size)
+    df = post_process.loci.load_table(config_file, burnin, thin, min_cluster_size=min_cluster_size)
     
     color_map = utils.get_clusters_color_map(df['cluster_id'])
     
@@ -341,7 +234,7 @@ def scatter_plot(
     
     utils.setup_plot()
     
-    df = post_process.load_multi_sample_table(
+    df = post_process.loci.load_table(
         config_file,
         burnin,
         thin,
@@ -437,7 +330,7 @@ def scatter_plot(
 #=======================================================================================================================
 # Similarity matrix
 #=======================================================================================================================
-def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0, thin=1):
+def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0, samples=None, thin=1):
     
     sb.set_style('whitegrid')
     
@@ -489,9 +382,13 @@ def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0,
     
     ax = g.ax_heatmap
     
-    utils.set_tick_label_font_sizes(ax, defaults.tick_font_size)
+    utils.set_tick_label_font_sizes(ax, defaults.small_tick_font_size)
     
     utils.set_tick_label_rotations(ax)
+    
+    ax.set_xlabel('Loci', fontsize=defaults.axis_label_font_size)
+    
+    ax.set_ylabel('Loci', fontsize=defaults.axis_label_font_size)
             
     g.fig.savefig(plot_file, bbox_inches='tight')
     

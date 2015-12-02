@@ -45,7 +45,7 @@ def run_analysis_pipeline(args):
         _build_mutations_file(
             in_file, 
             mutations_files[sample_id], 
-            args.var_prior
+            args.prior
         )
         
         if args.tumour_contents is not None:
@@ -67,99 +67,68 @@ def run_analysis_pipeline(args):
     
     _run_analysis(config_file, args.seed)
     
-    table_file = os.path.join(args.working_dir, 'results.tsv')
+    tables_dir = os.path.join(args.working_dir, 'tables')
     
-    _write_multi_sample_table(
-        config_file, 
-        table_file, 
-        args.burnin, 
-        args.thin, 
-        False
-    )
+    make_directory(tables_dir)
     
-    clusters_file = os.path.join(args.working_dir, 'clusters.tsv')
-    
-    _write_clusters_trace(
-        config_file, 
-        clusters_file, 
-        args.burnin, 
-        args.thin
-    )
-    
-    cluster_posteriors_file = os.path.join(args.working_dir, 'cluster_posteriors.tsv')
-    
-    _write_cluster_posteriors_table(
-        config_file, 
-        cluster_posteriors_file, 
-        args.burnin, 
-        args.thin, 
-        101)
-    
+    for table_type in ['cluster', 'loci']:
+        out_file = os.path.join(tables_dir, '{0}.tsv'.format(table_type))
+        
+        _build_table(
+            config_file, 
+            out_file, 
+            args.burnin, 
+            args.mesh_size, 
+            table_type, 
+            args.thin
+        )
+        
     plots_dir = os.path.join(args.working_dir, 'plots')
+
+    plots = [
+        ('cluster', 'density'),
+        ('cluster', 'parallel_coordinates'),
+        ('cluster', 'scatter'),
+        ('loci', 'density'),
+        ('loci', 'parallel_coordinates'),
+        ('loci', 'scatter'),
+        ('loci', 'similarity_matrix'),
+        ('loci', 'vaf_parallel_coordinates'),
+        ('loci', 'vaf_scatter')
+    ]
     
-    cellular_prevalence_posteriors_dir = os.path.join(plots_dir, 'cellular_prevalence_posteriors')
+    for category, plot_type in plots:
+        
+        plot_file = os.path.join(plots_dir, category, '{0}.{1}'.format(plot_type, args.plot_file_format))
+        
+        make_parent_directory(plot_file)
+        
+        if category == 'cluster':
+            
+            _cluster_plot(
+                config_file, 
+                plot_file, 
+                args.burnin, 
+                args.mesh_size, 
+                args.min_cluster_size, 
+                plot_type, 
+                args.samples, 
+                args.thin
+            )
+            
+        elif category == 'loci':
+            
+            _loci_plot(
+                config_file, 
+                plot_file, 
+                plot_type, 
+                args.burnin, 
+                args.min_cluster_size, 
+                args.samples, 
+                args.thin
+            )
+        
     
-    make_directory(cellular_prevalence_posteriors_dir)
-    
-    _plot_cellular_prevalence_posteriors(
-        config_file, 
-        cellular_prevalence_posteriors_dir, 
-        args.burnin, 
-        args.thin, 
-        args.plot_file_format)
-    
-    sim_mat_file = os.path.join(plots_dir, 'similarity_matrix.{0}'.format(args.plot_file_format))
-    
-    _plot_similarity_matrix(
-        config_file, 
-        sim_mat_file, 
-        args.burnin, 
-        args.thin
-    )
-    
-    cellular_prevalence_parallel_coordinates_file = os.path.join(
-        plots_dir, 
-        'cellular_prevalence_parallel_coordinates.{0}'.format(args.plot_file_format)
-    )
-    
-    _plot_multi_sample(
-        config_file, 
-        cellular_prevalence_parallel_coordinates_file, 
-        args.burnin, 
-        args.thin, 
-        mutations_files.keys(), 
-        False, 
-        'cellular_prevalence'
-    )
-    
-    cluster_posteriors_plot_file = os.path.join(
-        plots_dir,
-        'cluster_cellular_prevalence_posteriors.{0}'.format(args.plot_file_format)
-    )
-    
-    _cluster_plot(
-        config_file, 
-        cluster_posteriors_plot_file, 
-        args.burnin, 
-        args.thin, 
-        101, 
-        mutations_files.keys()
-    )
-    
-    vaf_parallel_coordinates_file = os.path.join(
-        plots_dir, 
-        'vaf_parallel_coordinates.{0}'.format(args.plot_file_format)
-    )
-    
-    _plot_multi_sample(
-        config_file, 
-        vaf_parallel_coordinates_file, 
-        args.burnin, 
-        args.thin, 
-        mutations_files.keys(), 
-        True, 
-        'variant_allele_frequency'
-    )
 
 def _write_config_file(config_file, density, mutations_files, num_iters, tumour_contents, working_dir):
     config = {}
@@ -253,10 +222,10 @@ def build_mutations_file(args):
     _build_mutations_file(
         args.in_file, 
         args.out_file,  
-        args.var_prior
+        args.prior
     )
 
-def _build_mutations_file(in_file, out_file, var_prior):
+def _build_mutations_file(in_file, out_file, prior):
     config = {}
     
     reader = csv.DictReader(open(in_file), delimiter='\t')
@@ -282,7 +251,7 @@ def _build_mutations_file(in_file, out_file, var_prior):
                                 normal_cn,
                                 minor_cn,
                                 major_cn,
-                                var_prior)
+                                prior)
 
         config['mutations'].append(mutation.to_dict())
     
@@ -297,68 +266,43 @@ def _build_mutations_file(in_file, out_file, var_prior):
 #=======================================================================================================================
 # Post processing code
 #=======================================================================================================================
-def write_multi_sample_table(args):
-    _write_multi_sample_table(
+def build_table(args):
+    _build_table(
         args.config_file, 
         args.out_file, 
         args.burnin, 
-        args.thin, 
-        args.old_style
+        args.mesh_size, 
+        args.table_type, 
+        args.thin
     )
 
-def _write_multi_sample_table(config_file, out_file, burnin, thin, old_style):
-    table = post_process.load_multi_sample_table(config_file, burnin, thin, old_style=old_style)
+def _build_table(config_file, out_file, burnin, mesh_size, table_type, thin):
+    if table_type == 'cluster':
+        df = post_process.clusters.load_table(
+            config_file, 
+            burnin=burnin, 
+            thin=thin, 
+            mesh_size=mesh_size
+        )
     
-    table.to_csv(out_file, index=False, sep='\t')
+    elif table_type == 'loci':
+        df = post_process.loci.load_table(
+            config_file, 
+            burnin, 
+            thin, 
+            old_style=False
+        )
     
-def write_clusters_trace(args):
-    _write_clusters_trace(
-        args.config_file,
-        args.out_file,
-        args.burnin,
-        args.thin)
-
-def _write_clusters_trace(config_file, out_file, burnin, thin):
-    labels = post_process.cluster_pyclone_trace(config_file, burnin, thin)
-    
-    labels.to_csv(out_file, index=False, sep='\t')
-
-def write_cluster_posteriors_table(args):
-    _write_cluster_posteriors_table(
-        args.config_file, 
-        args.out_file, 
-        args.burnin, 
-        args.thin, 
-        args.mesh_size
-    )
-
-def _write_cluster_posteriors_table(config_file, out_file, burnin, thin, mesh_size):
-    df = post_process.load_cluster_posteriors_table(
-        config_file, 
-        burnin=burnin, 
-        thin=thin, 
-        mesh_size=mesh_size
-    )
-    
+    elif table_type == 'old_style':
+        df = post_process.loci.load_table(
+            config_file, 
+            burnin, 
+            thin, 
+            old_style=True
+        )
+        
     df.to_csv(out_file, index=False, sep='\t')
 
-def plot_cellular_prevalence_posteriors(args):
-    _plot_cellular_prevalence_posteriors(
-        args.config_file, 
-        args.out_dir, 
-        args.burnin, 
-        args.thin, 
-        args.file_format)
-    
-def _plot_cellular_prevalence_posteriors(config_file, out_dir, burnin, thin, file_format):
-    plot.plot_cellular_prevalence_posteriors(
-        config_file, 
-        file_format,
-        out_dir, 
-        burnin, 
-        thin
-    )
-    
 def cluster_plot(args):
     _cluster_plot(
         args.config_file, 
@@ -375,7 +319,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
     
     if plot_type == 'density':
         
-        plot.cluster_posteriors.density_plot(
+        plot.clusters.density_plot(
             config_file, 
             plot_file, 
             burnin=burnin, 
@@ -387,7 +331,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
     
     elif plot_type == 'parallel_coordinates':
         
-        plot.cluster_posteriors.parallel_coordinates_plot(
+        plot.clusters.parallel_coordinates_plot(
             config_file, 
             plot_file, 
             burnin=burnin, 
@@ -399,7 +343,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
     
     elif plot_type == 'scatter':
         
-        plot.cluster_posteriors.scatter_plot(
+        plot.clusters.scatter_plot(
             config_file, 
             plot_file, 
             burnin=burnin, 
@@ -478,42 +422,3 @@ def _loci_plot(
             plot_file, 
             **kwargs
         )
-
-def plot_similarity_matrix(args):
-    _plot_similarity_matrix(
-        args.config_file, 
-        args.plot_file, 
-        args.burnin, 
-        args.thin
-    )
-
-def _plot_similarity_matrix(config_file, plot_file, burnin, thin):
-    plot.plot_similarity_matrix(
-        config_file, 
-        plot_file, 
-        burnin, 
-        thin
-    )
-    
-def plot_multi_sample(args):
-    _plot_multi_sample(
-        args.config_file, 
-        args.plot_file, 
-        args.burnin, 
-        args.thin, 
-        args.samples, 
-        args.separate_lines, 
-        args.y_value
-    )
-
-def _plot_multi_sample(config_file, plot_file, burnin, thin, samples, separate_lines, y_value):
-    plot.plot_multi_sample_parallel_coordinates(
-        config_file,
-        plot_file,
-        y_value,
-        burnin=burnin,
-        thin=thin,
-        samples=samples,
-        separate_lines=separate_lines
-    )
-

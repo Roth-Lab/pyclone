@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sb
 
-from pyclone.post_process import load_cluster_posteriors_table, load_cluster_posteriors_summary_table
+import pyclone.post_process as post_process
 
 import defaults
 import utils
@@ -28,7 +28,7 @@ def density_plot(
     thin=1,
     tick_font_size=defaults.tick_font_size):
     
-    df = load_cluster_posteriors_table(
+    df = post_process.clusters.load_table(
         config_file, 
         burnin=burnin, 
         thin=thin, 
@@ -139,7 +139,7 @@ def parallel_coordinates_plot(
     
     utils.setup_plot()
     
-    plot_df = load_cluster_posteriors_summary_table(
+    plot_df = post_process.clusters.load_summary_table(
         config_file, 
         burnin=burnin,
         mesh_size=mesh_size,
@@ -225,7 +225,7 @@ def scatter_plot(
     
     utils.setup_plot()
     
-    df = load_cluster_posteriors_summary_table(
+    df = post_process.clusters.load_summary_table(
         config_file, 
         burnin=burnin,
         mesh_size=mesh_size,

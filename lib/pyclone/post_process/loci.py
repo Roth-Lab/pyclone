@@ -10,12 +10,12 @@ import yaml
 
 from pyclone.config import load_mutation_from_dict
 
-from .cluster import cluster_pyclone_trace
+from .clusters import cluster_pyclone_trace
 from pyclone.trace import load_cellular_frequencies_trace
 
 import pyclone.paths as paths
 
-def load_multi_sample_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
+def load_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
     data = pd.merge(
         _load_variant_allele_frequencies(config_file),
         _load_cellular_prevalences(config_file, burnin, thin),

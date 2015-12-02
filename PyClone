@@ -40,21 +40,6 @@ def main():
     
     _setup_build_prior_parser(build_prior_parser)
     
-#---------------------------------------------------------------------------------------------------------------------- 
-    cluster_parser = subparsers.add_parser(
-        'cluster',
-        help='''Cluster the results of a PyClone analysis.'''
-    )
-    
-    _setup_cluster_parser(cluster_parser)
-    
-#---------------------------------------------------------------------------------------------------------------------- 
-    plot_cf_parser = subparsers.add_parser(
-        'plot_cellular_prevalence_posteriors',
-        help='''Plot the posterior densities of the cellular frequencies of the mutations from a PyClone analysis.'''
-    )
-    
-    _setup_plot_cf_parser(plot_cf_parser)
 
 #---------------------------------------------------------------------------------------------------------------------- 
     cluster_plot_parser = subparsers.add_parser(
@@ -72,23 +57,6 @@ def main():
     
     _setup_loci_plot_parser(loci_plot_parser)
     
-#---------------------------------------------------------------------------------------------------------------------- 
-    plot_sm_parser = subparsers.add_parser(
-        'plot_similarity_matrix',
-        help='''Plot a heat map of the posterior similarity matrix from a PyClone analysis.'''
-    )
-    
-    _setup_plot_sm_parser(plot_sm_parser)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-    plot_ms_parser = subparsers.add_parser(
-        'plot_multi_sample',
-        help='''Plot a parallel coordinates plot for the variant allelic prevalence or cellular prevalence colour code 
-        by cluster membership.'''
-    )
-    
-    _setup_plot_ms_parser(plot_ms_parser)
-    
 #----------------------------------------------------------------------------------------------------------------------
     build_table_parser = subparsers.add_parser(
         'build_table',
@@ -103,10 +71,7 @@ def main():
 
 def _setup_analyse_parser(parser):
    
-    parser.add_argument(
-        'config_file',
-        help='''Path to tab separated input file. See examples for format.'''
-    )
+    _add_config_file_args(parser)
     
     _add_seed_args(parser)
     
@@ -170,20 +135,26 @@ def _setup_analysis_pipeline_parser(parser):
         choices=['pdf', 'svg'],
         help='''File format for plots. Default is pdf.'''
     )
+    
+    _add_mesh_size_args(parser)
+    
+    _add_min_cluster_size_args(parser)
    
     parser.set_defaults(func=run.run_analysis_pipeline)
 
 def _setup_build_prior_parser(parser):    
     
     parser.add_argument(
-        'in_file',
+        '--in_file',
+        required=True,
         help='''Path to tab separated input file. The input file should have header and the following columns: 
         mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn. Any additional columns will be ignored. 
         See examples for format.'''
     )
     
     parser.add_argument(
-        'out_file',
+        '--out_file',
+        required=True,
         help='''Path where YAML formatted PyClone input file will be written.'''
     )
     
@@ -191,102 +162,29 @@ def _setup_build_prior_parser(parser):
     
     parser.set_defaults(func=run.build_mutations_file)
 
-def _setup_cluster_parser(parser):
-    
-    parser.add_argument(
-        'config_file',
-        help='''Path to configuration file used for analysis.'''
-    )
-    
-    parser.add_argument(
-        'out_file',
-        help='Path to file where clustering results will be written.'
-    )
-    
-    _add_post_process_args(parser)
-    
-    parser.set_defaults(func=run.write_clusters_trace)
-
-def _setup_plot_cf_parser(parser):
-    
-    _add_config_file_args(parser)
-  
-    parser.add_argument(
-        'out_dir',
-        help='Path to directory where plot files will be saved.'
-    )
-    
-    _add_post_process_args(parser)
-
-    parser.add_argument(
-        '--file_format',
-        default='pdf',
-        choices=['pdf', 'png', 'svg'],
-        help='''File format used for to plot files. Default is `pdf` and `png` is suggested for large datasets to reduce
-         figure size.''')
-    
-    parser.set_defaults(func=run.plot_cellular_prevalence_posteriors)
-
-def _setup_plot_sm_parser(parser):
-    
-    _add_config_file_args(parser)
-    
-    _add_plot_out_file_args(parser)
-    
-    _add_post_process_args(parser)
-     
-    parser.set_defaults(func=run.plot_similarity_matrix)
-
-def _setup_plot_ms_parser(parser):
-    
-    _add_config_file_args(parser)
-    
-    _add_plot_out_file_args(parser)
-    
-    _add_post_process_args(parser)
-    
-    parser.add_argument(
-        '--samples',
-        default=None,
-        nargs='+',
-        help='''Samples to plot. Samples will be plotted left to right in the order given.'''
-    )
-    
-    parser.add_argument(
-        '--separate_lines',
-        action='store_true',
-        default=False,
-        help='''If set then each mutation will be plotted with a separate line.'''
-    )
-    
-    parser.add_argument(
-        '--y_value',
-        choices=['cellular_prevalence', 'variant_allele_frequency'],
-        default='cellular_prevalence',
-        help='''Determines which values will be plotted on the y-axis. Default is cellular_prevalence.'''
-    )
-    
-    parser.set_defaults(func=run.plot_multi_sample)
-
 def _setup_build_table_parser(parser):
     
     _add_config_file_args(parser)
   
     parser.add_argument(
-        'out_file',
+        '--out_file',
+        required=True,
         help='''Path where table will be written in tsv format.'''
     )
   
     parser.add_argument(
-        '--old_style', 
-        action='store_true', 
-        default=False,
-        help='''If set old style (0.12.x) table will be output.'''
+        '--table_type', 
+        choices=['cluster', 'loci', 'old_style'], 
+        required=True, 
+        help='''Build a table of results. Choices are: `cluster` for cluster specific information; `loci` for loci 
+        specific information; `old_style` matches the 0.12.x PyClone output.'''
     )
     
+    _add_mesh_size_args(parser)
+        
     _add_post_process_args(parser)
  
-    parser.set_defaults(func=run.write_multi_sample_table)
+    parser.set_defaults(func=run.build_table)
 
 def _setup_cluster_plot_parser(parser):
 
@@ -303,20 +201,10 @@ def _setup_cluster_plot_parser(parser):
     )    
     
     _add_post_process_args(parser)
- 
-    parser.add_argument(
-        '--mesh_size',
-        default=101,
-        type=int,
-        help='''Number of points to use for approximating the cluster posteriors. Default is 101.'''
-    )
     
-    parser.add_argument(
-        '--min_cluster_size',
-        default=0,
-        type=int,
-        help='''Clusters with fewer mutations than this value will not be plotted.'''
-    )
+    _add_mesh_size_args(parser)
+    
+    _add_min_cluster_size_args(parser)
        
     parser.add_argument(
         '--samples',
@@ -337,7 +225,6 @@ def _setup_loci_plot_parser(parser):
         '--plot_type',
         choices=[
             'density',
-            'factor',
             'parallel_coordinates', 
             'scatter', 
             'similarity_matrix', 
@@ -361,18 +248,23 @@ def _setup_loci_plot_parser(parser):
     )
     
     parser.set_defaults(func=run.loci_plot)
-    
+
+#=======================================================================================================================
+# Common args
+#=======================================================================================================================
 def _add_config_file_args(parser):
      
      parser.add_argument(
-        '--config_file', required=True,
+        '--config_file', 
+        required=True,
         help='''Path to configuration file used for analysis.'''
     )
      
 def _add_plot_out_file_args(parser):
     
     parser.add_argument(
-        '--plot_file', required=True,
+        '--plot_file', 
+        required=True,
         help='Path to file where plot will be saved. Format can be controlled by changing file extension.'
     )
     
@@ -388,7 +280,7 @@ def _add_seed_args(parser):
 def _add_prior_args(parser):  
     
     parser.add_argument(
-        '--var_prior',
+        '--prior',
         choices=['major_copy_number', 'parental_copy_number', 'total_copy_number'],
         default='major_copy_number',
         help='''Method used to set the possible genotypes. See online help for description. Default is major_copy_number.'''
@@ -417,7 +309,15 @@ def _add_min_cluster_size_args(parser):
         default=0,
         type=int,
         help='''Clusters with fewer mutations than this value will not be plotted.'''
-    )    
+    )
+    
+def _add_mesh_size_args(parser):
+    parser.add_argument(
+        '--mesh_size',
+        default=101,
+        type=int,
+        help='''Number of points to use for approximating the cluster posteriors. Default is 101.'''
+    )
 
 if __name__ == '__main__':
     main()

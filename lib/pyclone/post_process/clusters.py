@@ -3,6 +3,7 @@ Created on Nov 29, 2015
 
 @author: Andrew Roth
 '''
+from pydp.cluster import cluster_with_mpear
 from pydp.data import BetaData, GammaData
 from pydp.utils import log_space_normalise
 
@@ -14,12 +15,30 @@ from pyclone.pyclone_beta_binomial import PyCloneBetaBinomialDensity
 from pyclone.pyclone_binomial import PyCloneBinomialDensity
 
 import pyclone.paths as paths
+import pyclone.trace as trace
 
-from .cluster import cluster_pyclone_trace
+def cluster_pyclone_trace(config_file, burnin, thin):   
+    labels_trace = trace.load_cluster_labels_trace(
+        paths.get_labels_trace_file(config_file), 
+        burnin, 
+        thin
+    )
+    
+    X = labels_trace.values
 
-def load_cluster_posteriors_summary_table(config_file, burnin=0, mesh_size=101, min_size=0, thin=1):
+    labels = cluster_with_mpear(X)
+    
+    labels = pd.Series(labels, index=labels_trace.columns)
+    
+    labels = labels.reset_index()
+    
+    labels.columns = 'mutation_id', 'cluster_id'
+    
+    return labels
+
+def load_summary_table(config_file, burnin=0, mesh_size=101, min_size=0, thin=1):
      
-    df = load_cluster_posteriors_table(
+    df = load_table(
         config_file, 
         burnin=burnin,
         mesh_size=mesh_size,
@@ -53,7 +72,7 @@ def load_cluster_posteriors_summary_table(config_file, burnin=0, mesh_size=101, 
     
     return out_df
 
-def load_cluster_posteriors_table(config_file, burnin=0, min_size=0, mesh_size=101, thin=1):
+def load_table(config_file, burnin=0, min_size=0, mesh_size=101, thin=1):
     config = paths.load_config(config_file)
 
     if config['density'] == 'pyclone_beta_binomial':
