@@ -11,14 +11,12 @@ import matplotlib.pyplot as pp
 import pandas as pd
 import seaborn as sb
 
-from pyclone.trace import load_cluster_labels_trace
-from pyclone.post_process import cluster_pyclone_trace
-
 import pyclone.paths as paths
 import pyclone.post_process as post_process
 import pyclone.trace as trace
 
 import defaults
+import _scatter
 import utils
 
 #=======================================================================================================================
@@ -32,7 +30,7 @@ def density_plot(
     min_cluster_size=0,
     samples=None,
     thin=1,
-    tick_font_size=defaults.tick_font_size):
+    tick_label_font_size=defaults.tick_label_font_size):
     
     utils.setup_plot()
 
@@ -71,6 +69,7 @@ def density_plot(
             
             inner=None,
             order=samples,
+            scale='width'
         )
 
         ax.set_ylabel('')
@@ -92,7 +91,7 @@ def density_plot(
             fontsize=axis_label_font_size
         )
         
-        utils.set_tick_label_font_sizes(ax, tick_font_size)
+        utils.set_tick_label_font_sizes(ax, tick_label_font_size)
 
     fig.text(
         -0.01,
@@ -146,7 +145,7 @@ def parallel_coordinates_plot(
     min_cluster_size=0,
     samples=None,
     thin=1,
-    tick_font_size=defaults.tick_font_size,
+    tick_label_font_size=defaults.tick_label_font_size,
     value='cellular_prevalence'):
     
     utils.setup_plot()
@@ -180,6 +179,7 @@ def parallel_coordinates_plot(
             ax.plot(
                 x,
                 y,
+                alpha=0.75,
                 c=color_map[cluster_id],
                 marker=defaults.line_plot_marker,
                 markersize=defaults.line_plot_marker_size
@@ -195,7 +195,7 @@ def parallel_coordinates_plot(
     
     ax.set_xticklabels(samples)
     
-    utils.set_tick_label_font_sizes(ax, tick_font_size)
+    utils.set_tick_label_font_sizes(ax, tick_label_font_size)
     
     ax.set_ylim(*defaults.cellular_prevalence_limits)
     
@@ -229,7 +229,7 @@ def scatter_plot(
     min_cluster_size=0,
     samples=None,
     thin=1,
-    tick_font_size=defaults.tick_font_size,
+    tick_label_font_size=defaults.tick_label_font_size,
     value='cellular_prevalence'):
     
     utils.setup_plot()
@@ -244,88 +244,21 @@ def scatter_plot(
     if samples is None:
         samples = sorted(df['sample_id'].unique())
     
-    else:
-        df = df[df['sample_id'].isin(samples)]
-    
     color_map = utils.get_clusters_color_map(df['cluster_id'])
     
-    num_samples = len(samples)
+    cluster_df = df[['mutation_id', 'cluster_id']].drop_duplicates().set_index('mutation_id')
     
-    cluster_df = df[['mutation_id', 'cluster_id']].drop_duplicates()
-    
+    loci_color_map = cluster_df['cluster_id'].map(color_map).to_dict()
+      
     mean_df = df.pivot(index='mutation_id', columns='sample_id', values=value)
     
-    size = max(2 * num_samples, 4)
-    
-    fig = pp.figure(figsize=(size, size))
-    
-    grid = gs.GridSpec(nrows=num_samples, ncols=num_samples)
-    
-    axes = []
-    
-    for i in range(num_samples):
-        for j in range(i):
-            ax = fig.add_subplot(grid[i, j])
-    
-            axes.append(ax)
-    
-            utils.setup_axes(ax)
-            
-            x_sample = samples[j]
-            
-            y_sample = samples[i]
-            
-            for cluster_id in color_map:
-                loci = cluster_df.loc[cluster_df['cluster_id'] == cluster_id, 'mutation_id']
-                
-                x = mean_df.loc[loci][x_sample].values
-        
-                y = mean_df.loc[loci][y_sample].values
-        
-                ax.scatter(
-                    x,
-                    y,
-                    s=20,
-                    c=color_map[cluster_id],
-                    label=cluster_id
-                )
-            
-            ax.set_xlim(defaults.cellular_prevalence_limits)
-            
-            ax.set_ylim(defaults.cellular_prevalence_limits)
-            
-            utils.set_tick_label_font_sizes(ax, tick_font_size)
-            
-            if i != (num_samples - 1):
-                ax.set_xticklabels([])
-                
-                ax.spines['bottom'].set_visible(False)
-                
-                ax.xaxis.set_ticks_position('none')
-                
-            else:
-                ax.set_xlabel(x_sample, fontsize=axis_label_font_size)
-                
-            if j != 0:
-                ax.set_yticklabels([])
-            
-                ax.spines['left'].set_visible(False)
-                
-                ax.yaxis.set_ticks_position('none')
-                
-            else:
-                ax.set_ylabel(y_sample, fontsize=axis_label_font_size)
-
-    legend = axes[0].legend(
-        bbox_to_anchor=(1.1, 0.5),
-        fontsize=6,
-        loc='center left',
-        title='Cluster'
+    _scatter.plot_all_pairs(
+        loci_color_map, 
+        mean_df, 
+        plot_file, 
+        samples,
+        legend_color_map=color_map
     )
-    
-    legend.get_title().set_fontsize(8)
-    
-    utils.save_figure(fig, plot_file)
 
 #=======================================================================================================================
 # Similarity matrix
@@ -334,7 +267,7 @@ def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0,
     
     sb.set_style('whitegrid')
     
-    labels = cluster_pyclone_trace(config_file, burnin, thin)
+    labels = post_process.cluster_pyclone_trace(config_file, burnin, thin)
     
     labels = labels.set_index('mutation_id')
     
@@ -352,11 +285,11 @@ def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0,
           
     trace_file = paths.get_labels_trace_file(config_file)
     
-    trace = load_cluster_labels_trace(trace_file, burnin, thin)
+    labels_trace = trace.load_cluster_labels_trace(trace_file, burnin, thin)
 
-    dist_mat = pdist(trace.values.T, 'hamming')
+    dist_mat = pdist(labels_trace.values.T, 'hamming')
     
-    dist_mat = pd.DataFrame(squareform(dist_mat), index=trace.columns, columns=trace.columns)
+    dist_mat = pd.DataFrame(squareform(dist_mat), index=labels_trace.columns, columns=labels_trace.columns)
     
     dist_mat = dist_mat.loc[used_loci, used_loci]
     
@@ -382,7 +315,7 @@ def similarity_matrix_plot(config_file, plot_file, burnin=0, min_cluster_size=0,
     
     ax = g.ax_heatmap
     
-    utils.set_tick_label_font_sizes(ax, defaults.small_tick_font_size)
+    utils.set_tick_label_font_sizes(ax, defaults.small_tick_label_font_size)
     
     utils.set_tick_label_rotations(ax)
     

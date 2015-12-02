@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 import seaborn as sb
 
 def get_legend_handles(color_map, marker='o', markersize=4):
-    legend_handles = {}
+    legend_handles = OrderedDict()
 
     for key in color_map:
         legend_handles[str(key)] = Line2D(
