@@ -17,14 +17,12 @@ import utils
 
 def density_plot(
     config_file, 
-    plot_file, 
-    axis_label_font_size=defaults.axis_label_font_size,
+    plot_file,
     burnin=0, 
     mesh_size=101,
     min_cluster_size=0,
     samples=None,
-    thin=1,
-    tick_label_font_size=defaults.tick_label_font_size):
+    thin=1):
     
     df = post_process.clusters.load_table(
         config_file, 
@@ -73,7 +71,7 @@ def density_plot(
             sample_id,
             xy=(1.01, 0.5),
             xycoords='axes fraction', 
-            fontsize=axis_label_font_size
+            fontsize=defaults.axis_label_font_size
         )
     
         for i, (cluster_id, log_pdf) in enumerate(plot_df.iterrows()):
@@ -97,19 +95,19 @@ def density_plot(
                 rotation=90
             )
             
-            ax.set_xlabel(defaults.cluster_label, fontsize=axis_label_font_size)
+            ax.set_xlabel(defaults.cluster_label, fontsize=defaults.axis_label_font_size)
         
         else:
             ax.set_xticklabels([])
         
-        utils.set_tick_label_font_sizes(ax, tick_label_font_size)
+        utils.set_tick_label_font_sizes(ax, defaults.tick_label_font_size)
         
         ax.set_ylim(defaults.cellular_prevalence_limits)
     
     if num_samples == 1:
         ax.set_ylabel(
             defaults.cellular_prevalence_label,
-            fontsize=axis_label_font_size
+            fontsize=defaults.axis_label_font_size
         )    
     
     else:
@@ -117,7 +115,7 @@ def density_plot(
             -0.01, 
             0.5, 
             defaults.cellular_prevalence_label,
-            fontsize=axis_label_font_size,
+            fontsize=defaults.axis_label_font_size,
             ha='center',
             rotation=90,
             va='center'
@@ -130,13 +128,11 @@ def density_plot(
 def parallel_coordinates_plot(
     config_file,
     plot_file,
-    axis_label_font_size=defaults.axis_label_font_size,
     burnin=0,
     mesh_size=101,
     min_cluster_size=0,
     samples=None,
-    thin=1,
-    tick_label_font_size=defaults.tick_label_font_size):
+    thin=1):
     
     utils.setup_plot()
     
@@ -194,11 +190,11 @@ def parallel_coordinates_plot(
     
     ax.set_xticklabels(samples)
     
-    ax.set_xlabel(defaults.sample_label, fontsize=axis_label_font_size)
+    ax.set_xlabel(defaults.sample_label, fontsize=defaults.axis_label_font_size)
     
-    ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=axis_label_font_size)
+    ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=defaults.axis_label_font_size)
     
-    utils.set_tick_label_font_sizes(ax, tick_label_font_size)
+    utils.set_tick_label_font_sizes(ax, defaults.tick_label_font_size)
     
     # Plot limits
     ax.set_xlim(
@@ -216,13 +212,11 @@ def parallel_coordinates_plot(
 def scatter_plot(
     config_file,
     plot_file,
-    axis_label_font_size=defaults.axis_label_font_size,
     burnin=0,
     mesh_size=101,
     min_cluster_size=0,
     samples=None,
-    thin=1,
-    tick_label_font_size=defaults.tick_label_font_size):
+    thin=1):
     
     utils.setup_plot()
     
