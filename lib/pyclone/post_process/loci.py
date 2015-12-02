@@ -41,6 +41,17 @@ def load_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
  
     data = pd.merge(data, labels, on='mutation_id', how='inner')
     
+    cols = [
+        'mutation_id', 
+        'sample_id', 
+        'cluster_id', 
+        'cellular_prevalence', 
+        'cellular_prevalence_std', 
+        'variant_allele_frequency'
+    ]
+    
+    data = data[cols]
+    
     if old_style:
         data = _reformat_multi_sample_table(data)
 

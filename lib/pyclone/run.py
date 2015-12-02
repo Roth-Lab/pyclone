@@ -278,7 +278,7 @@ def build_table(args):
 
 def _build_table(config_file, out_file, burnin, mesh_size, table_type, thin):
     if table_type == 'cluster':
-        df = post_process.clusters.load_table(
+        df = post_process.clusters.load_summary_table(
             config_file, 
             burnin=burnin, 
             thin=thin, 
@@ -390,15 +390,7 @@ def _loci_plot(
             plot_file, 
             **kwargs
         )
-    
-    elif plot_type == 'factor':
-        
-        plot.loci.factor_plot(
-            config_file, 
-            plot_file, 
-            **kwargs
-        )
-    
+     
     elif plot_type.endswith('parallel_coordinates'):
 
         plot.loci.parallel_coordinates_plot(
