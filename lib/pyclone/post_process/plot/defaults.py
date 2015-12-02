@@ -6,9 +6,15 @@ Created on Nov 30, 2015
 
 axis_label_font_size = 12
 
+legend_title_font_size = 8
+
+legend_font_size = 6
+
 tick_font_size = 8
 
 cellular_prevalence_label = 'Cellular prevalence'
+
+variant_allele_frequency_label = 'VAF'
 
 cluster_label = 'Cluster'
 

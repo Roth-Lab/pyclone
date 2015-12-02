@@ -428,25 +428,47 @@ def _loci_plot(
     samples=None, 
     thin=1):
     
+    kwargs = {
+        'burnin' : burnin,
+        'min_cluster_size' : min_cluster_size,
+        'samples' : samples,
+        'thin' : thin
+    }
+    
+    if plot_type.startswith('vaf'):
+        
+        kwargs['value'] = 'variant_allele_frequency'
+    
     if plot_type == 'density':
+        
         plot.loci.density_plot(
             config_file, 
             plot_file, 
-            burnin=burnin, 
-            min_cluster_size=min_cluster_size, 
-            samples=samples, 
-            thin=thin
+            **kwargs
         )
+    
+    elif plot_type == 'factor':
         
-    elif plot_type == 'scatter':
-        
+        plot.loci.factor_plot(
+            config_file, 
+            plot_file, 
+            **kwargs
+        )
+    
+    elif plot_type.endswith('parallel_coordinates'):
+
+        plot.loci.parallel_coordinates_plot(
+            config_file, 
+            plot_file, 
+            **kwargs
+        )
+    
+    elif plot_type.endswith('scatter'):
+
         plot.loci.scatter_plot(
             config_file, 
             plot_file, 
-            burnin=burnin,
-            min_cluster_size=min_cluster_size,
-            samples=samples, 
-            thin=thin
+            **kwargs
         )
     
     elif plot_type == 'similarity_matrix':
@@ -454,23 +476,9 @@ def _loci_plot(
         plot.loci.similarity_matrix_plot(
             config_file, 
             plot_file, 
-            burnin=burnin,
-            min_cluster_size=min_cluster_size, 
-            thin=thin
+            **kwargs
         )
-        
-    elif plot_type == 'vaf_scatter':
-        
-        plot.loci.scatter_plot(
-            config_file, 
-            plot_file, 
-            burnin=burnin,
-            min_cluster_size=min_cluster_size,
-            samples=samples, 
-            thin=thin,
-            value='variant_allele_frequency'
-        )
-        
+
 def plot_similarity_matrix(args):
     _plot_similarity_matrix(
         args.config_file, 

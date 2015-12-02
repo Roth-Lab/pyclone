@@ -335,7 +335,15 @@ def _setup_loci_plot_parser(parser):
     
     parser.add_argument(
         '--plot_type',
-        choices=['density', 'scatter', 'similarity_matrix', 'vaf_scatter'],
+        choices=[
+            'density',
+            'factor',
+            'parallel_coordinates', 
+            'scatter', 
+            'similarity_matrix', 
+            'vaf_parallel_coordinates', 
+            'vaf_scatter'
+        ],
         default='density',
         required=True,
         help='''Determines which style of plot will be done.'''
