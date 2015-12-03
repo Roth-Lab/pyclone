@@ -189,6 +189,8 @@ def parallel_coordinates_plot(
     elif value == 'variant_allele_frequency':
         ax.set_ylabel(defaults.variant_allele_frequency_label)
     
+    ax.set_xticks(sorted(df['sample_index'].unique()))
+    
     ax.set_xticklabels(samples)
     
     utils.set_tick_label_font_sizes(ax, defaults.tick_label_font_size)
