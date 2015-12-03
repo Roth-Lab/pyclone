@@ -25,43 +25,13 @@ import pyclone.post_process.plot as plot
 # PyClone analysis
 #=======================================================================================================================
 def run_analysis_pipeline(args):
-    make_directory(args.working_dir)
-    
-    make_directory(os.path.join(args.working_dir, 'yaml'))
-    
-    mutations_files = OrderedDict()
-    
-    tumour_contents = {}
-    
-    for i, in_file in enumerate(args.in_files):
-        if args.samples is not None:
-            sample_id = args.samples[i]
-            
-        else:
-            sample_id = os.path.splitext(os.path.basename(in_file))[0]
-        
-        mutations_files[sample_id] = os.path.join(args.working_dir, 'yaml', '{0}.yaml'.format(sample_id))
-        
-        _build_mutations_file(
-            in_file, 
-            mutations_files[sample_id], 
-            args.prior
-        )
-        
-        if args.tumour_contents is not None:
-            tumour_contents[sample_id] = args.tumour_contents[i]
-        
-        else:
-            tumour_contents[sample_id] = 1.0
-    
-    config_file = os.path.join(args.working_dir, 'config.yaml')
-    
-    _write_config_file(
-        config_file,
+    config_file =_setup_analysis(
         args.density, 
-        mutations_files, 
+        args.in_files, 
         args.num_iters, 
-        tumour_contents, 
+        args.samples, 
+        args.prior, 
+        args.tumour_contents, 
         args.working_dir
     )
     
@@ -214,7 +184,60 @@ def _run_analysis(config_file, seed):
     else:
         raise Exception('{0} is not a valid density for PyClone.'.format(density))   
 
+def setup_analysis(args):
+    _setup_analysis(
+        args.density, 
+        args.in_files, 
+        args.num_iters, 
+        args.samples, 
+        args.prior, 
+        args.tumour_contents, 
+        args.working_dir
+    )
 
+def _setup_analysis(density, in_files, num_iters, samples, prior, tumour_contents, working_dir):
+    make_directory(working_dir)
+    
+    make_directory(os.path.join(working_dir, 'yaml'))
+    
+    mutations_files = OrderedDict()
+    
+    _tumour_contents = {}
+    
+    for i, in_file in enumerate(in_files):
+        if samples is not None:
+            sample_id = samples[i]
+            
+        else:
+            sample_id = os.path.splitext(os.path.basename(in_file))[0]
+        
+        mutations_files[sample_id] = os.path.join(working_dir, 'yaml', '{0}.yaml'.format(sample_id))
+        
+        _build_mutations_file(
+            in_file, 
+            mutations_files[sample_id], 
+            prior
+        )
+        
+        if tumour_contents is not None:
+            _tumour_contents[sample_id] = tumour_contents[i]
+        
+        else:
+            _tumour_contents[sample_id] = 1.0
+    
+    config_file = os.path.join(working_dir, 'config.yaml')
+    
+    _write_config_file(
+        config_file,
+        density, 
+        mutations_files, 
+        num_iters, 
+        _tumour_contents, 
+        working_dir
+    )
+    
+    return config_file
+    
 #=======================================================================================================================
 # Input file code
 #=======================================================================================================================
