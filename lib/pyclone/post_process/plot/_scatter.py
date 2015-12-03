@@ -27,7 +27,7 @@ def plot_all_pairs(color_map, mean_df, plot_file, samples, error_df=None, legend
     axes = []
 
     for i in range(num_samples):
-        for j in range(i):
+        for j in range(i + 1):
             ax = fig.add_subplot(grid[i, j])
             
             axes.append(ax)
