@@ -5,29 +5,60 @@ Created on 2013-02-12
 '''
 from __future__ import division
 
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 from math import log
+
+import numpy as np
 
 import pyclone.paths as paths
 
 #=======================================================================================================================
 # Load data for sampler
 #=======================================================================================================================
-PyCloneData = namedtuple(
-    'PyCloneData',
-    [
-        'b',
-        'd',
-        'tumour_content',
-        'cn_n',
-        'cn_r',
-        'cn_v',
-        'mu_n',
-        'mu_r',
-        'mu_v',
-        'log_pi'
-    ]
-)
+class PyCloneData(object):
+    def __init__(self, name, b, d, tumour_content, cn, mu, log_pi):
+        self.name = name
+        
+        self._b = b
+        
+        self._d = d
+        
+        self._tumour_content = tumour_content
+        
+        self._cn = cn
+        
+        self._mu = mu
+        
+        self._log_pi = log_pi
+        
+        self._hash = hash(name)
+    
+    @property
+    def b(self):
+        return self._b
+    
+    @property
+    def cn(self):
+        return self._cn
+    
+    @property
+    def d(self):
+        return self._d
+    
+    @property
+    def log_pi(self):
+        return self._log_pi
+    
+    @property
+    def mu(self):
+        return self._mu
+    
+    @property
+    def tumour_content(self):
+        return self._tumour_content
+    
+    def __hash__(self):
+        return self._hash
 
 def load_base_measure_params(config_file):
     config = paths.load_config(config_file)    
@@ -56,7 +87,7 @@ def load_data(config_file):
     tumour_content = paths.get_tumour_contents(config_file)
     
     for sample_id, file_name in paths.get_mutations_files(config_file).items():
-        sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], tumour_content[sample_id])
+        sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], sample_id, tumour_content[sample_id])
     
     sample_ids = sample_data.keys()
     
@@ -72,7 +103,7 @@ def load_data(config_file):
     
     return data, sample_ids
 
-def _load_sample_data(file_name, error_rate, tumour_content):
+def _load_sample_data(file_name, error_rate, sample_id, tumour_content):
     '''
     Load data from PyClone formatted input file.
     '''
@@ -83,34 +114,40 @@ def _load_sample_data(file_name, error_rate, tumour_content):
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
 
-        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
+        data[mutation.id] = _get_pyclone_data(mutation, error_rate, sample_id, tumour_content)
     
     return data
 
-def _get_pyclone_data(mutation, error_rate, tumour_content):
+def _get_pyclone_data(mutation, error_rate, sample_id, tumour_content):
     a = mutation.ref_counts
     b = mutation.var_counts
     
     d = a + b 
     
-    cn_n = tuple([x.cn_n for x in mutation.states])
-    cn_r = tuple([x.cn_r for x in mutation.states])
-    cn_v = tuple([x.cn_v for x in mutation.states])
+    cn = np.column_stack([
+        np.array([x.cn_n for x in mutation.states]),
+        np.array([x.cn_r for x in mutation.states]),
+        np.array([x.cn_r for x in mutation.states])
+    ])
     
-    mu_n = tuple([x.get_mu_n(error_rate) for x in mutation.states])
-    mu_r = tuple([x.get_mu_r(error_rate) for x in mutation.states])
-    mu_v = tuple([x.get_mu_v(error_rate) for x in mutation.states])
+    mu = np.column_stack([
+        np.array([x.get_mu_n(error_rate) for x in mutation.states]),
+        np.array([x.get_mu_r(error_rate) for x in mutation.states]),
+        np.array([x.get_mu_v(error_rate) for x in mutation.states])
+    ])
     
-    prior_weights = tuple([x.prior_weight for x in mutation.states])
+    prior_weights = np.array([x.prior_weight for x in mutation.states])
     
     log_pi = _get_log_pi(prior_weights)
     
-    return PyCloneData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+    name = '{0}:{1}'.format(sample_id, mutation.id)
+    
+    return PyCloneData(name, b, d, tumour_content, cn, mu, log_pi)
 
 def _get_log_pi(weights):
     pi = [x / sum(weights) for x in weights]
     
-    return tuple([log(x) for x in pi])
+    return np.array([log(x) for x in pi])
 
 #=======================================================================================================================
 # Parse mutation dict
@@ -137,12 +174,16 @@ def _get_states(normal_cn, minor_cn, major_cn, prior):
     elif prior == 'total_copy_number':
         states = _get_total_copy_number_states(normal_cn, minor_cn, major_cn)
    
+    elif prior == 'vague':
+        states = _get_vague_copy_number_states(normal_cn, minor_cn, major_cn)
+    
     else:
         raise Exception('{0} is not a recognised method for setting variant priors.'.format(prior))
      
     return states
 
 def _get_major_copy_states(normal_cn, minor_cn, major_cn):
+    
     states = set()
     
     g_n = 'A' * normal_cn
@@ -163,6 +204,7 @@ def _get_major_copy_states(normal_cn, minor_cn, major_cn):
     return sorted(states)
 
 def _get_parental_copy_number_states(normal_cn, minor_cn, major_cn):
+    
     states = set()
     
     g_n = 'A' * normal_cn
@@ -213,6 +255,7 @@ def _get_parental_copy_number_states(normal_cn, minor_cn, major_cn):
     return sorted(states)
 
 def _get_total_copy_number_states(normal_cn, minor_cn, major_cn):
+    
     total_cn = minor_cn + major_cn
         
     states = set()
@@ -233,6 +276,31 @@ def _get_total_copy_number_states(normal_cn, minor_cn, major_cn):
             state = (g_n, g_r, g_v)
             
             states.add(state)
+    
+    return sorted(states)
+
+
+def _get_vague_copy_number_states(normal_cn, minor_cn, major_cn):
+    
+    states = set()
+    
+    for total_cn in range(1, 11):
+        g_n = 'A' * normal_cn
+    
+        var_genotypes = []
+        
+        for num_var_alleles in range(1, total_cn + 1):
+            g_v = 'A' * (total_cn - num_var_alleles) + 'B' * num_var_alleles
+            
+            var_genotypes.append(g_v)
+    
+        ref_genotypes = set([g_n, 'A' * total_cn])
+    
+        for g_r in ref_genotypes:
+            for g_v in var_genotypes:
+                state = (g_n, g_r, g_v)
+                
+                states.add(state)
     
     return sorted(states)
 
