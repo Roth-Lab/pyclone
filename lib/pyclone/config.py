@@ -5,8 +5,118 @@ Created on 2013-02-12
 '''
 from __future__ import division
 
-def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, ref_prior, var_prior):
-    states = _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior)
+from collections import namedtuple, OrderedDict
+from math import log
+
+import pyclone.paths as paths
+
+#=======================================================================================================================
+# Load data for sampler
+#=======================================================================================================================
+PyCloneData = namedtuple(
+    'PyCloneData',
+    [
+        'b',
+        'd',
+        'tumour_content',
+        'cn_n',
+        'cn_r',
+        'cn_v',
+        'mu_n',
+        'mu_r',
+        'mu_v',
+        'log_pi'
+    ]
+)
+
+def load_base_measure_params(config_file):
+    config = paths.load_config(config_file)    
+    
+    params = config['base_measure_params']
+    
+    return params
+
+
+def load_precision_params(config_file):
+    config = paths.load_config(config_file)
+        
+    return config['beta_binomial_precision_params']    
+
+def load_data(config_file):
+    '''
+    Load data for all samples.
+    
+    Args:
+        config_file : (str) Path to YAML format configuration file.
+    '''
+    sample_data = OrderedDict()
+    
+    error_rate = paths.get_error_rates(config_file)
+    
+    tumour_content = paths.get_tumour_contents(config_file)
+    
+    for sample_id, file_name in paths.get_mutations_files(config_file).items():
+        sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], tumour_content[sample_id])
+    
+    sample_ids = sample_data.keys()
+    
+    common_mutations = set.intersection(*[set(x.keys()) for x in sample_data.values()])
+    
+    data = OrderedDict()
+    
+    for mutation_id in common_mutations:
+        data[mutation_id] = OrderedDict()
+        
+        for sample_id in sample_ids:
+            data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
+    
+    return data, sample_ids
+
+def _load_sample_data(file_name, error_rate, tumour_content):
+    '''
+    Load data from PyClone formatted input file.
+    '''
+    data = OrderedDict()
+    
+    config = paths.load_config(file_name)
+  
+    for mutation_dict in config['mutations']:
+        mutation = load_mutation_from_dict(mutation_dict)
+
+        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
+    
+    return data
+
+def _get_pyclone_data(mutation, error_rate, tumour_content):
+    a = mutation.ref_counts
+    b = mutation.var_counts
+    
+    d = a + b 
+    
+    cn_n = tuple([x.cn_n for x in mutation.states])
+    cn_r = tuple([x.cn_r for x in mutation.states])
+    cn_v = tuple([x.cn_v for x in mutation.states])
+    
+    mu_n = tuple([x.get_mu_n(error_rate) for x in mutation.states])
+    mu_r = tuple([x.get_mu_r(error_rate) for x in mutation.states])
+    mu_v = tuple([x.get_mu_v(error_rate) for x in mutation.states])
+    
+    prior_weights = tuple([x.prior_weight for x in mutation.states])
+    
+    log_pi = _get_log_pi(prior_weights)
+    
+    return PyCloneData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
+
+def _get_log_pi(weights):
+    pi = [x / sum(weights) for x in weights]
+    
+    return tuple([log(x) for x in pi])
+
+#=======================================================================================================================
+# Parse mutation dict
+#=======================================================================================================================
+def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, prior):
+    states = _get_states(normal_cn, minor_cn, major_cn, prior)
     
     mutation = Mutation(mutation_id, ref_counts, var_counts)
     
@@ -17,30 +127,40 @@ def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major
     
     return mutation
 
-def _get_states(normal_cn, minor_cn, major_cn, ref_prior, var_prior):
-    if var_prior == 'parental_copy_number':
+def _get_states(normal_cn, minor_cn, major_cn, prior): 
+    if prior == 'major_copy_number':
+        states = _get_major_copy_states(normal_cn, minor_cn, major_cn)
+   
+    elif prior == 'parental_copy_number':
         states = _get_parental_copy_number_states(normal_cn, minor_cn, major_cn)
      
-    elif var_prior == 'total_copy_number':
-        total_cn = minor_cn + major_cn
-        
-        states = _get_total_copy_number_states(normal_cn, total_cn, ref_prior)
-     
-    elif var_prior == 'no_zygosity':
-        total_cn = minor_cn + major_cn
-        
-        states = _get_no_zygosity_states(normal_cn, total_cn, ref_prior)
-     
-    elif var_prior == 'AB':
-        states = _get_AB_states()
-     
-    elif var_prior == 'BB':
-        states = _get_BB_states()
-     
+    elif prior == 'total_copy_number':
+        states = _get_total_copy_number_states(normal_cn, minor_cn, major_cn)
+   
     else:
-        raise Exception('{0} is not a recognised method for setting variant priors.'.format(var_prior))
+        raise Exception('{0} is not a recognised method for setting variant priors.'.format(prior))
      
     return states
+
+def _get_major_copy_states(normal_cn, minor_cn, major_cn):
+    states = set()
+    
+    g_n = 'A' * normal_cn
+    
+    total_cn = minor_cn + major_cn
+    
+    for b in range(1, major_cn + 1):
+        a = total_cn - b
+        
+        g_r = g_n
+        
+        g_v = 'A' * a + 'B' * b
+    
+        states.add((g_n, g_r, g_v))
+    
+    states.add((g_n, 'A' * total_cn, 'A' * (total_cn - 1) + 'B'))
+    
+    return sorted(states)
 
 def _get_parental_copy_number_states(normal_cn, minor_cn, major_cn):
     states = set()
@@ -92,7 +212,9 @@ def _get_parental_copy_number_states(normal_cn, minor_cn, major_cn):
     
     return sorted(states)
 
-def _get_total_copy_number_states(normal_cn, total_cn, ref_prior):
+def _get_total_copy_number_states(normal_cn, minor_cn, major_cn):
+    total_cn = minor_cn + major_cn
+        
     states = set()
     
     g_n = 'A' * normal_cn
@@ -103,19 +225,9 @@ def _get_total_copy_number_states(normal_cn, total_cn, ref_prior):
         g_v = 'A' * (total_cn - num_var_alleles) + 'B' * num_var_alleles
         
         var_genotypes.append(g_v)
-    
-    if ref_prior == 'normal':
-        ref_genotypes = [g_n, ]
-    
-    elif ref_prior == 'variant':
-        ref_genotypes = ['A' * total_cn, ]
-    
-    elif ref_prior == 'normal_variant':
-        ref_genotypes = set([g_n, 'A' * total_cn])
-    
-    else:
-        raise Exception('{0} is not a recognised method for setting reference population priors.'.format(ref_prior))
-    
+
+    ref_genotypes = set([g_n, 'A' * total_cn])
+
     for g_r in ref_genotypes:
         for g_v in var_genotypes:
             state = (g_n, g_r, g_v)
@@ -123,48 +235,6 @@ def _get_total_copy_number_states(normal_cn, total_cn, ref_prior):
             states.add(state)
     
     return sorted(states)
-
-def _get_no_zygosity_states(normal_cn, total_cn, ref_prior):
-    states = set()
-    
-    g_n = 'A' * normal_cn
-    
-    if normal_cn == total_cn:
-        ref_genotypes = [g_n, ]
-        
-        var_genotypes = ['A' * (total_cn - 1) + 'B', ]
-    
-    else:
-        if ref_prior == 'normal':
-            ref_genotypes = [g_n, ]
-            
-            var_genotypes = ['A' * (total_cn - 1) + 'B']
-        
-        elif ref_prior == 'variant':
-            ref_genotypes = ['A' * total_cn, ]
-            
-            var_genotypes = ['A' * (total_cn - 1) + 'B']
-        
-        elif ref_prior == 'normal_variant':
-            ref_genotypes = [g_n, 'A' * total_cn]
-            
-            var_genotypes = ['A' * (total_cn - 1) + 'B', 'A' * (total_cn - 1) + 'B']
-    
-        else:
-            raise Exception('{0} is not a recognised method for setting reference population priors.'.format(ref_prior))
-            
-    for g_r, g_v in zip(ref_genotypes, var_genotypes):
-        state = (g_n, g_r, g_v)
-        
-        states.add(state)
-    
-    return sorted(states)
-
-def _get_AB_states():
-    return [('AA', 'AA', 'AB'), ]
-
-def _get_BB_states():
-    return [('AA', 'AA', 'BB'), ]
 
 #=======================================================================================================================
 # Helper classes

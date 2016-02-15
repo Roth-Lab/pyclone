@@ -5,33 +5,52 @@ Created on Nov 27, 2015
 '''
 from __future__ import division
 
-import os
 import pandas as pd
 import yaml
 
 from pyclone.config import load_mutation_from_dict
 
-from .cluster import cluster_pyclone_trace
-from .utils import load_cellular_frequencies_trace
+from .clusters import cluster_pyclone_trace
+from pyclone.trace import load_cellular_frequencies_trace
 
-def load_multi_sample_table(config_file, burnin, thin, old_style=False):
-    with open(config_file) as fh:
-        config = yaml.load(fh)
-    
+import pyclone.paths as paths
+
+def load_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
     data = pd.merge(
-        _load_variant_allele_frequencies(config),
-        _load_cellular_prevalences(config, burnin, thin),
+        _load_variant_allele_frequencies(config_file),
+        _load_cellular_prevalences(config_file, burnin, thin),
         how='inner',
-        on=['mutation_id', 'sample']
+        on=['mutation_id', 'sample_id']
     )
     
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
+    labels = cluster_pyclone_trace(
+        config_file, 
+        burnin, 
+        thin
+    )
     
-    labels_file = os.path.join(trace_dir, 'labels.tsv.bz2')
+    labels = labels.set_index('mutation_id')['cluster_id']
     
-    labels = cluster_pyclone_trace(labels_file, burnin, thin)
+    cluster_sizes = labels.value_counts()
+    
+    used_clusters = cluster_sizes[cluster_sizes >= min_cluster_size].index
+    
+    labels = labels[labels.isin(used_clusters)]
+    
+    labels = labels.reset_index()
  
     data = pd.merge(data, labels, on='mutation_id', how='inner')
+    
+    cols = [
+        'mutation_id', 
+        'sample_id', 
+        'cluster_id', 
+        'cellular_prevalence', 
+        'cellular_prevalence_std', 
+        'variant_allele_frequency'
+    ]
+    
+    data = data[cols]
     
     if old_style:
         data = _reformat_multi_sample_table(data)
@@ -39,13 +58,13 @@ def load_multi_sample_table(config_file, burnin, thin, old_style=False):
     return data
 
 def _reformat_multi_sample_table(df):
-    mean_df = df[['mutation_id', 'sample', 'cellular_prevalence']]
+    mean_df = df[['mutation_id', 'sample_id', 'cellular_prevalence']]
     
-    mean_df = mean_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence')
+    mean_df = mean_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence')
     
-    std_df = df[['mutation_id', 'sample', 'cellular_prevalence_std']]
+    std_df = df[['mutation_id', 'sample_id', 'cellular_prevalence_std']]
     
-    std_df = std_df.pivot(index='mutation_id', columns='sample', values='cellular_prevalence_std')
+    std_df = std_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence_std')
     
     std_df = std_df.rename(columns=lambda x: '{0}_std'.format(x))
 
@@ -58,27 +77,23 @@ def _reformat_multi_sample_table(df):
 #=======================================================================================================================
 # Load allelic prevalences for all samples
 #=======================================================================================================================
-def _load_variant_allele_frequencies(config):
+def _load_variant_allele_frequencies(config_file):
     data = []
     
-    for sample_id in config['samples']:
-        file_name = config['samples'][sample_id]['mutations_file']
-        
-        file_name = os.path.join(config['working_dir'], file_name)
-        
+    for sample_id, file_name in paths.get_mutations_files(config_file).items():
         sample_data = _load_sample_variant_allele_frequencies(file_name)
         
-        sample_data['sample'] = sample_id
+        sample_data['sample_id'] = sample_id
         
         data.append(sample_data)   
     
     data = pd.concat(data, axis=0)
     
-    num_samples = len(config['samples'])
+    num_samples = len(paths.get_sample_ids(config_file))
     
     # Filter for mutations in all samples
     data = data.groupby('mutation_id').filter(lambda x: len(x) == num_samples)
-    
+
     return data
           
 def _load_sample_variant_allele_frequencies(file_name):
@@ -92,8 +107,12 @@ def _load_sample_variant_allele_frequencies(file_name):
     
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
-
-        data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+        
+        try:
+            data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+        
+        except ZeroDivisionError:
+            data[mutation.id] = pd.np.nan
 
     data = pd.Series(data, name='variant_allele_frequency')
     
@@ -106,25 +125,19 @@ def _load_sample_variant_allele_frequencies(file_name):
 #=======================================================================================================================
 # Load cellular prevalences for all samples
 #=======================================================================================================================
-def _load_cellular_prevalences(config, burnin, thin):
+def _load_cellular_prevalences(config_file, burnin, thin):
     data = []
-    
-    trace_dir = os.path.join(config['working_dir'], config['trace_dir'])
-    
-    sample_ids = config['samples'].keys()
-    
-    for sample_id in sample_ids:
-        file_name = os.path.join(trace_dir, '{0}.cellular_prevalence.tsv.bz2'.format(sample_id))
-    
+  
+    for sample_id, file_name in paths.get_cellular_prevalence_trace_files(config_file).items():
         sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
     
-        sample_data['sample'] = sample_id
+        sample_data['sample_id'] = sample_id
     
         data.append(sample_data)
     
     data = pd.concat(data, axis=0)
 
-    num_samples = len(sample_ids)
+    num_samples = len(paths.get_sample_ids(config_file))
     
     # Filter for mutations in all samples
     data = data.groupby('mutation_id').filter(lambda x: len(x) == num_samples)

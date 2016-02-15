@@ -5,15 +5,37 @@ Created on 2013-04-23
 '''
 import bz2
 import csv
-import os
+import pandas as pd
 
 from pyclone.utils import make_directory
 
+import pyclone.paths as paths
+
+def load_cellular_frequencies_trace(file_name, burnin, thin):
+    return _load_trace(file_name, burnin, thin, float)
+
+def load_cluster_labels_trace(file_name, burnin, thin):
+    return _load_trace(file_name, burnin, thin, int)
+
+def _load_trace(trace_file, burnin, thin, cast_func):
+    '''
+        Args:
+            trace_file : (str) Path to file to load.
+            burnin : (int) Number of samples from the begining of MCMC chain to discard.
+            thin : (int) Number of samples to skip when building trace.
+            cast_func : (function) A function to cast data from string to appropriate type i.e. int, float
+    '''        
+    trace = pd.read_csv(trace_file, compression='bz2', sep='\t')
+    
+    trace = trace.iloc[burnin::thin]
+    
+    return trace.astype(cast_func)
+
 class DiskTrace(object):
-    def __init__(self, trace_dir, sample_ids, mutation_ids, attribute_map, precision=False):
-        self.trace_dir = trace_dir
-        
-        self.sample_ids = sample_ids
+    def __init__(self, config_file, mutation_ids, attribute_map, precision=False):
+        self.config_file = config_file
+    
+        self.sample_ids = paths.get_sample_ids(config_file)
         
         self.mutation_ids = mutation_ids
         
@@ -33,21 +55,26 @@ class DiskTrace(object):
             self.precision_writer.close()
     
     def open(self):
-        make_directory(self.trace_dir)
+        make_directory(paths.get_trace_dir(self.config_file))
         
-        self.alpha_writer = ConcentrationParameterWriter(self.trace_dir)
+        self.alpha_writer = ConcentrationParameterWriter(paths.get_concentration_trace_file(self.config_file))
         
-        self.labels_writer = LabelsWriter(self.trace_dir, self.mutation_ids)
+        self.labels_writer = LabelsWriter(
+                                paths.get_labels_trace_file(self.config_file), 
+                                self.mutation_ids
+                            )
         
         self.cellular_frequency_writers = {}
         
-        for sample_id in self.sample_ids:
-            self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(self.trace_dir, 
-                                                                                   sample_id, 
-                                                                                   self.mutation_ids)
+        for sample_id, file_name in paths.get_cellular_prevalence_trace_files(self.config_file).items():
+            self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(
+                                                            file_name,
+                                                            self.mutation_ids,
+                                                            sample_id
+                                                        )
         
         if self.update_precision:
-            self.precision_writer = PrecisionWriter(self.trace_dir)
+            self.precision_writer = PrecisionWriter(paths.get_precision_trace_file(self.config_file))
     
     def update(self, state):
         self.alpha_writer.write_row([state['alpha'], ])
@@ -68,8 +95,8 @@ class DiskTrace(object):
             self.precision_writer.write_row([state['global_params'].x])        
 
 class ConcentrationParameterWriter(object):
-    def __init__(self, trace_dir):
-        self.file_name = os.path.join(trace_dir, 'alpha.tsv.bz2')
+    def __init__(self, file_name):
+        self.file_name = file_name
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         
@@ -84,8 +111,8 @@ class ConcentrationParameterWriter(object):
         self.writer.writerow(row)
 
 class CellularFrequenciesWriter(object):
-    def __init__(self, trace_dir, sample_id, mutation_ids):
-        self.file_name = os.path.join(trace_dir, '{0}.cellular_prevalence.tsv.bz2'.format(sample_id))
+    def __init__(self, file_name, mutation_ids, sample_id):
+        self.file_name = file_name
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         
@@ -102,8 +129,8 @@ class CellularFrequenciesWriter(object):
         self.writer.writerow(row)
 
 class LabelsWriter(object):
-    def __init__(self, trace_dir, mutation_ids):
-        self.file_name = os.path.join(trace_dir, 'labels.tsv.bz2')
+    def __init__(self, file_name, mutation_ids):
+        self.file_name = file_name
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         
@@ -120,8 +147,8 @@ class LabelsWriter(object):
         self.writer.writerow(row)
 
 class PrecisionWriter(object):
-    def __init__(self, trace_dir):
-        self.file_name = os.path.join(trace_dir, 'precision.tsv.bz2')
+    def __init__(self, file_name):
+        self.file_name = file_name
     
         self.file_handle = bz2.BZ2File(self.file_name, 'w')
         

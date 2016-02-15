@@ -1,2 +1,4 @@
-from .cluster import cluster_pyclone_trace
-from .multi_sample import load_multi_sample_table
+from .clusters import cluster_pyclone_trace
+
+import clusters
+import loci
