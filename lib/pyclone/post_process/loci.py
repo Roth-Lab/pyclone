@@ -107,8 +107,12 @@ def _load_sample_variant_allele_frequencies(file_name):
     
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
-
-        data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+        
+        try:
+            data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+        
+        except ZeroDivisionError:
+            data[mutation.id] = pd.np.nan
 
     data = pd.Series(data, name='variant_allele_frequency')
     
