@@ -1,0 +1,23 @@
+package:
+  name: pyclone
+  version: "0.13.0"
+
+source:
+  hg_url: https://bitbucket.org/aroth85/pyclone
+  hg_tag: 0.13.0
+
+requirements:
+  build:
+    - python
+
+  run:
+    - matplotlib
+    - numpy
+    - pandas
+    - pydp
+    - pyyaml
+    - scipy
+    - seaborn
+
+about:
+  home: https://bitbucket.org/aroth85/pyclone
