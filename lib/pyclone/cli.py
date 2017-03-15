@@ -153,6 +153,8 @@ def _setup_analysis_pipeline_parser(parser):
         help='''File format for plots. Default is pdf.'''
     )
 
+    _add_max_clusters_args(parser)
+
     _add_mesh_size_args(parser)
 
     _add_min_cluster_size_args(parser)
@@ -198,6 +200,8 @@ def _setup_build_table_parser(parser):
         help='''Build a table of results. Choices are: `cluster` for cluster specific information; `loci` for loci 
         specific information; `old_style` matches the 0.12.x PyClone output.'''
     )
+
+    _add_max_clusters_args(parser)
 
     _add_mesh_size_args(parser)
 
@@ -355,6 +359,14 @@ def _add_init_method_args(parser):
         help='''How to initialise the DP clustering algorithm. `connected` places all data points in one cluster,
         preferred for large datasets. `disconnected places each data point in a separate cluster. Default
         `disconnected`.'''
+    )
+
+
+def _add_max_clusters_args(parser):
+    parser.add_argument(
+        '--max_clusters', default=None, type=int,
+        help='''Maximum number of clusters to consider for post-processing. Note this does not affect the DP sampling
+        only the final post-processing steps to get hard cluster assignments.'''
     )
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ import pyclone.paths as paths
 import pyclone.trace as trace
 
 
-def cluster_pyclone_trace(config_file, burnin, thin):
+def cluster_pyclone_trace(config_file, burnin, thin, max_clusters=None):
     labels_trace = trace.load_cluster_labels_trace(
         paths.get_labels_trace_file(config_file),
         burnin,
@@ -27,7 +27,7 @@ def cluster_pyclone_trace(config_file, burnin, thin):
 
     X = labels_trace.values
 
-    labels = cluster_with_mpear(X)
+    labels = cluster_with_mpear(X, max_clusters=max_clusters)
 
     labels = pd.Series(labels, index=labels_trace.columns)
 
@@ -38,11 +38,11 @@ def cluster_pyclone_trace(config_file, burnin, thin):
     return labels
 
 
-def load_summary_table(config_file, burnin=0, mesh_size=101, min_size=0, thin=1):
-
+def load_summary_table(config_file, burnin=0, max_clusters=None, mesh_size=101, min_size=0, thin=1):
     df = load_table(
         config_file,
         burnin=burnin,
+        max_clusters=max_clusters,
         mesh_size=mesh_size,
         min_size=min_size,
         thin=thin,
@@ -75,7 +75,7 @@ def load_summary_table(config_file, burnin=0, mesh_size=101, min_size=0, thin=1)
     return out_df
 
 
-def load_table(config_file, burnin=0, min_size=0, mesh_size=101, thin=1):
+def load_table(config_file, burnin=0, min_size=0, max_clusters=None, mesh_size=101, thin=1):
     config = paths.load_config(config_file)
 
     if config['density'] == 'pyclone_beta_binomial':
@@ -95,7 +95,7 @@ def load_table(config_file, burnin=0, min_size=0, mesh_size=101, thin=1):
 
     data, sample_ids = load_data(config_file)
 
-    labels = cluster_pyclone_trace(config_file, burnin, thin)
+    labels = cluster_pyclone_trace(config_file, burnin, thin, max_clusters=max_clusters)
 
     labels = labels.set_index('mutation_id')
 

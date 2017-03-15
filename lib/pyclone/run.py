@@ -53,12 +53,13 @@ def run_analysis_pipeline(args):
         out_file = os.path.join(tables_dir, '{0}.tsv'.format(table_type))
 
         _build_table(
-            config_file,
-            out_file,
-            args.burnin,
-            args.mesh_size,
-            table_type,
-            args.thin
+            config_file=config_file,
+            out_file=out_file,
+            burnin=args.burnin,
+            max_clusters=args.max_clusters,
+            mesh_size=args.mesh_size,
+            table_type=table_type,
+            thin=args.thin
         )
 
     plots_dir = os.path.join(args.working_dir, 'plots')
@@ -286,13 +287,15 @@ def _build_mutations_file(in_file, out_file, prior):
 
         major_cn = int(row['major_cn'])
 
-        mutation = get_mutation(mutation_id,
-                                ref_counts,
-                                var_counts,
-                                normal_cn,
-                                minor_cn,
-                                major_cn,
-                                prior)
+        mutation = get_mutation(
+            mutation_id,
+            ref_counts,
+            var_counts,
+            normal_cn,
+            minor_cn,
+            major_cn,
+            prior
+        )
 
         config['mutations'].append(mutation.to_dict())
 
@@ -311,22 +314,24 @@ def _build_mutations_file(in_file, out_file, prior):
 
 def build_table(args):
     _build_table(
-        args.config_file,
-        args.out_file,
-        args.burnin,
-        args.mesh_size,
-        args.table_type,
-        args.thin
+        config_file=args.config_file,
+        out_file=args.out_file,
+        burnin=args.burnin,
+        max_clusters=args.max_clusters,
+        mesh_size=args.mesh_size,
+        table_type=args.table_type,
+        thin=args.thin
     )
 
 
-def _build_table(config_file, out_file, burnin, mesh_size, table_type, thin):
+def _build_table(config_file, out_file, burnin, max_clusters, mesh_size, table_type, thin):
     if table_type == 'cluster':
         df = post_process.clusters.load_summary_table(
             config_file,
             burnin=burnin,
+            max_clusters=max_clusters,
+            mesh_size=mesh_size,
             thin=thin,
-            mesh_size=mesh_size
         )
 
     elif table_type == 'loci':
@@ -334,6 +339,7 @@ def _build_table(config_file, out_file, burnin, mesh_size, table_type, thin):
             config_file,
             burnin,
             thin,
+            max_clusters=max_clusters,
             old_style=False
         )
 
@@ -342,6 +348,7 @@ def _build_table(config_file, out_file, burnin, mesh_size, table_type, thin):
             config_file,
             burnin,
             thin,
+            max_clusters=max_clusters,
             old_style=True
         )
 

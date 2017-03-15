@@ -16,7 +16,7 @@ from pyclone.trace import load_cellular_frequencies_trace
 import pyclone.paths as paths
 
 
-def load_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
+def load_table(config_file, burnin, thin, max_clusters=None, min_cluster_size=0, old_style=False):
     data = pd.merge(
         _load_variant_allele_frequencies(config_file),
         _load_cellular_prevalences(config_file, burnin, thin),
@@ -27,7 +27,8 @@ def load_table(config_file, burnin, thin, min_cluster_size=0, old_style=False):
     labels = cluster_pyclone_trace(
         config_file,
         burnin,
-        thin
+        thin,
+        max_clusters=max_clusters,
     )
 
     labels = labels.set_index('mutation_id')['cluster_id']
