@@ -131,6 +131,12 @@ def _get_log_pi(weights):
 
 
 def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, prior):
+    if minor_cn > minor_cn:
+        raise Exception('{} is invalid. Major CN must be greater than minor CN.'.format(mutation_id))
+
+    if major_cn == 0:
+        raise Exception('{} is invalid. Major CN must be greater 0.'.format(mutation_id))
+
     states = _get_states(normal_cn, minor_cn, major_cn, prior)
 
     mutation = Mutation(mutation_id, ref_counts, var_counts)
