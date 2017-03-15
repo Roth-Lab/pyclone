@@ -36,7 +36,11 @@ def get_mutations_files(config_file):
     config = load_config(config_file)
 
     for sample_id in get_sample_ids(config_file):
-        files[sample_id] = config['samples'][sample_id]['mutations_file']
+        if os.path.exists(config['samples'][sample_id]['mutations_file']):
+            files[sample_id] = config['samples'][sample_id]['mutations_file']
+
+        else:
+            files[sample_id] = os.path.join(config['working_dir'], config['samples'][sample_id]['mutations_file'])
 
     return files
 

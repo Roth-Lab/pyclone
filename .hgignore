@@ -35,3 +35,5 @@ syntax: regexp
 ^examples/mixing/trace$
 syntax: regexp
 .*egg-info.*
+syntax: regexp
+^sandbox$
