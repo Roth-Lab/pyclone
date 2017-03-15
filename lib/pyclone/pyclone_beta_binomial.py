@@ -28,6 +28,11 @@ import pyclone.config as config
 def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     data, sample_ids = config.load_data(config_file)
 
+    print 'Beginning analysis using:'
+    print '{} mutations'.format(len(data))
+    print '{} sample(s)'.format(len(sample_ids))
+    print
+
     sample_atom_samplers = OrderedDict()
 
     sample_base_measures = OrderedDict()
