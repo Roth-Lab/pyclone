@@ -57,7 +57,20 @@ def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
 
     trace.open()
 
-    sampler.sample(data.values(), trace, num_iters, init_method=init_method)
+    sampler.initialise_partition(data.values(), init_method)
+
+    for i in range(num_iters):
+        state = sampler.state
+
+        if i % 100 == 0:
+            print 'Iteration: {}'.format(i)
+            print 'Number of clusters: {}'.format(len(np.unique(state['labels'])))
+            print 'DP concentration: {}'.format(state['alpha'])
+            print
+
+        sampler.interactive_sample(data.values())
+
+        trace.update(state)
 
     trace.close()
 
