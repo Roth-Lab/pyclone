@@ -226,6 +226,8 @@ def _setup_cluster_plot_parser(parser):
 
     _add_post_process_args(parser)
 
+    _add_max_clusters_args(parser)
+
     _add_mesh_size_args(parser)
 
     _add_min_cluster_size_args(parser)
@@ -264,6 +266,8 @@ def _setup_loci_plot_parser(parser):
     _add_post_process_args(parser)
 
     _add_min_cluster_size_args(parser)
+
+    _add_max_clusters_args(parser)
 
     parser.add_argument(
         '--samples',

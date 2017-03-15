@@ -28,7 +28,6 @@ def density_plot(
         config_file,
         plot_file,
         burnin=0,
-        min_cluster_size=0,
         samples=None,
         thin=1):
 
@@ -144,6 +143,7 @@ def parallel_coordinates_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1,
@@ -151,7 +151,13 @@ def parallel_coordinates_plot(
 
     utils.setup_plot()
 
-    df = post_process.loci.load_table(config_file, burnin, thin, min_cluster_size=min_cluster_size)
+    df = post_process.loci.load_table(
+        config_file,
+        burnin,
+        thin,
+        max_clusters=max_clusters,
+        min_cluster_size=min_cluster_size
+    )
 
     color_map = utils.get_clusters_color_map(df['cluster_id'])
 
@@ -230,6 +236,7 @@ def scatter_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1,
@@ -241,6 +248,7 @@ def scatter_plot(
         config_file,
         burnin,
         thin,
+        max_clusters=max_clusters,
         min_cluster_size=min_cluster_size
     )
 
@@ -272,13 +280,14 @@ def similarity_matrix_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1):
 
     sb.set_style('whitegrid')
 
-    labels = post_process.cluster_pyclone_trace(config_file, burnin, thin)
+    labels = post_process.cluster_pyclone_trace(config_file, burnin, thin, max_clusters=max_clusters)
 
     labels = labels.set_index('mutation_id')
 
@@ -298,15 +307,15 @@ def similarity_matrix_plot(
 
     labels_trace = trace.load_cluster_labels_trace(trace_file, burnin, thin)
 
+    labels_trace = labels_trace[used_loci]
+
     dist_mat = pdist(labels_trace.values.T, 'hamming')
+
+    Z = average(dist_mat)
 
     dist_mat = pd.DataFrame(squareform(dist_mat), index=labels_trace.columns, columns=labels_trace.columns)
 
-    dist_mat = dist_mat.loc[used_loci, used_loci]
-
     sim_mat = 1 - dist_mat
-
-    Z = average(dist_mat)
 
     N = sim_mat.shape[0]
 

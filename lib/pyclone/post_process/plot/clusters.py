@@ -20,6 +20,7 @@ def density_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         mesh_size=101,
         min_cluster_size=0,
         samples=None,
@@ -29,6 +30,7 @@ def density_plot(
         config_file,
         burnin=burnin,
         thin=thin,
+        max_clusters=max_clusters,
         mesh_size=mesh_size,
         min_size=min_cluster_size
     )
@@ -131,6 +133,7 @@ def parallel_coordinates_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         mesh_size=101,
         min_cluster_size=0,
         samples=None,
@@ -141,6 +144,7 @@ def parallel_coordinates_plot(
     plot_df = post_process.clusters.load_summary_table(
         config_file,
         burnin=burnin,
+        max_clusters=max_clusters,
         mesh_size=mesh_size,
         min_size=min_cluster_size,
         thin=thin,
@@ -216,6 +220,7 @@ def scatter_plot(
         config_file,
         plot_file,
         burnin=0,
+        max_clusters=None,
         mesh_size=101,
         min_cluster_size=0,
         samples=None,
@@ -226,6 +231,7 @@ def scatter_plot(
     df = post_process.clusters.load_summary_table(
         config_file,
         burnin=burnin,
+        max_clusters=max_clusters,
         mesh_size=mesh_size,
         min_size=min_cluster_size,
         thin=thin,

@@ -357,18 +357,19 @@ def _build_table(config_file, out_file, burnin, max_clusters, mesh_size, table_t
 
 def cluster_plot(args):
     _cluster_plot(
-        args.config_file,
-        args.plot_file,
-        args.burnin,
-        args.mesh_size,
-        args.min_cluster_size,
-        args.plot_type,
-        args.samples,
-        args.thin,
+        config_file=args.config_file,
+        plot_file=args.plot_file,
+        burnin=args.burnin,
+        max_clusters=args.max_clusters,
+        mesh_size=args.mesh_size,
+        min_cluster_size=args.min_cluster_size,
+        plot_type=args.plot_type,
+        samples=args.samples,
+        thin=args.thin,
     )
 
 
-def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, plot_type, samples, thin):
+def _cluster_plot(config_file, plot_file, burnin, max_clusters, mesh_size, min_cluster_size, plot_type, samples, thin):
 
     if plot_type == 'density':
 
@@ -377,6 +378,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
             plot_file,
             burnin=burnin,
             thin=thin,
+            max_clusters=max_clusters,
             mesh_size=mesh_size,
             min_cluster_size=min_cluster_size,
             samples=samples,
@@ -388,6 +390,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
             config_file,
             plot_file,
             burnin=burnin,
+            max_clusters=max_clusters,
             mesh_size=mesh_size,
             min_cluster_size=min_cluster_size,
             samples=samples,
@@ -400,6 +403,7 @@ def _cluster_plot(config_file, plot_file, burnin, mesh_size, min_cluster_size, p
             config_file,
             plot_file,
             burnin=burnin,
+            max_clusters=max_clusters,
             mesh_size=mesh_size,
             min_cluster_size=min_cluster_size,
             samples=samples,
@@ -413,6 +417,7 @@ def loci_plot(args):
         args.plot_file,
         args.plot_type,
         burnin=args.burnin,
+        max_clusters=args.max_clusters,
         min_cluster_size=args.min_cluster_size,
         samples=args.samples,
         thin=args.thin)
@@ -423,12 +428,14 @@ def _loci_plot(
         plot_file,
         plot_type,
         burnin=0,
+        max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1):
 
     kwargs = {
         'burnin': burnin,
+        'max_clusters': max_clusters,
         'min_cluster_size': min_cluster_size,
         'samples': samples,
         'thin': thin
@@ -439,6 +446,7 @@ def _loci_plot(
         kwargs['value'] = 'variant_allele_frequency'
 
     if plot_type == 'density':
+        [kwargs.pop(x) for x in kwargs.keys() if 'cluster' in x]
 
         plot.loci.density_plot(
             config_file,
