@@ -72,6 +72,13 @@ def load_data(config_file):
 
     common_mutations = set.intersection(*[set(x.keys()) for x in sample_data.values()])
 
+    if len(common_mutations) == 0:
+        raise Exception(' '.join((
+            ('No mutations found in common across samples.'),
+            ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
+            ('Search the user group before posting a message or a bug.'),
+        )))
+
     data = OrderedDict()
 
     for mutation_id in common_mutations:
