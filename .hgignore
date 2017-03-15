@@ -37,3 +37,5 @@ syntax: regexp
 .*egg-info.*
 syntax: regexp
 ^sandbox$
+syntax: regexp
+.*__pycache__.*
