@@ -6,10 +6,15 @@ Created on Nov 28, 2015
 import os
 import yaml
 
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
+
 
 def load_config(file_name):
     with open(file_name) as fh:
-        config = yaml.load(fh)
+        config = yaml.load(fh, Loader=Loader)
 
     return config
 
