@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import find_packages, setup
 
 setup(
       name='PyClone',
@@ -7,11 +7,11 @@ setup(
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
       url='http://compbio.bccrc.ca',
-      package_dir = {'': 'lib'},    
-      packages=[ 
-                'pyclone',
-                'pyclone.post_process',
-                'pyclone.post_process.plot'
-                ],
-      scripts=['PyClone']
+      package_dir={'': 'lib'},
+      packages=find_packages(),
+      entry_points={
+        'console_scripts': [
+            'PyClone = pyclone.cli:main',
+            ]
+        }
      )
