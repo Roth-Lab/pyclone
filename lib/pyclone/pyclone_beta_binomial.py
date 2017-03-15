@@ -6,16 +6,19 @@ Created on 2013-04-28
 from __future__ import division
 
 from collections import OrderedDict
+
 from pydp.base_measures import BetaBaseMeasure, GammaBaseMeasure
 from pydp.data import GammaData
-from pydp.densities import Density, log_beta_binomial_pdf
+from pydp.densities import Density
 from pydp.proposal_functions import GammaProposal
 from pydp.samplers.atom import BaseMeasureAtomSampler
 from pydp.samplers.dp import DirichletProcessSampler
 from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
-from pydp.utils import log_sum_exp
 
+import numpy as np
+
+from pyclone.math_utils import log_beta_binomial_likelihood, log_sum_exp, jit
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
 from pyclone.trace import DiskTrace
 
@@ -87,43 +90,54 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
 
 class PyCloneBetaBinomialDensity(Density):
 
+    def log_p(self, data, params):
+        return self._log_p(data, params)
+
     def _log_p(self, data, params):
-        ll = []
+        return _log_p(
+            data.b, data.d,
+            data.cn_n, data.cn_r, data.cn_v,
+            data.mu_n, data.mu_r, data.mu_v,
+            data.log_pi,
+            params.x, data.tumour_content, self.params.x
+        )
 
-        for cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi in zip(data.cn_n, data.cn_r, data.cn_v, data.mu_n, data.mu_r, data.mu_v, data.log_pi):
-            temp = log_pi + self._log_binomial_likelihood(data.b,
-                                                          data.d,
-                                                          cn_n,
-                                                          cn_r,
-                                                          cn_v,
-                                                          mu_n,
-                                                          mu_r,
-                                                          mu_v,
-                                                          params.x,
-                                                          data.tumour_content)
 
-            ll.append(temp)
+@jit(cache=True, nopython=True)
+def _log_p(b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi, f, t, s):
+    num_states = len(log_pi)
 
-        return log_sum_exp(ll)
+    ll = np.zeros(num_states)
 
-    def _log_binomial_likelihood(self, b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, cellular_frequency, tumour_content):
-        f = cellular_frequency
-        t = tumour_content
+    for i in range(num_states):
+        ll[i] = log_pi[i]
 
-        p_n = (1 - t) * cn_n
-        p_r = t * (1 - f) * cn_r
-        p_v = t * f * cn_v
+        ll[i] += _log_beta_binomial_likelihood(
+            b, d,
+            cn_n[i], cn_r[i], cn_v[i],
+            mu_n[i], mu_r[i], mu_v[i],
+            f, t, s
+        )
 
-        norm_const = p_n + p_r + p_v
+    return log_sum_exp(ll)
 
-        p_n = p_n / norm_const
-        p_r = p_r / norm_const
-        p_v = p_v / norm_const
 
-        mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
+@jit(cache=True, nopython=True)
+def _log_beta_binomial_likelihood(b, d, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, f, t, precision):
+    p_n = (1 - t) * cn_n
+    p_r = t * (1 - f) * cn_r
+    p_v = t * f * cn_v
 
-        param_a = mu * self.params.x
+    norm_const = p_n + p_r + p_v
 
-        param_b = (1 - mu) * self.params.x
+    p_n = p_n / norm_const
+    p_r = p_r / norm_const
+    p_v = p_v / norm_const
 
-        return log_beta_binomial_pdf(b, d, param_a, param_b)
+    mu = p_n * mu_n + p_r * mu_r + p_v * mu_v
+
+    param_a = mu * precision
+
+    param_b = (1 - mu) * precision
+
+    return log_beta_binomial_likelihood(b, d, param_a, param_b)

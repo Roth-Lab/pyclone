@@ -8,6 +8,8 @@ from __future__ import division
 from collections import namedtuple, OrderedDict
 from math import log
 
+import numpy as np
+
 import pyclone.paths as paths
 
 #=======================================================================================================================
@@ -103,13 +105,13 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
 
     d = a + b
 
-    cn_n = tuple([x.cn_n for x in mutation.states])
-    cn_r = tuple([x.cn_r for x in mutation.states])
-    cn_v = tuple([x.cn_v for x in mutation.states])
+    cn_n = np.array([x.cn_n for x in mutation.states])
+    cn_r = np.array([x.cn_r for x in mutation.states])
+    cn_v = np.array([x.cn_v for x in mutation.states])
 
-    mu_n = tuple([x.get_mu_n(error_rate) for x in mutation.states])
-    mu_r = tuple([x.get_mu_r(error_rate) for x in mutation.states])
-    mu_v = tuple([x.get_mu_v(error_rate) for x in mutation.states])
+    mu_n = np.array([x.get_mu_n(error_rate) for x in mutation.states])
+    mu_r = np.array([x.get_mu_r(error_rate) for x in mutation.states])
+    mu_v = np.array([x.get_mu_v(error_rate) for x in mutation.states])
 
     prior_weights = tuple([x.prior_weight for x in mutation.states])
 
@@ -121,7 +123,7 @@ def _get_pyclone_data(mutation, error_rate, tumour_content):
 def _get_log_pi(weights):
     pi = [x / sum(weights) for x in weights]
 
-    return tuple([log(x) for x in pi])
+    return np.array([log(x) for x in pi])
 
 #=======================================================================================================================
 # Parse mutation dict
