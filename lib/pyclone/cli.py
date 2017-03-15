@@ -123,6 +123,8 @@ def _setup_setup_analysis_parser(parser):
         default='pyclone_beta_binomial',
         help='''Emission density for the model. Default is pyclone_beta_binomial.'''
     )
+    
+    _add_init_method_args(parser)
 
     parser.add_argument(
         '--num_iters',
@@ -268,7 +270,7 @@ def _setup_loci_plot_parser(parser):
 #=======================================================================================================================
 def _add_config_file_args(parser):
      
-     parser.add_argument(
+    parser.add_argument(
         '--config_file', 
         required=True,
         help='''Path to configuration file used for analysis.'''
@@ -331,6 +333,14 @@ def _add_mesh_size_args(parser):
         default=101,
         type=int,
         help='''Number of points to use for approximating the cluster posteriors. Default is 101.'''
+    )
+
+def _add_init_method_args(parser):
+    parser.add_argument(
+        '--init_method', choices=['connected', 'disconnected'], default='disconnected',
+        help='''How to initialise the DP clustering algorithm. `connected` places all data points in one cluster,
+        preferred for large datasets. `disconnected places each data point in a separate cluster. Default
+        `disconnected`.''' 
     )
 
 if __name__ == '__main__':

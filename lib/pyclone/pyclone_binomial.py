@@ -29,6 +29,8 @@ def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     
     base_measure_params = config.load_base_measure_params(config_file)
     
+    init_method = config.load_init_method(config_file)
+        
     for sample_id in sample_ids:
         sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
         
@@ -51,7 +53,7 @@ def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     
     trace.open()
     
-    sampler.sample(data.values(), trace, num_iters)
+    sampler.sample(data.values(), trace, num_iters, init_method=init_method)
     
     trace.close()
 

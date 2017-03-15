@@ -36,6 +36,10 @@ def load_base_measure_params(config_file):
     
     return params
 
+def load_init_method(config_file):
+    config = paths.load_config(config_file)
+        
+    return config.get('init_method', 'disconnected')    
 
 def load_precision_params(config_file):
     config = paths.load_config(config_file)

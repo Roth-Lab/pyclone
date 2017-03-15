@@ -34,13 +34,17 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
     
     precision_params = config.load_precision_params(config_file)
     
+    init_method = config.load_init_method(config_file)
+    
     for sample_id in sample_ids:
         sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
         
         sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(precision_params['value']))
         
-        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id], 
-                                                                 sample_cluster_densities[sample_id])  
+        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(
+            sample_base_measures[sample_id], 
+            sample_cluster_densities[sample_id],
+        )  
     
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
     
@@ -51,21 +55,31 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
     
     if 'prior' in precision_params:
-        global_params_sampler = MetropolisHastingsGlobalParameterSampler(GammaBaseMeasure(precision_params['prior']['shape'], 
-                                                                                          precision_params['prior']['rate']), 
-                                                                         cluster_density, 
-                                                                         GammaProposal(precision_params['proposal']['precision']))
+        global_params_sampler = MetropolisHastingsGlobalParameterSampler(
+            GammaBaseMeasure(
+                precision_params['prior']['shape'], 
+                precision_params['prior']['rate']
+            ), 
+            cluster_density, 
+            GammaProposal(precision_params['proposal']['precision'])
+        )
     
     else:
         global_params_sampler = None
         
-    sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors, global_params_sampler)
+    sampler = DirichletProcessSampler(
+        atom_sampler, 
+        partition_sampler, 
+        alpha, 
+        alpha_priors, 
+        global_params_sampler,
+    )
     
     trace = DiskTrace(config_file, data.keys(), {'cellular_frequencies' : 'x'}, precision=True)
     
     trace.open()
     
-    sampler.sample(data.values(), trace, num_iters)
+    sampler.sample(data.values(), trace, num_iters, init_method=init_method)
     
     trace.close()
 

@@ -7,6 +7,11 @@ from __future__ import division
 
 from collections import OrderedDict
 
+try:
+    from yaml import CDumper as Dumper
+except ImportError:
+    from yaml import Dumper
+
 import csv
 import os
 import random
@@ -26,13 +31,14 @@ import pyclone.post_process.plot as plot
 #=======================================================================================================================
 def run_analysis_pipeline(args):
     config_file =_setup_analysis(
-        args.density, 
-        args.in_files, 
-        args.num_iters, 
-        args.samples, 
-        args.prior, 
-        args.tumour_contents, 
-        args.working_dir
+        density=args.density, 
+        in_files=args.in_files,
+        init_method=args.init_method,
+        num_iters=args.num_iters, 
+        samples=args.samples, 
+        prior=args.prior, 
+        tumour_contents=args.tumour_contents, 
+        working_dir=args.working_dir,
     )
     
     _run_analysis(config_file, args.seed)
@@ -100,7 +106,7 @@ def run_analysis_pipeline(args):
         
     
 
-def _write_config_file(config_file, density, mutations_files, num_iters, tumour_contents, working_dir):
+def _write_config_file(config_file, density, init_method, mutations_files, num_iters, tumour_contents, working_dir):
     config = {}
     
     config['num_iters'] = num_iters
@@ -127,6 +133,8 @@ def _write_config_file(config_file, density, mutations_files, num_iters, tumour_
             'proposal' : {'precision' : 0.01}
         }
     
+    config['init_method'] = init_method
+    
     config['working_dir'] = os.path.abspath(working_dir)
     
     config['trace_dir'] = 'trace'
@@ -143,7 +151,7 @@ def _write_config_file(config_file, density, mutations_files, num_iters, tumour_
         }
     
     with open(config_file, 'w') as fh:
-        yaml.dump(config, fh, default_flow_style=False)
+        yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
 
 def run_analysis(args):
     _run_analysis(args.config_file, args.seed)
@@ -186,16 +194,17 @@ def _run_analysis(config_file, seed):
 
 def setup_analysis(args):
     _setup_analysis(
-        args.density, 
-        args.in_files, 
-        args.num_iters, 
-        args.samples, 
-        args.prior, 
-        args.tumour_contents, 
-        args.working_dir
+        density=args.density, 
+        in_files=args.in_files,
+        init_method=args.init_method, 
+        num_iters=args.num_iters, 
+        samples=args.samples, 
+        prior=args.prior, 
+        tumour_contents=args.tumour_contents, 
+        working_dir=args.working_dir,
     )
 
-def _setup_analysis(density, in_files, num_iters, samples, prior, tumour_contents, working_dir):
+def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, tumour_contents, working_dir):
     make_directory(working_dir)
     
     make_directory(os.path.join(working_dir, 'yaml'))
@@ -228,12 +237,13 @@ def _setup_analysis(density, in_files, num_iters, samples, prior, tumour_content
     config_file = os.path.join(working_dir, 'config.yaml')
     
     _write_config_file(
-        config_file,
-        density, 
-        mutations_files, 
-        num_iters, 
-        _tumour_contents, 
-        working_dir
+        config_file=config_file,
+        density=density,
+        init_method=init_method,
+        mutations_files=mutations_files, 
+        num_iters=num_iters, 
+        tumour_contents=_tumour_contents, 
+        working_dir=working_dir,
     )
     
     return config_file
@@ -282,7 +292,7 @@ def _build_mutations_file(in_file, out_file, prior):
     
     fh = open(out_file, 'w')
     
-    yaml.dump(config, fh)
+    yaml.dump(config, fh, Dumper=Dumper)
     
     fh.close()
 
