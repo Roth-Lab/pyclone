@@ -7,7 +7,6 @@ setup(
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
       url='http://compbio.bccrc.ca',
-      package_dir={'': 'lib'},
       packages=find_packages(),
       entry_points={
         'console_scripts': [
