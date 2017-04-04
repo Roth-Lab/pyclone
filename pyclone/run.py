@@ -89,6 +89,7 @@ def run_analysis_pipeline(args):
                 config_file,
                 plot_file,
                 args.burnin,
+                args.max_clusters,
                 args.mesh_size,
                 args.min_cluster_size,
                 plot_type,
@@ -102,10 +103,10 @@ def run_analysis_pipeline(args):
                 config_file,
                 plot_file,
                 plot_type,
-                args.burnin,
-                args.min_cluster_size,
-                args.samples,
-                args.thin
+                burnin=args.burnin,
+                min_cluster_size=args.min_cluster_size,
+                samples=args.samples,
+                thin=args.thin
             )
 
 
