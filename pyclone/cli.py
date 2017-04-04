@@ -140,6 +140,12 @@ def _setup_setup_analysis_parser(parser):
 
 def _setup_analysis_pipeline_parser(parser):
 
+    parser.add_argument(
+        '--config_extras_file',
+        required=False,
+        help='''Path to configuration file with extra parameters used for analysis.'''
+    )
+
     _setup_setup_analysis_parser(parser)
 
     _add_post_process_args(parser)

@@ -41,6 +41,7 @@ def run_analysis_pipeline(args):
         prior=args.prior,
         tumour_contents=args.tumour_contents,
         working_dir=args.working_dir,
+        config_extras_file=args.config_extras_file,
     )
 
     _run_analysis(config_file, args.seed)
@@ -108,7 +109,7 @@ def run_analysis_pipeline(args):
             )
 
 
-def _write_config_file(config_file, density, init_method, mutations_files, num_iters, tumour_contents, working_dir):
+def _write_config_file(config_file, density, init_method, mutations_files, num_iters, tumour_contents, working_dir, config_extras_file=None):
     config = {}
 
     config['num_iters'] = num_iters
@@ -151,6 +152,9 @@ def _write_config_file(config_file, density, init_method, mutations_files, num_i
             },
             'error_rate': 0.001
         }
+
+    if config_extras_file is not None:
+        config.update(yaml.load(open(config_extras_file)))
 
     with open(config_file, 'w') as fh:
         yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
@@ -210,7 +214,7 @@ def setup_analysis(args):
     )
 
 
-def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, tumour_contents, working_dir):
+def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, tumour_contents, working_dir, config_extras_file):
     make_directory(working_dir)
 
     make_directory(os.path.join(working_dir, 'yaml'))
@@ -250,6 +254,7 @@ def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, t
         num_iters=num_iters,
         tumour_contents=_tumour_contents,
         working_dir=working_dir,
+        config_extras_file=config_extras_file,
     )
 
     return config_file
