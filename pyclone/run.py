@@ -4,25 +4,28 @@ Created on 2012-02-08
 @author: Andrew Roth
 '''
 from collections import OrderedDict
+from pydp.data import GammaData
 
 try:
     from yaml import CDumper as Dumper
+
 except ImportError:
     from yaml import Dumper
 
 import csv
+import numpy as np
 import os
 import random
 import yaml
 
 from pyclone.config import get_mutation
-from pyclone.pyclone_beta_binomial import run_pyclone_beta_binomial_analysis
-from pyclone.pyclone_binomial import run_pyclone_binomial_analysis
 from pyclone.utils import make_directory, make_parent_directory
 
-import pyclone.paths as paths
-import pyclone.post_process as post_process
-import pyclone.post_process.plot as plot
+import pyclone.config
+import pyclone.post_process
+import pyclone.pyclone_beta_binomial
+import pyclone.pyclone_binomial
+import pyclone.trace
 
 #=======================================================================================================================
 # PyClone analysis
@@ -108,12 +111,17 @@ def run_analysis_pipeline(args):
             )
 
 
-def _write_config_file(config_file, density, init_method, mutations_files, num_iters, tumour_contents, working_dir, config_extras_file=None):
+def _write_config_file(
+        config_file,
+        density,
+        init_method,
+        mutations_files,
+        tumour_contents,
+        config_extras_file=None):
+
     config = {}
 
-    config['num_iters'] = num_iters
-
-    config['base_measure_params'] = {'alpha': 1, 'beta': 1}
+    config['base_measure_params'] = {'a': 1, 'b': 1}
 
     config['concentration'] = {
         'value': 1.0,
@@ -126,7 +134,7 @@ def _write_config_file(config_file, density, init_method, mutations_files, num_i
     config['density'] = density
 
     if density == 'pyclone_beta_binomial':
-        config['beta_binomial_precision_params'] = {
+        config['beta_binomial_precision'] = {
             'value': 1000,
             'prior': {
                 'shape': 1.0,
@@ -136,10 +144,6 @@ def _write_config_file(config_file, density, init_method, mutations_files, num_i
         }
 
     config['init_method'] = init_method
-
-    config['working_dir'] = os.path.abspath(working_dir)
-
-    config['trace_dir'] = 'trace'
 
     config['samples'] = {}
 
@@ -159,77 +163,129 @@ def _write_config_file(config_file, density, init_method, mutations_files, num_i
         yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
 
 
-def run_analysis(args):
-    _run_analysis(args.config_file, args.seed)
+def resume_analysis(config_file, num_iters, trace_file):
+    config = pyclone.config.PyCloneConfig(config_file)
+
+    trace = pyclone.trace.DiskTrace(trace_file, mode='a')
+
+    trace.mutations = config.mutations
+
+    trace.samples = config.samples
+
+    state = {
+        'alpha': trace['alpha'].iloc[-1],
+        'labels': trace['/state/labels'],
+        'params': trace['/state/params']
+    }
+
+    if config.density == 'pyclone_beta_binomial':
+        sampler = pyclone.pyclone_beta_binomial.load_sampler(config)
+
+        state['global_params'] = GammaData(trace['beta_binomial_precision'].iloc[-1])
+
+    elif config.density == 'pyclone_binomial':
+        sampler = pyclone.pyclone_binomial.load_sampler(config)
+
+        state['global_params'] = None
+
+    else:
+        raise Exception('{0} is not a valid density for PyClone.'.format(config.density))
+
+    sampler.state = state
+
+    _run_mcmc(config, num_iters, sampler, trace)
+
+    print(trace['alpha'])
+
+    trace.close()
 
 
-def _run_analysis(config_file, seed):
+def run_analysis(config_file, num_iters, trace_file, seed):
     if seed is not None:
         random.seed(seed)
 
-    config = paths.load_config(config_file)
+    config = pyclone.config.PyCloneConfig(config_file)
 
-    alpha = config['concentration']['value']
+    trace = pyclone.trace.DiskTrace(trace_file, mode='w')
 
-    if 'prior' in config['concentration']:
-        alpha_priors = config['concentration']['prior']
-    else:
-        alpha_priors = None
+    trace.mutations = config.mutations
 
-    num_iters = config['num_iters']
+    trace.samples = config.samples
 
-    density = config['density']
+    if config.density == 'pyclone_beta_binomial':
+        sampler = pyclone.pyclone_beta_binomial.load_sampler(config)
 
-    if density == 'pyclone_beta_binomial':
-        run_pyclone_beta_binomial_analysis(
-            config_file,
-            num_iters,
-            alpha,
-            alpha_priors
-        )
-
-    elif density == 'pyclone_binomial':
-        run_pyclone_binomial_analysis(
-            config_file,
-            num_iters,
-            alpha,
-            alpha_priors
-        )
+    elif config.density == 'pyclone_binomial':
+        sampler = pyclone.pyclone_binomial.load_sampler(config)
 
     else:
-        raise Exception('{0} is not a valid density for PyClone.'.format(density))
+        raise Exception('{0} is not a valid density for PyClone.'.format(config.density))
+
+    sampler.initialise_partition(config.init_method, len(config.data))
+
+    _run_mcmc(config, num_iters, sampler, trace)
+
+    print(trace['alpha'])
+
+    print(trace.labels.iloc[-1])
+
+    cellular_prevalences = trace.cellular_prevalences
+
+    for sample in trace.samples:
+        print(sample)
+        print(cellular_prevalences[sample].iloc[-1])
+
+    trace.close()
 
 
-def setup_analysis(args):
-    _setup_analysis(
-        density=args.density,
-        in_files=args.in_files,
-        init_method=args.init_method,
-        num_iters=args.num_iters,
-        samples=args.samples,
-        prior=args.prior,
-        tumour_contents=args.tumour_contents,
-        working_dir=args.working_dir,
-    )
+def _run_mcmc(config, num_iters, sampler, trace):
+    print('Beginning analysis using:')
+    print('{} mutations'.format(len(config.mutations)))
+    print('{} sample(s)'.format(len(config.samples)))
+    print()
+
+    for i in range(num_iters):
+        sampler.interactive_sample(list(config.data.values()))
+
+        state = sampler.state
+
+        trace.update(state)
+
+        if i % 100 == 0:
+            print('Iteration: {}'.format(i))
+            print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
+            print('DP concentration: {}'.format(state['alpha']))
+            if state['global_params'] is not None:
+                print('Beta-Binomial precision: {}'.format(state['global_params'][0]))
+            print()
 
 
-def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, tumour_contents, working_dir, config_extras_file):
-    make_directory(working_dir)
+def setup_analysis(
+        density,
+        in_files,
+        init_method,
+        out_dir,
+        prior,
+        samples,
+        tumour_contents,
+        config_extras_file=None):
 
-    make_directory(os.path.join(working_dir, 'yaml'))
+    make_directory(out_dir)
+
+    make_directory(os.path.join(out_dir, 'yaml'))
 
     mutations_files = OrderedDict()
 
-    _tumour_contents = {}
+    if len(samples) == 0:
+        samples = [os.path.basename(x).split('.')[0] for x in in_files]
 
-    for i, in_file in enumerate(in_files):
-        if samples is not None:
-            sample_id = samples[i]
+    if len(tumour_contents) == 0:
+        tumour_contents = [1.0 for _ in samples]
 
-        else:
-            sample_id = os.path.splitext(os.path.basename(in_file))[0]
+    tumour_contents = dict(zip(samples, tumour_contents))
 
-        mutations_files[sample_id] = os.path.join(working_dir, 'yaml', '{0}.yaml'.format(sample_id))
+    for in_file, sample_id in zip(in_files, samples):
+        mutations_files[sample_id] = os.path.join(out_dir, 'yaml', '{}.yaml'.format(sample_id))
 
         _build_mutations_file(
             in_file,
@@ -237,22 +293,14 @@ def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, t
             prior
         )
 
-        if tumour_contents is not None:
-            _tumour_contents[sample_id] = tumour_contents[i]
-
-        else:
-            _tumour_contents[sample_id] = 1.0
-
-    config_file = os.path.join(working_dir, 'config.yaml')
+    config_file = os.path.join(out_dir, 'config.yaml')
 
     _write_config_file(
-        config_file=config_file,
-        density=density,
-        init_method=init_method,
-        mutations_files=mutations_files,
-        num_iters=num_iters,
-        tumour_contents=_tumour_contents,
-        working_dir=working_dir,
+        config_file,
+        density,
+        init_method,
+        mutations_files,
+        tumour_contents,
         config_extras_file=config_extras_file,
     )
 
@@ -316,47 +364,44 @@ def _build_mutations_file(in_file, out_file, prior):
 #=======================================================================================================================
 
 
-def build_table(args):
-    _build_table(
-        config_file=args.config_file,
-        out_file=args.out_file,
-        burnin=args.burnin,
-        max_clusters=args.max_clusters,
-        mesh_size=args.mesh_size,
-        table_type=args.table_type,
-        thin=args.thin
-    )
+def build_table(config_file, trace_file, out_file, table_format, burnin=0, grid_size=101, max_clusters=100, thin=1):
+    config = pyclone.config.PyCloneConfig(config_file)
 
+    trace = pyclone.trace.DiskTrace(trace_file)
 
-def _build_table(config_file, out_file, burnin, max_clusters, mesh_size, table_type, thin):
-    if table_type == 'cluster':
-        df = post_process.clusters.load_summary_table(
-            config_file,
+    if table_format == 'cluster':
+        df = pyclone.post_process.clusters.load_summary_table(
+            config,
+            trace,
             burnin=burnin,
+            grid_size=grid_size,
             max_clusters=max_clusters,
-            mesh_size=mesh_size,
             thin=thin,
         )
 
-    elif table_type == 'loci':
-        df = post_process.loci.load_table(
-            config_file,
-            burnin,
-            thin,
+    elif table_format == 'loci':
+        df = pyclone.post_process.loci.load_table(
+            config,
+            trace,
+            burnin=burnin,
             max_clusters=max_clusters,
-            old_style=False
+            old_style=False,
+            thin=thin
         )
 
-    elif table_type == 'old_style':
-        df = post_process.loci.load_table(
-            config_file,
-            burnin,
-            thin,
+    elif table_format == 'old':
+        df = pyclone.post_process.loci.load_table(
+            config,
+            trace,
+            burnin=burnin,
             max_clusters=max_clusters,
-            old_style=True
+            old_style=True,
+            thin=thin
         )
 
     df.to_csv(out_file, index=False, sep='\t')
+
+    trace.close()
 
 
 def cluster_plot(args):

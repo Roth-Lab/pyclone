@@ -7,6 +7,13 @@ from collections import namedtuple, OrderedDict
 from math import log
 
 import numpy as np
+import yaml
+
+try:
+    from yaml import CLoader as Loader
+
+except ImportError:
+    from yaml import Loader
 
 import pyclone.paths as paths
 
@@ -30,78 +37,168 @@ PyCloneData = namedtuple(
 )
 
 
-def load_base_measure_params(config_file):
-    config = paths.load_config(config_file)
+class PyCloneConfig(object):
+    def __init__(self, file_name):
+        self._config = load_yaml_file(file_name)
 
-    params = config['base_measure_params']
+        self._init_mutations()
 
-    return params
+        self._init_data()
 
+        if len(self.mutations) == 0:
+            raise Exception(' '.join((
+                ('No mutations found in common across samples.'),
+                ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
+                ('Search the user group before posting a message or a bug.'),
+            )))
 
-def load_init_method(config_file):
-    config = paths.load_config(config_file)
+    @property
+    def base_measure_params(self):
+        """ The parameters for the DP Beta base measure.
+        """
+        return self._config['base_measure_params']
 
-    return config.get('init_method', 'disconnected')
+    @property
+    def beta_binomial_precision_prior(self):
+        """ Precision parameter for the Beta-Binomial distribution.
+        """
+        return self._config['beta_binomial_precision'].get('prior', None)
 
+    @property
+    def beta_binomial_precision_proposal_precision(self):
+        """ Precision of Beta proposal distribution for Metropolis-Hastings updates of Beta-Binomial precision.
+        """
+        return self._config['beta_binomial_precision'].get('proposal', {'precision': 0.1})['precision']
 
-def load_precision_params(config_file):
-    config = paths.load_config(config_file)
+    @property
+    def beta_binomial_precision_value(self):
+        """ The (initial) value of the precision parameter for the Beta-Binomial distribution.
+        """
+        return self._config['beta_binomial_precision']['value']
 
-    return config['beta_binomial_precision_params']
+    @property
+    def concetration_prior(self):
+        """ The prior for the DP concentration parameter.
 
+        Return None if not prior specified.
+        """
+        return self._config['concentration'].get('prior', None)
 
-def load_data(config_file):
-    '''
-    Load data for all samples.
+    @property
+    def concetration_value(self):
+        """ The (initial) value of the DP concentration parameter.
+        """
+        return self._config['concentration']['value']
 
-    Args:
-        config_file : (str) Path to YAML format configuration file.
-    '''
-    sample_data = OrderedDict()
+    @property
+    def data(self):
+        """ Data for all samples.
+        """
+        return self._data
 
-    error_rate = paths.get_error_rates(config_file)
+    @property
+    def density(self):
+        return self._config['density']
 
-    tumour_content = paths.get_tumour_contents(config_file)
+    @property
+    def error_rates(self):
+        """ Sequencing error rates for each sample.
+        """
+        result = {}
 
-    for sample_id, file_name in list(paths.get_mutations_files(config_file).items()):
-        sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], tumour_content[sample_id])
+        for sample_id in self.samples:
+            result[sample_id] = self._config['samples'][sample_id]['error_rate']
 
-    sample_ids = list(sample_data.keys())
+        return result
 
-    common_mutations = set.intersection(*[set(x.keys()) for x in list(sample_data.values())])
+    @property
+    def init_method(self):
+        """ Initialisation method for DP sampler.
+        """
+        return self._config.get('init_method', 'connected')
 
-    if len(common_mutations) == 0:
-        raise Exception(' '.join((
-            ('No mutations found in common across samples.'),
-            ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
-            ('Search the user group before posting a message or a bug.'),
-        )))
+    @property
+    def mutations(self):
+        """ List of mutations in data.
+        """
+        return self._mutations
 
-    data = OrderedDict()
+    @property
+    def mutations_files(self):
+        """ Dictionary of mutations files for samples.
+        """
+        result = {}
 
-    for mutation_id in common_mutations:
-        data[mutation_id] = OrderedDict()
+        for sample in self.samples:
+            result[sample] = self._config['samples'][sample]['mutations_file']
 
-        for sample_id in sample_ids:
-            data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
+        return result
 
-    return data, sample_ids
+    @property
+    def samples(self):
+        """ List of samples.
+        """
+        return list(self._config['samples'].keys())
 
+    @property
+    def tumour_content_values(self):
+        """ Dictionary of tumour contents for each sample.
+        """
+        result = {}
 
-def _load_sample_data(file_name, error_rate, tumour_content):
-    '''
-    Load data from PyClone formatted input file.
-    '''
-    data = OrderedDict()
+        for sample_id in self.samples:
+            result[sample_id] = self._config['samples'][sample_id]['tumour_content']['value']
 
-    config = paths.load_config(file_name)
+        return result
 
-    for mutation_dict in config['mutations']:
-        mutation = load_mutation_from_dict(mutation_dict)
+    def _init_data(self):
+        sample_data = OrderedDict()
 
-        data[mutation.id] = _get_pyclone_data(mutation, error_rate, tumour_content)
+        for sample_id in self.samples:
+            sample_data[sample_id] = self._load_sample_data(sample_id)
 
-    return data
+        data = OrderedDict()
+
+        for mutation_id in self.mutations:
+            data[mutation_id] = OrderedDict()
+
+            for sample_id in self.samples:
+                data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
+
+        self._data = data
+
+    def _init_mutations(self):
+        mutations = []
+
+        for file_name in self.mutations_files.values():
+            sample_config = load_yaml_file(file_name)
+
+            sample_mutations = set()
+
+            for mutation_config in sample_config['mutations']:
+                sample_mutations.add(mutation_config['id'])
+
+            mutations.append(sample_mutations)
+
+        mutations = set.intersection(*mutations)
+
+        self._mutations = sorted(mutations)
+
+    def _load_sample_data(self, sample):
+        """ Load data from PyClone YAML formatted input file.
+        """
+        data = OrderedDict()
+
+        config = paths.load_config(self.mutations_files[sample])
+
+        for mutation_dict in config['mutations']:
+            mutation = load_mutation_from_dict(mutation_dict)
+
+            data[mutation.id] = _get_pyclone_data(
+                mutation, self.error_rates[sample], self.tumour_content_values[sample]
+            )
+
+        return data
 
 
 def _get_pyclone_data(mutation, error_rate, tumour_content):
@@ -155,13 +252,13 @@ def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major
 
 
 def _get_states(normal_cn, minor_cn, major_cn, prior):
-    if prior == 'major_copy_number':
+    if prior == 'major':
         states = _get_major_copy_states(normal_cn, minor_cn, major_cn)
 
-    elif prior == 'parental_copy_number':
+    elif prior == 'parental':
         states = _get_parental_copy_number_states(normal_cn, minor_cn, major_cn)
 
-    elif prior == 'total_copy_number':
+    elif prior == 'total':
         states = _get_total_copy_number_states(normal_cn, minor_cn, major_cn)
 
     else:
@@ -408,3 +505,10 @@ def load_state_from_dict(d):
     prior_weight = float(d['prior_weight'])
 
     return State(g_n, g_r, g_v, prior_weight)
+
+
+def load_yaml_file(file_name):
+    with open(file_name) as fh:
+        config = yaml.load(fh, Loader=Loader)
+
+    return config

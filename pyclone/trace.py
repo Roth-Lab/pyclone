@@ -3,174 +3,90 @@ Created on 2013-04-23
 
 @author: Andrew Roth
 '''
-import bz2
-import csv
+import os
 import pandas as pd
+import warnings
 
-from pyclone.utils import make_directory
-
-import pyclone.paths as paths
-
-
-def load_cellular_frequencies_trace(file_name, burnin, thin):
-    return _load_trace(file_name, burnin, thin, float)
-
-
-def load_cluster_labels_trace(file_name, burnin, thin):
-    return _load_trace(file_name, burnin, thin, int)
-
-
-def _load_trace(trace_file, burnin, thin, cast_func):
-    '''
-        Args:
-            trace_file : (str) Path to file to load.
-            burnin : (int) Number of samples from the begining of MCMC chain to discard.
-            thin : (int) Number of samples to skip when building trace.
-            cast_func : (function) A function to cast data from string to appropriate type i.e. int, float
-    '''
-    trace = pd.read_csv(trace_file, compression='bz2', sep='\t')
-
-    trace = trace.iloc[burnin::thin]
-
-    return trace.astype(cast_func)
+warnings.filterwarnings('ignore', category=pd.io.pytables.PerformanceWarning)
 
 
 class DiskTrace(object):
 
-    def __init__(self, config_file, mutation_ids, attribute_map, precision=False):
-        self.config_file = config_file
+    def __init__(self, file_name, mode='r'):
+        if mode == 'w':
+            if os.path.exists(file_name):
+                raise Exception('Trace file {} exists. Remove the file or specify another location.'.format(file_name))
 
-        self.sample_ids = paths.get_sample_ids(config_file)
+        self._store = pd.HDFStore(file_name, complevel=9, mode=mode)
 
-        self.mutation_ids = mutation_ids
+        if mode == 'w':
+            self._idx = 0
 
-        self.attribute_map = attribute_map
+        else:
+            self._idx = len(self['alpha'])
 
-        self.update_precision = precision
+    def __getitem__(self, key):
+        return self._store[key]
+
+    @property
+    def cancer_cell_fractions(self):
+        result = {}
+
+        for sample in self.samples:
+            key = 'params/{}'.format(sample)
+
+            result[sample] = self[key].pivot(values='value', columns='mutation_id', index='idx')
+
+        return result
+
+    @property
+    def labels(self):
+        return self['labels'].pivot(values='value', columns='mutation_id', index='idx')
+
+    @property
+    def mutations(self):
+        return self._store['mutations']
+
+    @mutations.setter
+    def mutations(self, value):
+        self._store['mutations'] = pd.Series(value)
+
+    @property
+    def samples(self):
+        return self._store['samples']
+
+    @samples.setter
+    def samples(self, value):
+        self._store['samples'] = pd.Series(value)
 
     def close(self):
-        self.alpha_writer.close()
-
-        self.labels_writer.close()
-
-        for writer in list(self.cellular_frequency_writers.values()):
-            writer.close()
-
-        if self.update_precision:
-            self.precision_writer.close()
-
-    def open(self):
-        make_directory(paths.get_trace_dir(self.config_file))
-
-        self.alpha_writer = ConcentrationParameterWriter(paths.get_concentration_trace_file(self.config_file))
-
-        self.labels_writer = LabelsWriter(
-            paths.get_labels_trace_file(self.config_file),
-            self.mutation_ids
-        )
-
-        self.cellular_frequency_writers = {}
-
-        for sample_id, file_name in list(paths.get_cellular_prevalence_trace_files(self.config_file).items()):
-            self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(
-                file_name,
-                self.mutation_ids,
-                sample_id
-            )
-
-        if self.update_precision:
-            self.precision_writer = PrecisionWriter(paths.get_precision_trace_file(self.config_file))
+        self._store.close()
 
     def update(self, state):
-        self.alpha_writer.write_row([state['alpha'], ])
+        self._store.append('alpha', pd.Series({self._idx: state['alpha']}))
 
-        self.labels_writer.write_row(state['labels'])
+        if state['global_params'] is not None:
+            precision = float(state['global_params'].x)
 
-        for sample_id in self.sample_ids:
-            row = []
+            self._store.append('beta_binomial_precision', pd.Series({self._idx: precision}))
 
-            for param in state['params']:
-                attr = self.attribute_map['cellular_frequencies']
+        labels = pd.DataFrame({'mutation_id': self.mutations, 'value': state['labels']})
 
-                row.append(getattr(param[sample_id], attr))
+        labels['idx'] = self._idx
 
-            self.cellular_frequency_writers[sample_id].write_row(row)
+        self._store.append('labels', labels)
 
-        if self.update_precision:
-            self.precision_writer.write_row([state['global_params'].x])
+        for sample in self.samples:
+            sample_params = [data_point_param[sample].x for data_point_param in state['params']]
 
+            sample_params = pd.DataFrame({'mutation_id': self.mutations, 'value': sample_params})
 
-class ConcentrationParameterWriter(object):
+            sample_params['idx'] = self._idx
 
-    def __init__(self, file_name):
-        self.file_name = file_name
+            self._store.append('params/{}'.format(sample), sample_params)
 
-        self.file_handle = bz2.BZ2File(self.file_name, 'w')
+        self._store['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
 
-        self.writer = csv.writer(self.file_handle, delimiter='\t')
+        self._store['/state/params'] = pd.Series(state['params'], index=self.mutations)
 
-        self.param_id = 'alpha'
-
-    def close(self):
-        self.file_handle.close()
-
-    def write_row(self, row):
-        self.writer.writerow(row)
-
-
-class CellularFrequenciesWriter(object):
-
-    def __init__(self, file_name, mutation_ids, sample_id):
-        self.file_name = file_name
-
-        self.file_handle = bz2.BZ2File(self.file_name, 'w')
-
-        self.writer = csv.writer(self.file_handle, delimiter='\t')
-
-        self.writer.writerow(mutation_ids)
-
-        self.param_id = (sample_id, 'cellular_frequencies')
-
-    def close(self):
-        self.file_handle.close()
-
-    def write_row(self, row):
-        self.writer.writerow(row)
-
-
-class LabelsWriter(object):
-
-    def __init__(self, file_name, mutation_ids):
-        self.file_name = file_name
-
-        self.file_handle = bz2.BZ2File(self.file_name, 'w')
-
-        self.writer = csv.writer(self.file_handle, delimiter='\t')
-
-        self.writer.writerow(mutation_ids)
-
-        self.param_id = 'labels'
-
-    def close(self):
-        self.file_handle.close()
-
-    def write_row(self, row):
-        self.writer.writerow(row)
-
-
-class PrecisionWriter(object):
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-        self.file_handle = bz2.BZ2File(self.file_name, 'w')
-
-        self.writer = csv.writer(self.file_handle, delimiter='\t')
-
-        self.param_id = 'precision'
-
-    def close(self):
-        self.file_handle.close()
-
-    def write_row(self, row):
-        self.writer.writerow(row)
+        self._idx += 1

@@ -10,26 +10,16 @@ from pydp.utils import log_space_normalise
 import numpy as np
 import pandas as pd
 
-from pyclone.config import load_data
 from pyclone.pyclone_beta_binomial import PyCloneBetaBinomialDensity
 from pyclone.pyclone_binomial import PyCloneBinomialDensity
 
-import pyclone.paths as paths
-import pyclone.trace as trace
 
-
-def cluster_pyclone_trace(config_file, burnin, thin, max_clusters=None):
-    labels_trace = trace.load_cluster_labels_trace(
-        paths.get_labels_trace_file(config_file),
-        burnin,
-        thin
-    )
-
-    X = labels_trace.values
+def cluster_pyclone_trace(trace, burnin=0, thin=1, max_clusters=None):
+    X = trace.labels.values[burnin::thin]
 
     labels = cluster_with_mpear(X, max_clusters=max_clusters)
 
-    labels = pd.Series(labels, index=labels_trace.columns)
+    labels = pd.Series(labels, index=trace.mutations)
 
     labels = labels.reset_index()
 
@@ -38,14 +28,9 @@ def cluster_pyclone_trace(config_file, burnin, thin, max_clusters=None):
     return labels
 
 
-def load_summary_table(config_file, burnin=0, max_clusters=None, mesh_size=101, min_size=0, thin=1):
+def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_size=0, thin=1):
     df = load_table(
-        config_file,
-        burnin=burnin,
-        max_clusters=max_clusters,
-        mesh_size=mesh_size,
-        min_size=min_size,
-        thin=thin,
+        config, trace, burnin=burnin, grid_size=grid_size, max_clusters=max_clusters, min_size=min_size, thin=thin
     )
 
     df = df.set_index(['sample_id', 'cluster_id', 'size'])
@@ -75,27 +60,23 @@ def load_summary_table(config_file, burnin=0, max_clusters=None, mesh_size=101, 
     return out_df
 
 
-def load_table(config_file, burnin=0, min_size=0, max_clusters=None, mesh_size=101, thin=1):
-    config = paths.load_config(config_file)
-
-    if config['density'] == 'pyclone_beta_binomial':
-        precision_file = paths.get_precision_trace_file(config_file)
-
-        precision = pd.read_csv(precision_file, header=None, compression='bz2', sep='\t', squeeze=True)
+def load_table(config, trace, burnin=0, grid_size=101, min_size=0, max_clusters=None, thin=1):
+    if config.density == 'pyclone_beta_binomial':
+        precision = trace['beta_binomial_precision']
 
         precision = precision.iloc[burnin::thin].mean()
 
         density = PyCloneBetaBinomialDensity(GammaData(precision))
 
-    elif config['density'] == 'pyclone_binomial':
+    elif config.density == 'pyclone_binomial':
         density = PyCloneBinomialDensity()
 
     else:
         raise Exception('Only pyclone_binomial and pyclone_beta_binomial density are supported.')
 
-    data, sample_ids = load_data(config_file)
+    data = config.data
 
-    labels = cluster_pyclone_trace(config_file, burnin, thin, max_clusters=max_clusters)
+    labels = cluster_pyclone_trace(trace, burnin=burnin, max_clusters=max_clusters, thin=thin)
 
     labels = labels.set_index('mutation_id')
 
@@ -106,10 +87,10 @@ def load_table(config_file, burnin=0, min_size=0, max_clusters=None, mesh_size=1
 
         cluster_data = [data[x] for x in mutation_ids]
 
-        for sample_id in sample_ids:
+        for sample_id in config.samples:
             cluster_sample_data = [x[sample_id] for x in cluster_data]
 
-            cluster_sample_posterior = _compute_posterior(cluster_sample_data, density, mesh_size)
+            cluster_sample_posterior = _compute_posterior(cluster_sample_data, density, grid_size)
 
             cluster_sample_posterior['sample_id'] = sample_id
 
@@ -130,10 +111,10 @@ def load_table(config_file, burnin=0, min_size=0, max_clusters=None, mesh_size=1
     return df
 
 
-def _compute_posterior(data, density, mesh_size):
+def _compute_posterior(data, density, grid_size):
     posterior = {}
 
-    for cellular_prevalence in np.linspace(0, 1, mesh_size):
+    for cellular_prevalence in np.linspace(0, 1, grid_size):
         posterior[cellular_prevalence] = 0
 
         for data_point in data:

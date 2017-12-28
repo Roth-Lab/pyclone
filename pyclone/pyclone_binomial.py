@@ -17,67 +17,38 @@ import numpy as np
 
 from pyclone.math_utils import jit, log_binomial_likelihood, log_sum_exp
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
-from pyclone.trace import DiskTrace
-
-import pyclone.config as config
 
 
-def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
-    data, sample_ids = config.load_data(config_file)
-
-    print('Beginning analysis using:')
-    print('{} mutations'.format(len(data)))
-    print('{} sample(s)'.format(len(sample_ids)))
-    print()
-
+def load_sampler(config):
     sample_atom_samplers = OrderedDict()
 
     sample_base_measures = OrderedDict()
 
     sample_cluster_densities = OrderedDict()
 
-    base_measure_params = config.load_base_measure_params(config_file)
-
-    init_method = config.load_init_method(config_file)
-
-    for sample_id in sample_ids:
-        sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
+    for sample_id in config.samples:
+        sample_base_measures[sample_id] = BetaBaseMeasure(**config.base_measure_params)
 
         sample_cluster_densities[sample_id] = PyCloneBinomialDensity()
 
-        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(sample_base_measures[sample_id],
-                                                                 sample_cluster_densities[sample_id])
+        sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(
+            sample_base_measures[sample_id],
+            sample_cluster_densities[sample_id],
+        )
 
     base_measure = MultiSampleBaseMeasure(sample_base_measures)
 
-    cluster_density = MultiSampleDensity(sample_cluster_densities)
+    cluster_density = MultiSampleDensity(sample_cluster_densities, shared_params=True)
 
     atom_sampler = MultiSampleAtomSampler(base_measure, cluster_density, sample_atom_samplers)
 
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
 
-    sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors)
+    sampler = DirichletProcessSampler(
+        atom_sampler, partition_sampler, config.concetration_value, config.concetration_prior
+    )
 
-    trace = DiskTrace(config_file, list(data.keys()), {'cellular_frequencies': 'x'})
-
-    trace.open()
-
-    sampler.initialise_partition(list(data.values()), init_method)
-
-    for i in range(num_iters):
-        state = sampler.state
-
-        if i % 100 == 0:
-            print('Iteration: {}'.format(i))
-            print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
-            print('DP concentration: {}'.format(state['alpha']))
-            print()
-
-        sampler.interactive_sample(list(data.values()))
-
-        trace.update(state)
-
-    trace.close()
+    return sampler
 
 
 class PyCloneBinomialDensity(Density):

@@ -4,29 +4,19 @@ Created on Nov 27, 2015
 @author: Andrew Roth
 '''
 import pandas as pd
-import yaml
 
-from pyclone.config import load_mutation_from_dict
-
-from .clusters import cluster_pyclone_trace
-from pyclone.trace import load_cellular_frequencies_trace
-
-import pyclone.paths as paths
+import pyclone.post_process.clusters
 
 
-def load_table(config_file, burnin, thin, max_clusters=None, min_cluster_size=0, old_style=False):
-    data = pd.merge(
-        _load_variant_allele_frequencies(config_file),
-        _load_cellular_prevalences(config_file, burnin, thin),
-        how='inner',
-        on=['mutation_id', 'sample_id']
-    )
+def load_table(config, trace, burnin, thin, max_clusters=None, min_cluster_size=0, old_style=False):
+    ccf = _load_cancer_cell_fractions(trace, burnin, thin)
 
-    labels = cluster_pyclone_trace(
-        config_file,
-        burnin,
-        thin,
-        max_clusters=max_clusters,
+    vaf = _load_variant_allele_frequencies(config)
+
+    data = pd.merge(vaf, ccf, how='inner', on=['mutation_id', 'sample_id'])
+
+    labels = pyclone.post_process.clusters.cluster_pyclone_trace(
+        trace, burnin=burnin, max_clusters=max_clusters, thin=thin
     )
 
     labels = labels.set_index('mutation_id')['cluster_id']
@@ -41,16 +31,11 @@ def load_table(config_file, burnin, thin, max_clusters=None, min_cluster_size=0,
 
     data = pd.merge(data, labels, on='mutation_id', how='inner')
 
-    cols = [
-        'mutation_id',
-        'sample_id',
-        'cluster_id',
-        'cellular_prevalence',
-        'cellular_prevalence_std',
-        'variant_allele_frequency'
-    ]
+    cols = ['mutation_id', 'sample_id', 'cluster_id', 'ccf', 'ccf_std', 'vaf']
 
     data = data[cols]
+
+    data = data.sort_values(by=['cluster_id', 'mutation_id', 'sample_id'])
 
     if old_style:
         data = _reformat_multi_sample_table(data)
@@ -59,13 +44,13 @@ def load_table(config_file, burnin, thin, max_clusters=None, min_cluster_size=0,
 
 
 def _reformat_multi_sample_table(df):
-    mean_df = df[['mutation_id', 'sample_id', 'cellular_prevalence']]
+    mean_df = df[['mutation_id', 'sample_id', 'ccf']]
 
-    mean_df = mean_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence')
+    mean_df = mean_df.pivot(index='mutation_id', columns='sample_id', values='ccf')
 
-    std_df = df[['mutation_id', 'sample_id', 'cellular_prevalence_std']]
+    std_df = df[['mutation_id', 'sample_id', 'ccf_std']]
 
-    std_df = std_df.pivot(index='mutation_id', columns='sample_id', values='cellular_prevalence_std')
+    std_df = std_df.pivot(index='mutation_id', columns='sample_id', values='ccf_std')
 
     std_df = std_df.rename(columns=lambda x: '{0}_std'.format(x))
 
@@ -75,50 +60,41 @@ def _reformat_multi_sample_table(df):
 
     return pd.concat([mean_df, std_df, cluster_df], axis=1).reset_index()
 
-#=======================================================================================================================
-# Load allelic prevalences for all samples
-#=======================================================================================================================
 
-
-def _load_variant_allele_frequencies(config_file):
+def _load_variant_allele_frequencies(config):
     data = []
 
-    for sample_id, file_name in list(paths.get_mutations_files(config_file).items()):
-        sample_data = _load_sample_variant_allele_frequencies(file_name)
+    for sample in config.samples:
+        sample_data = _load_sample_variant_allele_frequencies(config, sample)
 
-        sample_data['sample_id'] = sample_id
+        sample_data['sample_id'] = sample
 
         data.append(sample_data)
 
     data = pd.concat(data, axis=0)
 
-    num_samples = len(paths.get_sample_ids(config_file))
-
     # Filter for mutations in all samples
-    data = data.groupby('mutation_id').filter(lambda x: len(x) == num_samples)
+    data = data[data['mutation_id'].isin(config.mutations)]
 
     return data
 
 
-def _load_sample_variant_allele_frequencies(file_name):
+def _load_sample_variant_allele_frequencies(config, sample):
     '''
     Load data from PyClone formatted input file.
     '''
     data = {}
 
-    with open(file_name) as fh:
-        config = yaml.load(fh)
-
-    for mutation_dict in config['mutations']:
-        mutation = load_mutation_from_dict(mutation_dict)
+    for mutation_id in config.data:
+        mutation = config.data[mutation_id][sample]
 
         try:
-            data[mutation.id] = mutation.var_counts / (mutation.ref_counts + mutation.var_counts)
+            data[mutation_id] = mutation.b / mutation.d
 
         except ZeroDivisionError:
-            data[mutation.id] = pd.np.nan
+            data[mutation_id] = pd.np.nan
 
-    data = pd.Series(data, name='variant_allele_frequency')
+    data = pd.Series(data, name='vaf')
 
     data.index.name = 'mutation_id'
 
@@ -126,16 +102,14 @@ def _load_sample_variant_allele_frequencies(file_name):
 
     return data
 
-#=======================================================================================================================
-# Load cellular prevalences for all samples
-#=======================================================================================================================
 
-
-def _load_cellular_prevalences(config_file, burnin, thin):
+def _load_cancer_cell_fractions(trace, burnin, thin):
     data = []
 
-    for sample_id, file_name in list(paths.get_cellular_prevalence_trace_files(config_file).items()):
-        sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
+    for sample_id, sample_data in trace.cancer_cell_fractions.items():
+        sample_data = sample_data.iloc[burnin::thin]
+
+        sample_data = _load_sample_cancer_cell_fractions(sample_data)
 
         sample_data['sample_id'] = sample_id
 
@@ -143,20 +117,16 @@ def _load_cellular_prevalences(config_file, burnin, thin):
 
     data = pd.concat(data, axis=0)
 
-    num_samples = len(paths.get_sample_ids(config_file))
-
     # Filter for mutations in all samples
-    data = data.groupby('mutation_id').filter(lambda x: len(x) == num_samples)
+    data = data[data['mutation_id'].isin(trace.mutations)]
 
     return data
 
 
-def _load_sample_cellular_prevalences(file_name, burnin, thin):
-    data = load_cellular_frequencies_trace(file_name, burnin, thin)
-
+def _load_sample_cancer_cell_fractions(data):
     data = pd.concat([data.mean(), data.std()], axis=1)
 
-    data.columns = 'cellular_prevalence', 'cellular_prevalence_std'
+    data.columns = 'ccf', 'ccf_std'
 
     data.index.name = 'mutation_id'
 

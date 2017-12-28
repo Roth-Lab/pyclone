@@ -18,35 +18,21 @@ import numpy as np
 
 from pyclone.math_utils import log_beta_binomial_likelihood, log_sum_exp, jit
 from pyclone.multi_sample import MultiSampleBaseMeasure, MultiSampleDensity, MultiSampleAtomSampler
-from pyclone.trace import DiskTrace
-
-import pyclone.config as config
 
 
-def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
-    data, sample_ids = config.load_data(config_file)
-
-    print('Beginning analysis using:')
-    print('{} mutations'.format(len(data)))
-    print('{} sample(s)'.format(len(sample_ids)))
-    print()
-
+def load_sampler(config):
     sample_atom_samplers = OrderedDict()
 
     sample_base_measures = OrderedDict()
 
     sample_cluster_densities = OrderedDict()
 
-    base_measure_params = config.load_base_measure_params(config_file)
+    for sample_id in config.samples:
+        sample_base_measures[sample_id] = BetaBaseMeasure(**config.base_measure_params)
 
-    precision_params = config.load_precision_params(config_file)
-
-    init_method = config.load_init_method(config_file)
-
-    for sample_id in sample_ids:
-        sample_base_measures[sample_id] = BetaBaseMeasure(base_measure_params['alpha'], base_measure_params['beta'])
-
-        sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(GammaData(precision_params['value']))
+        sample_cluster_densities[sample_id] = PyCloneBetaBinomialDensity(
+            GammaData(config.beta_binomial_precision_value)
+        )
 
         sample_atom_samplers[sample_id] = BaseMeasureAtomSampler(
             sample_base_measures[sample_id],
@@ -61,14 +47,11 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
 
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
 
-    if 'prior' in precision_params:
+    if config.beta_binomial_precision_prior is not None:
         global_params_sampler = MetropolisHastingsGlobalParameterSampler(
-            GammaBaseMeasure(
-                precision_params['prior']['shape'],
-                precision_params['prior']['rate']
-            ),
+            GammaBaseMeasure(**config.beta_binomial_precision_prior),
             cluster_density,
-            GammaProposal(precision_params['proposal']['precision'])
+            GammaProposal(config.beta_binomial_precision_proposal_precision)
         )
 
     else:
@@ -77,32 +60,12 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
     sampler = DirichletProcessSampler(
         atom_sampler,
         partition_sampler,
-        alpha,
-        alpha_priors,
+        config.concetration_value,
+        config.concetration_prior,
         global_params_sampler,
     )
 
-    trace = DiskTrace(config_file, list(data.keys()), {'cellular_frequencies': 'x'}, precision=True)
-
-    trace.open()
-
-    sampler.initialise_partition(list(data.values()), init_method)
-
-    for i in range(num_iters):
-        state = sampler.state
-
-        if i % 100 == 0:
-            print('Iteration: {}'.format(i))
-            print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
-            print('DP concentration: {}'.format(state['alpha']))
-            print('Beta-Binomial precision: {}'.format(state['global_params'][0]))
-            print()
-
-        sampler.interactive_sample(list(data.values()))
-
-        trace.update(state)
-
-    trace.close()
+    return sampler
 
 
 class PyCloneBetaBinomialDensity(Density):
