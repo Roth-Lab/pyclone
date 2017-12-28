@@ -1,2 +1,2 @@
-import clusters
-import loci
+from . import clusters
+from . import loci

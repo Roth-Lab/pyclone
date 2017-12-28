@@ -48,7 +48,7 @@ def get_mutations_files(config_file):
 def get_sample_ids(config_file):
     config = load_config(config_file)
 
-    return config['samples'].keys()
+    return list(config['samples'].keys())
 
 
 def get_tumour_contents(config_file):

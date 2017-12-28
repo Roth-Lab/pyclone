@@ -3,7 +3,7 @@ Created on 2013-04-28
 
 @author: Andrew Roth
 '''
-from __future__ import division
+
 
 from collections import OrderedDict
 
@@ -25,10 +25,10 @@ import pyclone.config as config
 def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     data, sample_ids = config.load_data(config_file)
 
-    print 'Beginning analysis using:'
-    print '{} mutations'.format(len(data))
-    print '{} sample(s)'.format(len(sample_ids))
-    print
+    print('Beginning analysis using:')
+    print('{} mutations'.format(len(data)))
+    print('{} sample(s)'.format(len(sample_ids)))
+    print()
 
     sample_atom_samplers = OrderedDict()
 
@@ -58,22 +58,22 @@ def run_pyclone_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
 
     sampler = DirichletProcessSampler(atom_sampler, partition_sampler, alpha, alpha_priors)
 
-    trace = DiskTrace(config_file, data.keys(), {'cellular_frequencies': 'x'})
+    trace = DiskTrace(config_file, list(data.keys()), {'cellular_frequencies': 'x'})
 
     trace.open()
 
-    sampler.initialise_partition(data.values(), init_method)
+    sampler.initialise_partition(list(data.values()), init_method)
 
     for i in range(num_iters):
         state = sampler.state
 
         if i % 100 == 0:
-            print 'Iteration: {}'.format(i)
-            print 'Number of clusters: {}'.format(len(np.unique(state['labels'])))
-            print 'DP concentration: {}'.format(state['alpha'])
-            print
+            print('Iteration: {}'.format(i))
+            print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
+            print('DP concentration: {}'.format(state['alpha']))
+            print()
 
-        sampler.interactive_sample(data.values())
+        sampler.interactive_sample(list(data.values()))
 
         trace.update(state)
 

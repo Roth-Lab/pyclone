@@ -3,8 +3,6 @@ Created on 2013-04-28
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 from collections import OrderedDict
 
 from pydp.base_measures import BetaBaseMeasure, GammaBaseMeasure
@@ -28,10 +26,10 @@ import pyclone.config as config
 def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_priors):
     data, sample_ids = config.load_data(config_file)
 
-    print 'Beginning analysis using:'
-    print '{} mutations'.format(len(data))
-    print '{} sample(s)'.format(len(sample_ids))
-    print
+    print('Beginning analysis using:')
+    print('{} mutations'.format(len(data)))
+    print('{} sample(s)'.format(len(sample_ids)))
+    print()
 
     sample_atom_samplers = OrderedDict()
 
@@ -84,23 +82,23 @@ def run_pyclone_beta_binomial_analysis(config_file, num_iters, alpha, alpha_prio
         global_params_sampler,
     )
 
-    trace = DiskTrace(config_file, data.keys(), {'cellular_frequencies': 'x'}, precision=True)
+    trace = DiskTrace(config_file, list(data.keys()), {'cellular_frequencies': 'x'}, precision=True)
 
     trace.open()
 
-    sampler.initialise_partition(data.values(), init_method)
+    sampler.initialise_partition(list(data.values()), init_method)
 
     for i in range(num_iters):
         state = sampler.state
 
         if i % 100 == 0:
-            print 'Iteration: {}'.format(i)
-            print 'Number of clusters: {}'.format(len(np.unique(state['labels'])))
-            print 'DP concentration: {}'.format(state['alpha'])
-            print 'Beta-Binomial precision: {}'.format(state['global_params'][0])
-            print
+            print('Iteration: {}'.format(i))
+            print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
+            print('DP concentration: {}'.format(state['alpha']))
+            print('Beta-Binomial precision: {}'.format(state['global_params'][0]))
+            print()
 
-        sampler.interactive_sample(data.values())
+        sampler.interactive_sample(list(data.values()))
 
         trace.update(state)
 

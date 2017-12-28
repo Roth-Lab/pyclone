@@ -11,9 +11,9 @@ import seaborn as sb
 
 import pyclone.post_process as post_process
 
-import defaults
-import _scatter
-import utils
+from . import defaults
+from . import utils
+from . import _scatter
 
 
 def density_plot(
@@ -47,7 +47,7 @@ def density_plot(
 
     clusters = df['cluster_id'].unique()
 
-    postions = range(1, len(clusters) + 1)
+    postions = list(range(1, len(clusters) + 1))
 
     utils.setup_plot()
 

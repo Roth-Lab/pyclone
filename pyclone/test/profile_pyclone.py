@@ -39,11 +39,11 @@ def main():
 
         data_points[str(i)] = DataPoint(b, d, eps, cn_r, cn_v, mu_v, log_pi)
 
-    results_db = TraceDB(out_dir, data_points.keys())
+    results_db = TraceDB(out_dir, list(data_points.keys()))
 
     sampler = DirichletProcessSampler(tumour_content, None, alpha_shape, alpha_rate)
 
-    sampler.sample(data_points.values(), results_db, num_iters, 100, seed=1)
+    sampler.sample(list(data_points.values()), results_db, num_iters, 100, seed=1)
 
     shutil.rmtree(out_dir)
 

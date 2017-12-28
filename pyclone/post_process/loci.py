@@ -3,8 +3,6 @@ Created on Nov 27, 2015
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 import pandas as pd
 import yaml
 
@@ -85,7 +83,7 @@ def _reformat_multi_sample_table(df):
 def _load_variant_allele_frequencies(config_file):
     data = []
 
-    for sample_id, file_name in paths.get_mutations_files(config_file).items():
+    for sample_id, file_name in list(paths.get_mutations_files(config_file).items()):
         sample_data = _load_sample_variant_allele_frequencies(file_name)
 
         sample_data['sample_id'] = sample_id
@@ -136,7 +134,7 @@ def _load_sample_variant_allele_frequencies(file_name):
 def _load_cellular_prevalences(config_file, burnin, thin):
     data = []
 
-    for sample_id, file_name in paths.get_cellular_prevalence_trace_files(config_file).items():
+    for sample_id, file_name in list(paths.get_cellular_prevalence_trace_files(config_file).items()):
         sample_data = _load_sample_cellular_prevalences(file_name, burnin, thin)
 
         sample_data['sample_id'] = sample_id

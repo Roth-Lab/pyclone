@@ -30,7 +30,7 @@ def get_clusters_color_map(labels, palette='husl'):
 
     num_clusters = len(clusters)
 
-    color_map = OrderedDict(zip(clusters, sb.color_palette(palette, num_clusters)))
+    color_map = OrderedDict(list(zip(clusters, sb.color_palette(palette, num_clusters))))
 
     return color_map
 

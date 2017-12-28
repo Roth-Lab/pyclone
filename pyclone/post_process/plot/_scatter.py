@@ -3,16 +3,14 @@ Created on Dec 2, 2015
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 from math import ceil
 from matplotlib.patches import Ellipse
 
 import matplotlib.gridspec as gs
 import matplotlib.pyplot as pp
 
-import defaults
-import utils
+from . import defaults
+from . import utils
 
 
 def plot_all_pairs(color_map, mean_df, plot_file, samples, error_df=None, legend_color_map=None):
@@ -127,8 +125,8 @@ def add_legend(ax, color_map):
     num_cols = int(ceil(len(legend_handles) / 8))
 
     legend = ax.legend(
-        legend_handles.values(),
-        legend_handles.keys(),
+        list(legend_handles.values()),
+        list(legend_handles.keys()),
         bbox_to_anchor=(1.1, 0.5),
         fontsize=defaults.legend_font_size,
         loc='center left',

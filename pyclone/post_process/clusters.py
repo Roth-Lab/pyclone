@@ -139,6 +139,6 @@ def _compute_posterior(data, density, mesh_size):
         for data_point in data:
             posterior[cellular_prevalence] += density.log_p(data_point, BetaData(cellular_prevalence))
 
-    posterior = dict(zip(posterior.keys(), log_space_normalise(posterior.values())))
+    posterior = dict(list(zip(list(posterior.keys()), log_space_normalise(list(posterior.values())))))
 
     return posterior

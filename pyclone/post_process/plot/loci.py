@@ -15,9 +15,9 @@ import pyclone.paths as paths
 import pyclone.post_process as post_process
 import pyclone.trace as trace
 
-import defaults
-import _scatter
-import utils
+from . import defaults
+from . import _scatter
+from . import utils
 
 #=======================================================================================================================
 # Density
@@ -112,7 +112,7 @@ def _load_density_df(config_file, burnin, thin):
 
     df = []
 
-    for sample_id, file_name in trace_files.items():
+    for sample_id, file_name in list(trace_files.items()):
 
         sample_df = trace.load_cellular_frequencies_trace(
             file_name,
@@ -215,8 +215,8 @@ def parallel_coordinates_plot(
     legend_handles = utils.get_legend_handles(color_map)
 
     legend = ax.legend(
-        legend_handles.values(),
-        legend_handles.keys(),
+        list(legend_handles.values()),
+        list(legend_handles.keys()),
         bbox_to_anchor=(1, 0.5),
         fontsize=defaults.legend_font_size,
         loc='center left',

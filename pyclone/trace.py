@@ -53,7 +53,7 @@ class DiskTrace(object):
 
         self.labels_writer.close()
 
-        for writer in self.cellular_frequency_writers.values():
+        for writer in list(self.cellular_frequency_writers.values()):
             writer.close()
 
         if self.update_precision:
@@ -71,7 +71,7 @@ class DiskTrace(object):
 
         self.cellular_frequency_writers = {}
 
-        for sample_id, file_name in paths.get_cellular_prevalence_trace_files(self.config_file).items():
+        for sample_id, file_name in list(paths.get_cellular_prevalence_trace_files(self.config_file).items()):
             self.cellular_frequency_writers[sample_id] = CellularFrequenciesWriter(
                 file_name,
                 self.mutation_ids,

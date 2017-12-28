@@ -3,8 +3,6 @@ Created on 2013-02-12
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 from collections import namedtuple, OrderedDict
 from math import log
 
@@ -65,12 +63,12 @@ def load_data(config_file):
 
     tumour_content = paths.get_tumour_contents(config_file)
 
-    for sample_id, file_name in paths.get_mutations_files(config_file).items():
+    for sample_id, file_name in list(paths.get_mutations_files(config_file).items()):
         sample_data[sample_id] = _load_sample_data(file_name, error_rate[sample_id], tumour_content[sample_id])
 
-    sample_ids = sample_data.keys()
+    sample_ids = list(sample_data.keys())
 
-    common_mutations = set.intersection(*[set(x.keys()) for x in sample_data.values()])
+    common_mutations = set.intersection(*[set(x.keys()) for x in list(sample_data.values())])
 
     if len(common_mutations) == 0:
         raise Exception(' '.join((

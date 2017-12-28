@@ -3,8 +3,6 @@ Created on 2011-12-15
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 from collections import OrderedDict
 from math import log
 

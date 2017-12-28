@@ -1,4 +1,4 @@
 from .clusters import cluster_pyclone_trace
 
-import clusters
-import loci
+from . import clusters
+from . import loci

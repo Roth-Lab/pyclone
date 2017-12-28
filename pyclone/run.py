@@ -3,8 +3,6 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
-from __future__ import division
-
 from collections import OrderedDict
 
 try:
@@ -452,7 +450,7 @@ def _loci_plot(
         kwargs['value'] = 'variant_allele_frequency'
 
     if plot_type == 'density':
-        [kwargs.pop(x) for x in kwargs.keys() if 'cluster' in x]
+        [kwargs.pop(x) for x in list(kwargs.keys()) if 'cluster' in x]
 
         plot.loci.density_plot(
             config_file,
