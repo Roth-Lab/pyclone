@@ -60,7 +60,7 @@ def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None
     return out_df
 
 
-def load_table(config, trace, burnin=0, grid_size=101, min_size=0, max_clusters=None, thin=1):
+def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_size=0, thin=1):
     if config.density == 'pyclone_beta_binomial':
         precision = trace['beta_binomial_precision']
 

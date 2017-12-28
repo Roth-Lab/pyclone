@@ -23,6 +23,7 @@ from pyclone.utils import make_directory, make_parent_directory
 
 import pyclone.config
 import pyclone.post_process
+import pyclone.post_process.plot
 import pyclone.pyclone_beta_binomial
 import pyclone.pyclone_binomial
 import pyclone.trace
@@ -404,60 +405,45 @@ def build_table(config_file, trace_file, out_file, table_format, burnin=0, grid_
     trace.close()
 
 
-def cluster_plot(args):
-    _cluster_plot(
-        config_file=args.config_file,
-        plot_file=args.plot_file,
-        burnin=args.burnin,
-        max_clusters=args.max_clusters,
-        mesh_size=args.mesh_size,
-        min_cluster_size=args.min_cluster_size,
-        plot_type=args.plot_type,
-        samples=args.samples,
-        thin=args.thin,
-    )
+def plot_clusters(
+        config_file,
+        trace_file,
+        out_file,
+        burnin=0,
+        grid_size=101,
+        plot_format='density',
+        max_clusters=100,
+        min_cluster_size=0,
+        samples=[],
+        thin=1):
 
+    config = pyclone.config.PyCloneConfig(config_file)
 
-def _cluster_plot(config_file, plot_file, burnin, max_clusters, mesh_size, min_cluster_size, plot_type, samples, thin):
+    trace = pyclone.trace.DiskTrace(trace_file)
 
-    if plot_type == 'density':
+    kwargs = {
+        'burnin': burnin,
+        'grid_size': grid_size,
+        'max_clusters': max_clusters,
+        'min_cluster_size': min_cluster_size,
+        'samples': samples,
+        'thin': thin
+    }
 
-        plot.clusters.density_plot(
-            config_file,
-            plot_file,
-            burnin=burnin,
-            thin=thin,
-            max_clusters=max_clusters,
-            mesh_size=mesh_size,
-            min_cluster_size=min_cluster_size,
-            samples=samples,
+    if plot_format == 'density':
+        pyclone.post_process.plot.clusters.density_plot(config, trace, out_file, **kwargs)
+
+    elif plot_format == 'line':
+        pyclone.post_process.plot.clusters.parallel_coordinates_plot(
+            config, trace, out_file, **kwargs
         )
 
-    elif plot_type == 'parallel_coordinates':
-
-        plot.clusters.parallel_coordinates_plot(
-            config_file,
-            plot_file,
-            burnin=burnin,
-            max_clusters=max_clusters,
-            mesh_size=mesh_size,
-            min_cluster_size=min_cluster_size,
-            samples=samples,
-            thin=thin
+    elif plot_format == 'scatter':
+        pyclone.post_process.plot.clusters.scatter_plot(
+            config, trace, out_file, **kwargs
         )
 
-    elif plot_type == 'scatter':
-
-        plot.clusters.scatter_plot(
-            config_file,
-            plot_file,
-            burnin=burnin,
-            max_clusters=max_clusters,
-            mesh_size=mesh_size,
-            min_cluster_size=min_cluster_size,
-            samples=samples,
-            thin=thin
-        )
+    trace.close()
 
 
 def loci_plot(args):
@@ -491,13 +477,12 @@ def _loci_plot(
     }
 
     if plot_type.startswith('vaf'):
-
         kwargs['value'] = 'variant_allele_frequency'
 
     if plot_type == 'density':
         [kwargs.pop(x) for x in list(kwargs.keys()) if 'cluster' in x]
 
-        plot.loci.density_plot(
+        pyclone.post_process.plot.loci.density_plot(
             config_file,
             plot_file,
             **kwargs
@@ -505,23 +490,21 @@ def _loci_plot(
 
     elif plot_type.endswith('parallel_coordinates'):
 
-        plot.loci.parallel_coordinates_plot(
+        pyclone.post_process.plot.loci.parallel_coordinates_plot(
             config_file,
             plot_file,
             **kwargs
         )
 
     elif plot_type.endswith('scatter'):
-
-        plot.loci.scatter_plot(
+        pyclone.post_process.plot.loci.scatter_plot(
             config_file,
             plot_file,
             **kwargs
         )
 
     elif plot_type == 'similarity_matrix':
-
-        plot.loci.similarity_matrix_plot(
+        pyclone.post_process.plot.loci.similarity_matrix_plot(
             config_file,
             plot_file,
             **kwargs

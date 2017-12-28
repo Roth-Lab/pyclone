@@ -16,7 +16,7 @@ import pyclone.post_process as post_process
 import pyclone.trace as trace
 
 from . import defaults
-from . import _scatter
+from pyclone.post_process.plot import scatter
 from . import utils
 
 #=======================================================================================================================
@@ -25,15 +25,16 @@ from . import utils
 
 
 def density_plot(
-        config_file,
-        plot_file,
+        config,
+        trace,
+        out_file,
         burnin=0,
         samples=None,
         thin=1):
 
     utils.setup_plot()
 
-    df = _load_density_df(config_file, burnin, thin)
+    df = _load_density_df(trace, burnin, thin)
 
     if samples is None:
         samples = sorted(df['sample_id'].unique())
@@ -104,7 +105,7 @@ def density_plot(
 
     grid.tight_layout(fig, h_pad=3)
 
-    utils.save_figure(fig, plot_file)
+    utils.save_figure(fig, out_file)
 
 
 def _load_density_df(config_file, burnin, thin):
@@ -263,7 +264,7 @@ def scatter_plot(
 
     mean_df = df.pivot(index='mutation_id', columns='sample_id', values=value)
 
-    _scatter.plot_all_pairs(
+    scatter.plot_all_pairs(
         loci_color_map,
         mean_df,
         plot_file,

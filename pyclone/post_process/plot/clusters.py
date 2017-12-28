@@ -9,35 +9,29 @@ import numpy as np
 import pandas as pd
 import seaborn as sb
 
-import pyclone.post_process as post_process
+import pyclone.post_process
 
 from . import defaults
 from . import utils
-from . import _scatter
+from . import scatter
 
 
 def density_plot(
-        config_file,
-        plot_file,
-        burnin=0,
-        max_clusters=None,
-        mesh_size=101,
-        min_cluster_size=0,
-        samples=None,
-        thin=1):
+        config, trace, out_file, burnin=0, grid_size=101, max_clusters=None, min_cluster_size=0, samples=[], thin=1):
 
-    df = post_process.clusters.load_table(
-        config_file,
+    df = pyclone.post_process.clusters.load_table(
+        config,
+        trace,
         burnin=burnin,
-        thin=thin,
+        grid_size=grid_size,
         max_clusters=max_clusters,
-        mesh_size=mesh_size,
-        min_size=min_cluster_size
+        min_size=min_cluster_size,
+        thin=thin
     )
 
     sizes = df[['cluster_id', 'size']].drop_duplicates().set_index('cluster_id').to_dict()['size']
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(df['sample_id'].unique())
 
     else:
@@ -98,14 +92,21 @@ def density_plot(
                 rotation=90
             )
 
-            ax.set_xlabel(defaults.cluster_label, fontsize=defaults.axis_label_font_size)
+            ax.set_xlabel(
+                defaults.cluster_label,
+                fontsize=defaults.axis_label_font_size
+            )
 
         else:
             ax.set_xticklabels([])
 
-        utils.set_tick_label_font_sizes(ax, defaults.tick_label_font_size)
+        utils.set_tick_label_font_sizes(
+            ax, defaults.tick_label_font_size
+        )
 
-        ax.set_ylim(defaults.cellular_prevalence_limits)
+        ax.set_ylim(
+            defaults.cellular_prevalence_limits
+        )
 
     if num_samples == 1:
         ax.set_ylabel(
@@ -126,31 +127,33 @@ def density_plot(
 
     grid.tight_layout(fig)
 
-    utils.save_figure(fig, plot_file)
+    utils.save_figure(fig, out_file)
 
 
 def parallel_coordinates_plot(
-        config_file,
-        plot_file,
+        config,
+        trace,
+        out_file,
         burnin=0,
-        max_clusters=None,
-        mesh_size=101,
+        grid_size=101,
+        max_clusters=100,
         min_cluster_size=0,
-        samples=None,
+        samples=[],
         thin=1):
 
     utils.setup_plot()
 
-    plot_df = post_process.clusters.load_summary_table(
-        config_file,
+    plot_df = pyclone.post_process.clusters.load_summary_table(
+        config,
+        trace,
         burnin=burnin,
+        grid_size=grid_size,
         max_clusters=max_clusters,
-        mesh_size=mesh_size,
         min_size=min_cluster_size,
-        thin=thin,
+        thin=thin
     )
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(plot_df['sample_id'].unique())
 
     else:
@@ -213,40 +216,42 @@ def parallel_coordinates_plot(
     # Resize and save figure
     fig.set_size_inches(*utils.get_parallel_coordinates_figure_size(samples))
 
-    utils.save_figure(fig, plot_file)
+    utils.save_figure(fig, out_file)
 
 
 def scatter_plot(
-        config_file,
+        config,
+        trace,
         plot_file,
         burnin=0,
+        grid_size=101,
         max_clusters=None,
-        mesh_size=101,
         min_cluster_size=0,
         samples=None,
         thin=1):
 
     utils.setup_plot()
 
-    df = post_process.clusters.load_summary_table(
-        config_file,
+    df = pyclone.post_process.clusters.load_summary_table(
+        config,
+        trace,
         burnin=burnin,
+        grid_size=grid_size,
         max_clusters=max_clusters,
-        mesh_size=mesh_size,
         min_size=min_cluster_size,
-        thin=thin,
+        thin=thin
     )
 
     mean_df = df.pivot(index='cluster_id', columns='sample_id', values='mean')
 
     error_df = df.pivot(index='cluster_id', columns='sample_id', values='std')
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(df['sample_id'].unique())
 
     color_map = utils.get_clusters_color_map(pd.Series(df['cluster_id']))
 
-    _scatter.plot_all_pairs(
+    scatter.plot_all_pairs(
         color_map,
         mean_df,
         plot_file,

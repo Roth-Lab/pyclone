@@ -66,6 +66,91 @@ import pyclone.run as run
 def build_table(**kwargs):
     run.build_table(**kwargs)
 
+
+#=======================================================================================================================
+# Plot clusters
+#=======================================================================================================================
+@click.command(
+    context_settings={'max_content_width': 120},
+    name='plot-clusters',
+    help='Plot results by cluster.'
+)
+@click.option(
+    '-c', '--config-file',
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
+)
+@click.option(
+    '-t', '--trace-file',
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help='''Path to trace file will be written in HDF5 format.'''
+)
+@click.option(
+    '-o', '--out-file',
+    required=True,
+    type=click.Path(resolve_path=True),
+    help='''Path to file where plot will be saved. Format can be controlled by changing file extension.'''
+)
+@click.option(
+    '-f', '--plot-format',
+    required=True,
+    type=click.Choice(['density', 'line', 'scatter']),
+    help='''Determines which style of plot will be done. Choices are: `denisty` plots posterior cluster ccf density,
+    `line` parallel coordinate plots of mean ccf with error bars representing std and `scatter` plots grid of pairwise
+    scatters of mean ccf with size proportional to std.'''
+)
+@click.option(
+    '-m', '--max-clusters',
+    default=100,
+    type=int,
+    help='''Maximum number of clusters to consider for post-processing.Note this does not affect the DP sampling only
+    the final post-processing steps to get hard cluster assignments. Default is 100.'''
+)
+@click.option(
+    '-s', '--samples',
+    multiple=True,
+    help='''Sample to plot. Can be specified multiple times for multiple samples. The order samples are specified
+    controls the plotting order.'''
+)
+@click.option(
+    '--burnin',
+    default=0,
+    type=int,
+    help='''Number of samples to discard as burning for the MCMC chain. Default is 0.'''
+)
+@click.option(
+    '--min-cluster-size',
+    default=0,
+    type=int,
+    help='''Clusters with fewer mutations than this value will not be plotted. Default is to plot all clusters.'''
+)
+@click.option(
+    '--thin',
+    default=1,
+    type=int,
+    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be used
+    for inference. Default is 1.'''
+)
+@click.option(
+    '--grid-size',
+    default=101,
+    type=int,
+    help='''Number of points to use for approximating the cluster posteriors. Most users should not need to change this.
+    Default is 101.'''
+)
+def plot_clusters(**kwargs):
+    run.plot_clusters(**kwargs)
+
+#     parser.add_argument(
+#         '--plot_type',
+#         choices=['density', 'parallel_coordinates', 'scatter'],
+#         default='density',
+#         required=True,
+#         help='''Determines which style of plot will be done.'''
+#     )
+
 #=======================================================================================================================
 # Resume analysis
 #=======================================================================================================================
@@ -207,45 +292,12 @@ def pyclone():
     pass
 
 
+pyclone.add_command(plot_clusters)
 pyclone.add_command(build_table)
 pyclone.add_command(resume_analysis)
 pyclone.add_command(run_analysis)
 pyclone.add_command(setup_analyis)
 
-
-# def _setup_build_table_parser(parser):
-#
-#     _add_config_file_args(parser)
-#
-#     parser.add_argument(
-#         '--out_file',
-#         required=True,
-#         help='''Path where table will be written in tsv format.'''
-#     )
-#
-#     parser.add_argument(
-#         '--table_type',
-#         choices=['cluster', 'loci', 'old_style'], required=True, help='''Build a table of results. Choices are:
-#         `cluster` for cluster specific information; `loci` for loci specific information; `old_style` matches the 0.12.x
-#         PyClone output.'''
-#     )
-#
-#     _add_max_clusters_args(parser)
-#
-#     _add_mesh_size_args(parser)
-#
-#     _add_post_process_args(parser)
-#
-#     parser.set_defaults(func=run.build_table)
-
-#     build_prior_parser = subparsers.add_parser(
-#         'build_mutations_file',
-#         help='''Build a YAML format file with mutation data and states prior to be used for PyClone analysis.'''
-#     )
-#
-#     _setup_build_prior_parser(build_prior_parser)
-#
-#
 # #----------------------------------------------------------------------------------------------------------------------
 #     plot_clusters_parser = subparsers.add_parser(
 #         'plot_clusters',
