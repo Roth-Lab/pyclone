@@ -91,10 +91,8 @@ def _setup_setup_analysis_parser(parser):
 
     parser.add_argument(
         '--in_files',
-        nargs='+',
-        required=True,
-        help='''Space delimited list of tsv format files with copy number and allele count information. See 
-        build_mutations_file command for information.'''
+        nargs='+', required=True, help='''Space delimited list of tsv format files with copy number and allele count
+        information. See build_mutations_file command for information.'''
     )
 
     parser.add_argument(
@@ -105,11 +103,8 @@ def _setup_setup_analysis_parser(parser):
 
     parser.add_argument(
         '--tumour_contents',
-        nargs='+',
-        type=float,
-        default=None,
-        help='''Space delimited list of tumour contents. Should match the order of --in_files. If not given tumour 
-        content is assumed to 1.0 in all samples.'''
+        nargs='+', type=float, default=None, help='''Space delimited list of tumour contents. Should match the order of
+        --in_files. If not given tumour content is assumed to 1.0 in all samples.'''
     )
 
     parser.add_argument(
@@ -172,10 +167,9 @@ def _setup_build_prior_parser(parser):
 
     parser.add_argument(
         '--in_file',
-        required=True,
-        help='''Path to tab separated input file. The input file should have header and the following columns: 
-        mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn. Any additional columns will be ignored. 
-        See examples for format.'''
+        required=True, help='''Path to tab separated input file. The input file should have header and the following
+        columns: mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn. Any additional columns will be
+        ignored. See examples for format.'''
     )
 
     parser.add_argument(
@@ -201,10 +195,9 @@ def _setup_build_table_parser(parser):
 
     parser.add_argument(
         '--table_type',
-        choices=['cluster', 'loci', 'old_style'],
-        required=True,
-        help='''Build a table of results. Choices are: `cluster` for cluster specific information; `loci` for loci 
-        specific information; `old_style` matches the 0.12.x PyClone output.'''
+        choices=['cluster', 'loci', 'old_style'], required=True, help='''Build a table of results. Choices are:
+        `cluster` for cluster specific information; `loci` for loci specific information; `old_style` matches the 0.12.x
+        PyClone output.'''
     )
 
     _add_max_clusters_args(parser)
@@ -321,9 +314,9 @@ def _add_prior_args(parser):
 
     parser.add_argument(
         '--prior',
-        choices=['major_copy_number', 'parental_copy_number', 'total_copy_number'],
-        default='major_copy_number',
-        help='''Method used to set the possible genotypes. See online help for description. Default is major_copy_number.'''
+        choices=['major_copy_number', 'parental_copy_number', 'total_copy_number'], default='major_copy_number',
+        help='''Method used to set the possible genotypes. See online help for description. Default is
+        major_copy_number.'''
     )
 
 
@@ -340,7 +333,7 @@ def _add_post_process_args(parser):
         '--thin',
         default=1,
         type=int,
-        help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be 
+        help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be
         used for inference. Default is 1.'''
     )
 
