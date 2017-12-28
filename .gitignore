@@ -1,2 +1,5 @@
 *.egg-info
 *.pyc
+/.project
+/.pydevproject
+*__pycache*__
