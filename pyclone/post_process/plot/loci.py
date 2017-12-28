@@ -11,13 +11,11 @@ import matplotlib.pyplot as pp
 import pandas as pd
 import seaborn as sb
 
-import pyclone.paths as paths
 import pyclone.post_process as post_process
-import pyclone.trace as trace
 
-from . import defaults
+from pyclone.post_process.plot import defaults
 from pyclone.post_process.plot import scatter
-from . import utils
+from pyclone.post_process.plot import utils
 
 #=======================================================================================================================
 # Density
@@ -25,7 +23,6 @@ from . import utils
 
 
 def density_plot(
-        config,
         trace,
         out_file,
         burnin=0,
@@ -36,7 +33,7 @@ def density_plot(
 
     df = _load_density_df(trace, burnin, thin)
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(df['sample_id'].unique())
 
     else:
@@ -108,18 +105,11 @@ def density_plot(
     utils.save_figure(fig, out_file)
 
 
-def _load_density_df(config_file, burnin, thin):
-    trace_files = paths.get_cellular_prevalence_trace_files(config_file)
-
+def _load_density_df(trace, burnin=0, thin=1):
     df = []
 
-    for sample_id, file_name in list(trace_files.items()):
-
-        sample_df = trace.load_cellular_frequencies_trace(
-            file_name,
-            burnin,
-            thin
-        )
+    for sample_id, sample_df in trace.cancer_cell_fractions.items():
+        sample_df = sample_df[burnin::thin]
 
         sample_df = sample_df.unstack().reset_index()
 
@@ -141,28 +131,30 @@ def _load_density_df(config_file, burnin, thin):
 
 
 def parallel_coordinates_plot(
-        config_file,
-        plot_file,
+        config,
+        trace,
+        out_file,
         burnin=0,
         max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1,
-        value='cellular_prevalence'):
+        value='ccf'):
 
     utils.setup_plot()
 
     df = post_process.loci.load_table(
-        config_file,
-        burnin,
-        thin,
+        config,
+        trace,
+        burnin=burnin,
+        thin=thin,
         max_clusters=max_clusters,
         min_cluster_size=min_cluster_size
     )
 
     color_map = utils.get_clusters_color_map(df['cluster_id'])
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(df['sample_id'].unique())
 
     else:
@@ -195,11 +187,7 @@ def parallel_coordinates_plot(
 
     ax.set_xlabel(defaults.sample_label, fontsize=defaults.axis_label_font_size)
 
-    if value == 'cellular_prevalence':
-        ax.set_ylabel(defaults.cellular_prevalence_label, fontsize=defaults.axis_label_font_size)
-
-    elif value == 'variant_allele_frequency':
-        ax.set_ylabel(defaults.variant_allele_frequency_label)
+    ax.set_ylabel(value.upper(), fontsize=defaults.axis_label_font_size)
 
     ax.set_xticks(sorted(df['sample_index'].unique()))
 
@@ -226,7 +214,7 @@ def parallel_coordinates_plot(
 
     legend.get_title().set_fontsize(defaults.legend_title_font_size)
 
-    utils.save_figure(fig, plot_file)
+    utils.save_figure(fig, out_file)
 
 #=======================================================================================================================
 # Scatter
@@ -234,8 +222,9 @@ def parallel_coordinates_plot(
 
 
 def scatter_plot(
-        config_file,
-        plot_file,
+        config,
+        trace,
+        out_file,
         burnin=0,
         max_clusters=None,
         min_cluster_size=0,
@@ -246,14 +235,15 @@ def scatter_plot(
     utils.setup_plot()
 
     df = post_process.loci.load_table(
-        config_file,
-        burnin,
-        thin,
+        config,
+        trace,
+        burnin=burnin,
         max_clusters=max_clusters,
-        min_cluster_size=min_cluster_size
+        min_cluster_size=min_cluster_size,
+        thin=thin,
     )
 
-    if samples is None:
+    if len(samples) == 0:
         samples = sorted(df['sample_id'].unique())
 
     color_map = utils.get_clusters_color_map(df['cluster_id'])
@@ -267,7 +257,7 @@ def scatter_plot(
     scatter.plot_all_pairs(
         loci_color_map,
         mean_df,
-        plot_file,
+        out_file,
         samples,
         legend_color_map=color_map
     )
@@ -278,17 +268,16 @@ def scatter_plot(
 
 
 def similarity_matrix_plot(
-        config_file,
-        plot_file,
+        trace,
+        out_file,
         burnin=0,
         max_clusters=None,
         min_cluster_size=0,
-        samples=None,
         thin=1):
 
     sb.set_style('whitegrid')
 
-    labels = post_process.cluster_pyclone_trace(config_file, burnin, thin, max_clusters=max_clusters)
+    labels = post_process.cluster_pyclone_trace(trace, burnin, thin, max_clusters=max_clusters)
 
     labels = labels.set_index('mutation_id')
 
@@ -304,11 +293,7 @@ def similarity_matrix_plot(
 
     used_loci = labels.index
 
-    trace_file = paths.get_labels_trace_file(config_file)
-
-    labels_trace = trace.load_cluster_labels_trace(trace_file, burnin, thin)
-
-    labels_trace = labels_trace[used_loci]
+    labels_trace = trace.labels[used_loci]
 
     dist_mat = pdist(labels_trace.values.T, 'hamming')
 
@@ -344,4 +329,4 @@ def similarity_matrix_plot(
 
     ax.set_ylabel('Loci', fontsize=defaults.axis_label_font_size)
 
-    g.fig.savefig(plot_file, bbox_inches='tight')
+    g.fig.savefig(out_file, bbox_inches='tight')

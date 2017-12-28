@@ -22,146 +22,11 @@ from pyclone.config import get_mutation
 from pyclone.utils import make_directory, make_parent_directory
 
 import pyclone.config
-import pyclone.post_process
+import pyclone.post_process.clusters
 import pyclone.post_process.plot
 import pyclone.pyclone_beta_binomial
 import pyclone.pyclone_binomial
 import pyclone.trace
-
-#=======================================================================================================================
-# PyClone analysis
-#=======================================================================================================================
-
-
-def run_analysis_pipeline(args):
-    config_file = _setup_analysis(
-        density=args.density,
-        in_files=args.in_files,
-        init_method=args.init_method,
-        num_iters=args.num_iters,
-        samples=args.samples,
-        prior=args.prior,
-        tumour_contents=args.tumour_contents,
-        working_dir=args.working_dir,
-        config_extras_file=args.config_extras_file,
-    )
-
-    _run_analysis(config_file, args.seed)
-
-    tables_dir = os.path.join(args.working_dir, 'tables')
-
-    make_directory(tables_dir)
-
-    for table_type in ['cluster', 'loci']:
-        out_file = os.path.join(tables_dir, '{0}.tsv'.format(table_type))
-
-        _build_table(
-            config_file=config_file,
-            out_file=out_file,
-            burnin=args.burnin,
-            max_clusters=args.max_clusters,
-            mesh_size=args.mesh_size,
-            table_type=table_type,
-            thin=args.thin
-        )
-
-    plots_dir = os.path.join(args.working_dir, 'plots')
-
-    plots = [
-        ('cluster', 'density'),
-        ('cluster', 'parallel_coordinates'),
-        ('cluster', 'scatter'),
-        ('loci', 'density'),
-        ('loci', 'parallel_coordinates'),
-        ('loci', 'scatter'),
-        ('loci', 'similarity_matrix'),
-        ('loci', 'vaf_parallel_coordinates'),
-        ('loci', 'vaf_scatter')
-    ]
-
-    for category, plot_type in plots:
-
-        plot_file = os.path.join(plots_dir, category, '{0}.{1}'.format(plot_type, args.plot_file_format))
-
-        make_parent_directory(plot_file)
-
-        if category == 'cluster':
-
-            _cluster_plot(
-                config_file,
-                plot_file,
-                args.burnin,
-                args.max_clusters,
-                args.mesh_size,
-                args.min_cluster_size,
-                plot_type,
-                args.samples,
-                args.thin
-            )
-
-        elif category == 'loci':
-
-            _loci_plot(
-                config_file,
-                plot_file,
-                plot_type,
-                burnin=args.burnin,
-                min_cluster_size=args.min_cluster_size,
-                samples=args.samples,
-                thin=args.thin
-            )
-
-
-def _write_config_file(
-        config_file,
-        density,
-        init_method,
-        mutations_files,
-        tumour_contents,
-        config_extras_file=None):
-
-    config = {}
-
-    config['base_measure_params'] = {'a': 1, 'b': 1}
-
-    config['concentration'] = {
-        'value': 1.0,
-        'prior': {
-            'shape': 1.0,
-            'rate': 0.001
-        }
-    }
-
-    config['density'] = density
-
-    if density == 'pyclone_beta_binomial':
-        config['beta_binomial_precision'] = {
-            'value': 1000,
-            'prior': {
-                'shape': 1.0,
-                'rate': 0.001
-            },
-            'proposal': {'precision': 0.01}
-        }
-
-    config['init_method'] = init_method
-
-    config['samples'] = {}
-
-    for sample_id in mutations_files:
-        config['samples'][sample_id] = {
-            'mutations_file': mutations_files[sample_id],
-            'tumour_content': {
-                'value': tumour_contents[sample_id]
-            },
-            'error_rate': 0.001
-        }
-
-    if config_extras_file is not None:
-        config.update(yaml.load(open(config_extras_file)))
-
-    with open(config_file, 'w') as fh:
-        yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
 
 
 def resume_analysis(config_file, num_iters, trace_file):
@@ -307,6 +172,59 @@ def setup_analysis(
 
     return config_file
 
+
+def _write_config_file(
+        config_file,
+        density,
+        init_method,
+        mutations_files,
+        tumour_contents,
+        config_extras_file=None):
+
+    config = {}
+
+    config['base_measure_params'] = {'a': 1, 'b': 1}
+
+    config['concentration'] = {
+        'value': 1.0,
+        'prior': {
+            'shape': 1.0,
+            'rate': 0.001
+        }
+    }
+
+    config['density'] = density
+
+    if density == 'pyclone_beta_binomial':
+        config['beta_binomial_precision'] = {
+            'value': 1000,
+            'prior': {
+                'shape': 1.0,
+                'rate': 0.001
+            },
+            'proposal': {'precision': 0.01}
+        }
+
+    config['init_method'] = init_method
+
+    config['samples'] = {}
+
+    for sample_id in mutations_files:
+        config['samples'][sample_id] = {
+            'mutations_file': mutations_files[sample_id],
+            'tumour_content': {
+                'value': tumour_contents[sample_id]
+            },
+            'error_rate': 0.001
+        }
+
+    if config_extras_file is not None:
+        config.update(yaml.load(open(config_extras_file)))
+
+    with open(config_file, 'w') as fh:
+        yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
+
+
 #=======================================================================================================================
 # Input file code
 #=======================================================================================================================
@@ -446,27 +364,20 @@ def plot_clusters(
     trace.close()
 
 
-def loci_plot(args):
-    _loci_plot(
-        args.config_file,
-        args.plot_file,
-        args.plot_type,
-        burnin=args.burnin,
-        max_clusters=args.max_clusters,
-        min_cluster_size=args.min_cluster_size,
-        samples=args.samples,
-        thin=args.thin)
-
-
-def _loci_plot(
+def plot_loci(
         config_file,
-        plot_file,
-        plot_type,
+        trace_file,
+        out_file,
+        plot_format,
         burnin=0,
         max_clusters=None,
         min_cluster_size=0,
         samples=None,
         thin=1):
+
+    config = pyclone.config.PyCloneConfig(config_file)
+
+    trace = pyclone.trace.DiskTrace(trace_file)
 
     kwargs = {
         'burnin': burnin,
@@ -476,36 +387,46 @@ def _loci_plot(
         'thin': thin
     }
 
-    if plot_type.startswith('vaf'):
-        kwargs['value'] = 'variant_allele_frequency'
+    if plot_format.startswith('ccf'):
+        kwargs['value'] = 'ccf'
 
-    if plot_type == 'density':
+    elif plot_format.startswith('vaf'):
+        kwargs['value'] = 'vaf'
+
+    if plot_format == 'ccf_density':
         [kwargs.pop(x) for x in list(kwargs.keys()) if 'cluster' in x]
 
+        kwargs.pop('value')
+
         pyclone.post_process.plot.loci.density_plot(
-            config_file,
-            plot_file,
+            trace,
+            out_file,
             **kwargs
         )
 
-    elif plot_type.endswith('parallel_coordinates'):
-
+    elif plot_format in ['ccf_line', 'vaf_line']:
         pyclone.post_process.plot.loci.parallel_coordinates_plot(
-            config_file,
-            plot_file,
+            config,
+            trace,
+            out_file,
             **kwargs
         )
 
-    elif plot_type.endswith('scatter'):
+    elif plot_format in ['ccf_scatter', 'vaf_scatter']:
         pyclone.post_process.plot.loci.scatter_plot(
-            config_file,
-            plot_file,
+            config,
+            trace,
+            out_file,
             **kwargs
         )
 
-    elif plot_type == 'similarity_matrix':
+    elif plot_format == 'similarity_matrix':
+        kwargs.pop('samples')
+
         pyclone.post_process.plot.loci.similarity_matrix_plot(
-            config_file,
-            plot_file,
+            trace,
+            out_file,
             **kwargs
         )
+
+    trace.close()

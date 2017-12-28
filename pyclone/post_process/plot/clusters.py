@@ -11,9 +11,9 @@ import seaborn as sb
 
 import pyclone.post_process
 
-from . import defaults
-from . import utils
-from . import scatter
+from pyclone.post_process.plot import defaults
+from pyclone.post_process.plot import utils
+from pyclone.post_process.plot import scatter
 
 
 def density_plot(
