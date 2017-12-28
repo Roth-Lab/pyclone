@@ -47,6 +47,7 @@ def main():
 
     shutil.rmtree(out_dir)
 
+
 if __name__ == "__main__":
     import line_profiler
 
