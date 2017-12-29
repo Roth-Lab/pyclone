@@ -147,12 +147,12 @@ class PyCloneConfig(object):
             print('Num mutations: {}'.format(len(self.mutations)))
 
         if 'error_rate' not in df.columns:
-            df['error_rate'] = 1e-3
+            df.loc[:, 'error_rate'] = 1e-3
 
         if 'tumour_content' not in df.columns:
             print('Tumour content column not found. Setting values to 1.0.')
 
-            df['tumour_content'] = 1.0
+            df.loc[:, 'tumour_content'] = 1.0
 
         self.data = {}
 
