@@ -5,12 +5,11 @@ Created on 15 Mar 2017
 '''
 from math import lgamma as log_gamma
 
+import numba
 import numpy as np
 
-from pyclone.numba import jit
 
-
-@jit(nopython=True)
+@numba.jit(nopython=True)
 def log_pyclone_beta_binomial_pdf(data, f, s):
     t = data.t
 
@@ -42,7 +41,7 @@ def log_pyclone_beta_binomial_pdf(data, f, s):
     return log_sum_exp(ll)
 
 
-@jit(nopython=True)
+@numba.jit(nopython=True)
 def log_pyclone_binomial_pdf(data, f):
     t = data.t
 
@@ -74,7 +73,7 @@ def log_pyclone_binomial_pdf(data, f):
     return log_sum_exp(ll)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_beta(a, b):
     if a <= 0 or b <= 0:
         return -np.inf
@@ -82,27 +81,27 @@ def log_beta(a, b):
     return log_gamma(a) + log_gamma(b) - log_gamma(a + b)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_factorial(x):
     return log_gamma(x + 1)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_binomial_coefficient(n, x):
     return log_factorial(n) - log_factorial(x) - log_factorial(n - x)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_beta_binomial_likelihood(n, x, a, b):
     return log_beta(a + x, b + n - x) - log_beta(a, b)
 
 
-@jit(nopython=True)
+@numba.jit(nopython=True)
 def log_beta_binomial_pdf(n, x, a, b):
     return log_binomial_coefficient(n, x) + log_beta_binomial_likelihood(n, x, a, b)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_binomial_likelihood(n, x, p):
     if p == 0:
         if x == 0:
@@ -119,12 +118,12 @@ def log_binomial_likelihood(n, x, p):
     return x * np.log(p) + (n - x) * np.log(1 - p)
 
 
-@jit(nopython=True)
+@numba.jit(nopython=True)
 def log_binomial_pdf(n, x, p):
     return log_binomial_coefficient(n, x) + log_binomial_likelihood(n, x, p)
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_sum_exp(log_X):
     '''
     Given a list of values in log space, log_X. Compute exp(log_X[0] + log_X[1] + ... log_X[n])
@@ -144,6 +143,6 @@ def log_sum_exp(log_X):
     return np.log(total) + max_exp
 
 
-@jit(cache=True, nopython=True)
+@numba.jit(cache=True, nopython=True)
 def log_normalize(log_p):
     return log_p - log_sum_exp(log_p)

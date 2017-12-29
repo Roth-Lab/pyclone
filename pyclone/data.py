@@ -1,4 +1,4 @@
-import pyclone.numba as numba
+import numba
 
 
 @numba.jitclass([
