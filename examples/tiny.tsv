@@ -1,0 +1,7 @@
+mutation	ref_counts	alt_counts	major_cn	minor_cn	normal_cn	sample	tumour_content
+chr1:1234	100	100	1	1	2	A	1
+chr1:1234	0	100	2	0	2	B	1
+chr2:5678	300	900	2	1	2	A	1
+chr2:5678	0	50	1	0	2	B	1
+ChrY:100	100	0	1	0	1	A	1
+ChrY:100	0	400	4	0	1	B	1
