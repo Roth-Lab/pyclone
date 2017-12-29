@@ -19,14 +19,14 @@ def load_sampler(config):
     )
 
     if config.density == 'binomial':
-        density_cls = pyclone.pydp.PyCloneBinomialDensity()
+        density_cls = pyclone.pydp.PyCloneBinomialDensity
 
         density_params = {}
 
     elif config.density == 'beta-binomial':
-        density_cls = pyclone.densities.PyCloneBetaBinomialDensity()
+        density_cls = pyclone.densities.PyCloneBetaBinomialDensity
 
-        density_params = config.beta_binomial_precision_value
+        density_params = {'params': config.beta_binomial_precision_value}
 
     cluster_density = pyclone.pydp.MultiSampleDensity.from_samples(
         density_cls, density_params, config.samples
@@ -150,7 +150,7 @@ class MultiSampleDensity(Density):
         for sample in samples:
             densities[sample] = density_cls(**density_params)
 
-        return MultiSampleDensity(densities)
+        return MultiSampleDensity(densities, shared_params=True)
 
     @property
     def params(self):
