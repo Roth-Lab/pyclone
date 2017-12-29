@@ -1,16 +1,13 @@
-'''
-Functions to allow multiple samples to be analysed in PyDP framework.
-
-Created on 2013-04-28
-
-@author: Andrew Roth
-'''
 from collections import OrderedDict, namedtuple
+
 from pydp.base_measures import BaseMeasure
+from pydp.data import GammaData
 from pydp.densities import Density
 from pydp.proposal_functions import ProposalFunction
 from pydp.samplers.atom import AtomSampler
 from pydp.partition import PartitionCell
+
+import pyclone.math_utils
 
 
 class MultiSampleAtomSampler(AtomSampler):
@@ -137,3 +134,22 @@ class MultiSampleProposalFunction(ProposalFunction):
             random_sample[sample_id] = self.proposal_funcs[sample_id].random(params[sample_id])
 
         return random_sample
+
+
+class PyCloneBetaBinomialDensity(Density):
+    def __init__(self, params):
+        self.params = GammaData(params)
+
+    def log_p(self, data, params):
+        return self._log_p(data, params)
+
+    def _log_p(self, data, params):
+        return pyclone.math_utils.log_pyclone_beta_binomial_pdf(data, params.x, self.params.x)
+
+
+class PyCloneBinomialDensity(Density):
+    def log_p(self, data, params):
+        return self._log_p(data, params)
+
+    def _log_p(self, data, params):
+        return pyclone.math_utils.log_pyclone_binomial_pdf(data, params.x)

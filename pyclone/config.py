@@ -49,8 +49,8 @@ class PyCloneConfig(object):
         if not update_concentration:
             del self._config['concentration']['prior']
 
-        if not update_precision:
-            del self._config['precision']['prior']
+        if (not update_precision) or (grid_size is not None):
+            del self._config['beta_binomial_precision']['prior']
 
         if over_ride_file is not None:
             with open(over_ride_file, 'r') as fh:

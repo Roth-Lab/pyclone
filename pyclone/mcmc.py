@@ -13,11 +13,11 @@ from pydp.samplers.dp import DirichletProcessSampler
 from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
-import pgsm.distributions.pyclone
 import numpy as np
 
 import pyclone.densities
-import pyclone.multi_sample
+import pyclone.pydp
+import pyclone.pgsm
 
 
 def get_sampler(config):
@@ -53,11 +53,11 @@ def _load_classic_sampler(config):
             sample_cluster_densities[sample_id],
         )
 
-    base_measure = pyclone.multi_sample.MultiSampleBaseMeasure(sample_base_measures)
+    base_measure = pyclone.pydp.MultiSampleBaseMeasure(sample_base_measures)
 
-    cluster_density = pyclone.multi_sample.MultiSampleDensity(sample_cluster_densities, shared_params=True)
+    cluster_density = pyclone.pydp.MultiSampleDensity(sample_cluster_densities, shared_params=True)
 
-    atom_sampler = pyclone.multi_sample.MultiSampleAtomSampler(base_measure, cluster_density, sample_atom_samplers)
+    atom_sampler = pyclone.pydp.MultiSampleAtomSampler(base_measure, cluster_density, sample_atom_samplers)
 
     partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
 
@@ -98,14 +98,14 @@ def run_mcmc(config, num_iters, sampler, trace):
     print('{} sample(s)'.format(len(config.samples)))
     print()
 
-    for i in range(num_iters):
+    for i in range(1, num_iters + 1):
         sampler.interactive_sample(list(config.data.values()))
 
         state = sampler.state
 
         trace.update(state)
 
-        if i % 100 == 0:
+        if i % 10 == 0:
             print('Iteration: {}'.format(i))
             print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
             print('DP concentration: {}'.format(state['alpha']))
@@ -116,7 +116,7 @@ def run_mcmc(config, num_iters, sampler, trace):
 
 class MarginalSampler(object):
     def __init__(self, data, concetration_prior={'rate': 1.0, 'shape': 1.0}, init_concentration=1.0):
-        self.dist = pgsm.distributions.pyclone.PyCloneDistribution(data[0].shape)
+        self.dist = pyclone.pgsm.PyCloneDistribution(data[0].shape)
 
         self.partition_prior = DirichletProcessPartitionPrior(init_concentration)
 

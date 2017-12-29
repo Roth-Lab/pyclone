@@ -22,7 +22,7 @@ def cluster_pyclone_trace(trace, burnin=0, thin=1, max_clusters=None):
 
     labels = labels.reset_index()
 
-    labels.columns = 'mutation_id', 'cluster_id'
+    labels.columns = 'mutation', 'cluster'
 
     return labels
 
@@ -32,7 +32,7 @@ def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None
         config, trace, burnin=burnin, grid_size=grid_size, max_clusters=max_clusters, min_size=min_size, thin=thin
     )
 
-    df = df.set_index(['sample_id', 'cluster_id', 'size'])
+    df = df.set_index(['sample', 'cluster', 'size'])
 
     x = df.columns.astype(float).values[np.newaxis, :]
 
@@ -61,9 +61,13 @@ def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None
 
 def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_size=0, thin=1):
     if config.density == 'beta-binomial':
-        precision = trace['beta_binomial_precision']
+        if config.beta_binomial_precision_prior is None:
+            precision = config.beta_binomial_precision_value
 
-        precision = precision.iloc[burnin::thin].mean()
+        else:
+            precision = trace['beta_binomial_precision']
+
+            precision = precision.iloc[burnin::thin].mean()
 
         density = pyclone.densities.PyCloneBetaBinomialDensity(precision)
 
@@ -77,23 +81,33 @@ def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_si
 
     labels = cluster_pyclone_trace(trace, burnin=burnin, max_clusters=max_clusters, thin=thin)
 
-    labels = labels.set_index('mutation_id')
+    labels = labels.set_index('mutation')
 
     posteriors = []
 
-    for cluster_id, cluster_df in labels.groupby('cluster_id'):
+    for cluster_id, cluster_df in labels.groupby('cluster'):
         mutation_ids = list(cluster_df.index)
 
         cluster_data = [data[x] for x in mutation_ids]
 
         for sample_id in config.samples:
-            cluster_sample_data = [x[sample_id] for x in cluster_data]
+            if not config.discrete_approximation:
+                cluster_sample_data = [x[sample_id] for x in cluster_data]
 
-            cluster_sample_posterior = _compute_posterior(cluster_sample_data, density, grid_size)
+                cluster_sample_posterior = _compute_posterior(cluster_sample_data, density, grid_size)
 
-            cluster_sample_posterior['sample_id'] = sample_id
+            else:
+                cluster_sample_data = np.array([x[config.samples.index(sample_id)] for x in cluster_data])
 
-            cluster_sample_posterior['cluster_id'] = cluster_id
+                cluster_sample_posterior = log_space_normalise(cluster_sample_data.sum(axis=0))
+
+                cluster_sample_posterior = dict(
+                    zip(np.linspace(0, 1, len(cluster_sample_posterior)), cluster_sample_posterior)
+                )
+
+            cluster_sample_posterior['sample'] = sample_id
+
+            cluster_sample_posterior['cluster'] = cluster_id
 
             cluster_sample_posterior['size'] = len(mutation_ids)
 
@@ -101,7 +115,7 @@ def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_si
 
     df = pd.DataFrame(posteriors)
 
-    df = df.set_index(['sample_id', 'cluster_id', 'size'])
+    df = df.set_index(['sample', 'cluster', 'size'])
 
     df = df.reset_index()
 
