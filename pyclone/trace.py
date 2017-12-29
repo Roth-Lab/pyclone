@@ -7,9 +7,12 @@ from pydp.data import GammaData
 
 import os
 import pandas as pd
+import tables
 import warnings
 
 warnings.filterwarnings('ignore', category=pd.io.pytables.PerformanceWarning)
+warnings.filterwarnings('ignore', category=pd.core.common.SettingWithCopyWarning)
+warnings.filterwarnings('ignore', category=tables.exceptions.NaturalNameWarning)
 
 
 class DiskTrace(object):
