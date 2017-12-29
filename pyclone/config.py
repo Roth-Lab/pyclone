@@ -3,8 +3,7 @@ Created on 2013-02-12
 
 @author: Andrew Roth
 '''
-from collections import namedtuple, OrderedDict
-from math import log
+from collections import OrderedDict
 
 import numpy as np
 import yaml
@@ -15,42 +14,49 @@ try:
 except ImportError:
     from yaml import Loader
 
-import pyclone.paths as paths
-
-#=======================================================================================================================
-# Load data for sampler
-#=======================================================================================================================
-PyCloneData = namedtuple(
-    'PyCloneData',
-    [
-        'b',
-        'd',
-        'tumour_content',
-        'cn_n',
-        'cn_r',
-        'cn_v',
-        'mu_n',
-        'mu_r',
-        'mu_v',
-        'log_pi'
-    ]
-)
+import pyclone.data
+import pyclone.math_utils
 
 
 class PyCloneConfig(object):
-    def __init__(self, file_name):
-        self._config = load_yaml_file(file_name)
+    def __init__(
+            self,
+            data_df,
+            density='beta-binomial',
+            grid_size=None,
+            init_concentration=1.0,
+            init_precision=400,
+            over_ride_file=None,
+            update_concentration=True,
+            update_precision=True):
 
-        self._init_mutations()
+        self._config = {
+            'base_measure_params': {'a': 1.0, 'b': 1.0},
+            'beta_binomial_precision': {
+                'prior': {'rate': 0.001, 'shape': 1.0},
+                'proposal': {'precision': 0.01},
+                'value': init_precision
+            },
+            'concentration': {
+                'prior': {'rate': 0.1, 'shape': 0.1},
+                'value': init_concentration
+            },
+            'density': density,
+            'grid_size': grid_size,
+            'init_method': 'connected'
+        }
 
-        self._init_data()
+        if not update_concentration:
+            del self._config['concentration']['prior']
 
-        if len(self.mutations) == 0:
-            raise Exception(' '.join((
-                ('No mutations found in common across samples.'),
-                ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
-                ('Search the user group before posting a message or a bug.'),
-            )))
+        if not update_precision:
+            del self._config['precision']['prior']
+
+        if over_ride_file is not None:
+            with open(over_ride_file, 'r') as fh:
+                self._config.update(yaml.load(fh))
+
+        self._init_data(data_df)
 
     @property
     def base_measure_params(self):
@@ -91,424 +97,148 @@ class PyCloneConfig(object):
         return self._config['concentration']['value']
 
     @property
-    def data(self):
-        """ Data for all samples.
-        """
-        return self._data
+    def discrete_approximation(self):
+        return self._config['grid_size'] is not None
 
     @property
     def density(self):
         return self._config['density']
 
     @property
-    def error_rates(self):
-        """ Sequencing error rates for each sample.
-        """
-        result = {}
-
-        for sample_id in self.samples:
-            result[sample_id] = self._config['samples'][sample_id]['error_rate']
-
-        return result
-
-    @property
     def init_method(self):
         """ Initialisation method for DP sampler.
         """
-        return self._config.get('init_method', 'connected')
-
-    @property
-    def mutations(self):
-        """ List of mutations in data.
-        """
-        return self._mutations
-
-    @property
-    def mutations_files(self):
-        """ Dictionary of mutations files for samples.
-        """
-        result = {}
-
-        for sample in self.samples:
-            result[sample] = self._config['samples'][sample]['mutations_file']
-
-        return result
-
-    @property
-    def samples(self):
-        """ List of samples.
-        """
-        return list(self._config['samples'].keys())
-
-    @property
-    def tumour_content_values(self):
-        """ Dictionary of tumour contents for each sample.
-        """
-        result = {}
-
-        for sample_id in self.samples:
-            result[sample_id] = self._config['samples'][sample_id]['tumour_content']['value']
-
-        return result
-
-    def _init_data(self):
-        sample_data = OrderedDict()
-
-        for sample_id in self.samples:
-            sample_data[sample_id] = self._load_sample_data(sample_id)
-
-        data = OrderedDict()
-
-        for mutation_id in self.mutations:
-            data[mutation_id] = OrderedDict()
-
-            for sample_id in self.samples:
-                data[mutation_id][sample_id] = sample_data[sample_id][mutation_id]
-
-        self._data = data
-
-    def _init_mutations(self):
-        mutations = []
-
-        for file_name in self.mutations_files.values():
-            sample_config = load_yaml_file(file_name)
-
-            sample_mutations = set()
-
-            for mutation_config in sample_config['mutations']:
-                sample_mutations.add(mutation_config['id'])
-
-            mutations.append(sample_mutations)
-
-        mutations = set.intersection(*mutations)
-
-        self._mutations = sorted(mutations)
-
-    def _load_sample_data(self, sample):
-        """ Load data from PyClone YAML formatted input file.
-        """
-        data = OrderedDict()
-
-        config = paths.load_config(self.mutations_files[sample])
-
-        for mutation_dict in config['mutations']:
-            mutation = load_mutation_from_dict(mutation_dict)
-
-            data[mutation.id] = _get_pyclone_data(
-                mutation, self.error_rates[sample], self.tumour_content_values[sample]
-            )
-
-        return data
-
-
-def _get_pyclone_data(mutation, error_rate, tumour_content):
-    a = mutation.ref_counts
-    b = mutation.var_counts
-
-    d = a + b
-
-    cn_n = np.array([x.cn_n for x in mutation.states])
-    cn_r = np.array([x.cn_r for x in mutation.states])
-    cn_v = np.array([x.cn_v for x in mutation.states])
-
-    mu_n = np.array([x.get_mu_n(error_rate) for x in mutation.states])
-    mu_r = np.array([x.get_mu_r(error_rate) for x in mutation.states])
-    mu_v = np.array([x.get_mu_v(error_rate) for x in mutation.states])
-
-    prior_weights = tuple([x.prior_weight for x in mutation.states])
-
-    log_pi = _get_log_pi(prior_weights)
-
-    return PyCloneData(b, d, tumour_content, cn_n, cn_r, cn_v, mu_n, mu_r, mu_v, log_pi)
-
-
-def _get_log_pi(weights):
-    pi = [x / sum(weights) for x in weights]
-
-    return np.array([log(x) for x in pi])
-
-#=======================================================================================================================
-# Parse mutation dict
-#=======================================================================================================================
-
-
-def get_mutation(mutation_id, ref_counts, var_counts, normal_cn, minor_cn, major_cn, prior):
-    if minor_cn > minor_cn:
-        raise Exception('{} is invalid. Major CN must be greater than minor CN.'.format(mutation_id))
-
-    if major_cn == 0:
-        raise Exception('{} is invalid. Major CN must be greater 0.'.format(mutation_id))
-
-    states = _get_states(normal_cn, minor_cn, major_cn, prior)
-
-    mutation = Mutation(mutation_id, ref_counts, var_counts)
-
-    for (g_n, g_r, g_v) in states:
-        state = State(g_n, g_r, g_v, 1)
-
-        mutation.add_state(state)
-
-    return mutation
-
-
-def _get_states(normal_cn, minor_cn, major_cn, prior):
-    if prior == 'major':
-        states = _get_major_copy_states(normal_cn, minor_cn, major_cn)
-
-    elif prior == 'parental':
-        states = _get_parental_copy_number_states(normal_cn, minor_cn, major_cn)
-
-    elif prior == 'total':
-        states = _get_total_copy_number_states(normal_cn, minor_cn, major_cn)
-
-    else:
-        raise Exception('{0} is not a recognised method for setting variant priors.'.format(prior))
-
-    return states
-
-
-def _get_major_copy_states(normal_cn, minor_cn, major_cn):
-    states = set()
-
-    g_n = 'A' * normal_cn
-
-    total_cn = minor_cn + major_cn
-
-    for b in range(1, major_cn + 1):
-        a = total_cn - b
-
-        g_r = g_n
-
-        g_v = 'A' * a + 'B' * b
-
-        states.add((g_n, g_r, g_v))
-
-    states.add((g_n, 'A' * total_cn, 'A' * (total_cn - 1) + 'B'))
-
-    return sorted(states)
-
-
-def _get_parental_copy_number_states(normal_cn, minor_cn, major_cn):
-    states = set()
-
-    g_n = 'A' * normal_cn
-
-    total_cn = minor_cn + major_cn
-
-    if normal_cn == total_cn:
-        if minor_cn == 0:
-            ref_genotypes = [g_n, g_n]
-
-            var_genotypes = [
-                'A' * minor_cn + 'B' * major_cn,
-                'A' * (total_cn - 1) + 'B'
-            ]
-        else:
-            ref_genotypes = [g_n, g_n, g_n]
-
-            var_genotypes = [
-                'A' * minor_cn + 'B' * major_cn,
-                'A' * major_cn + 'B' * minor_cn,
-                'A' * (total_cn - 1) + 'B'
-            ]
-
-    else:
-        if minor_cn == 0:
-            ref_genotypes = [g_n, g_n, 'A' * total_cn]
-
-            var_genotypes = [
-                'A' * minor_cn + 'B' * major_cn,
-                'A' * (total_cn - 1) + 'B',
-                'A' * (total_cn - 1) + 'B'
-            ]
-        else:
-            ref_genotypes = [g_n, g_n, g_n, 'A' * total_cn]
-
-            var_genotypes = [
-                'A' * minor_cn + 'B' * major_cn,
-                'A' * major_cn + 'B' * minor_cn,
-                'A' * (total_cn - 1) + 'B',
-                'A' * (total_cn - 1) + 'B'
-            ]
-
-    for g_r, g_v in zip(ref_genotypes, var_genotypes):
-        state = (g_n, g_r, g_v)
-
-        states.add(state)
-
-    return sorted(states)
-
-
-def _get_total_copy_number_states(normal_cn, minor_cn, major_cn):
-    total_cn = minor_cn + major_cn
-
-    states = set()
-
-    g_n = 'A' * normal_cn
-
-    var_genotypes = []
-
-    for num_var_alleles in range(1, total_cn + 1):
-        g_v = 'A' * (total_cn - num_var_alleles) + 'B' * num_var_alleles
-
-        var_genotypes.append(g_v)
-
-    ref_genotypes = set([g_n, 'A' * total_cn])
-
-    for g_r in ref_genotypes:
-        for g_v in var_genotypes:
-            state = (g_n, g_r, g_v)
-
-            states.add(state)
-
-    return sorted(states)
-
-#=======================================================================================================================
-# Helper classes
-#=======================================================================================================================
-
-
-class Mutation(object):
-
-    def __init__(self, mutation_id, ref_counts, var_counts):
-        self.id = mutation_id
-
-        self.ref_counts = ref_counts
-
-        self.var_counts = var_counts
-
-        self.states = []
-
-    @property
-    def cn_n(self):
-        return [x.cn_n for x in self.states]
-
-    @property
-    def cn_r(self):
-        return [x.cn_r for x in self.states]
-
-    @property
-    def cn_v(self):
-        return [x.cn_v for x in self.states]
-
-    @property
-    def prior_weights(self):
-        return [x.prior_weight for x in self.states]
-
-    def add_state(self, state):
-        self.states.append(state)
-
-    def get_mu_n(self, error_rate):
-        return [x.get_mu_n(error_rate) for x in self.states]
-
-    def get_mu_r(self, error_rate):
-        return [x.get_mu_r(error_rate) for x in self.states]
-
-    def get_mu_v(self, error_rate):
-        return [x.get_mu_v(error_rate) for x in self.states]
+        return self._config['init_method']
 
     def to_dict(self):
-        return {
-            'id': self.id,
-            'ref_counts': self.ref_counts,
-            'var_counts': self.var_counts,
-            'states': [x.to_dict() for x in self.states]
-        }
+        return self._config.copy()
 
+    def update(self, config):
+        self._config.update(config)
 
-class State(object):
+    def _init_data(self, df):
+        self.samples = sorted(df['sample'].unique())
 
-    def __init__(self, g_n, g_r, g_v, prior_weight):
-        self.g_n = g_n
+        # Filter for mutations present in all samples
+        df = df.groupby(by='mutation').filter(lambda x: sorted(x['sample'].unique()) == self.samples)
 
-        self.g_r = g_r
+        self.mutations = df['mutation'].unique()
 
-        self.g_v = g_v
+        if len(self.mutations) == 0:
+            raise Exception(' '.join((
+                ('No mutations found in common across samples.'),
+                ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
+                ('Search the user group before posting a message or a bug.'),
+            )))
 
-        self.prior_weight = prior_weight
-
-    @property
-    def cn_n(self):
-        return len(self.g_n)
-
-    @property
-    def cn_r(self):
-        return len(self.g_r)
-
-    @property
-    def cn_v(self):
-        return len(self.g_v)
-
-    def get_mu_n(self, error_rate):
-        return self._get_variant_allele_probability(self.g_n, error_rate)
-
-    def get_mu_r(self, error_rate):
-        return self._get_variant_allele_probability(self.g_r, error_rate)
-
-    def get_mu_v(self, error_rate):
-        return self._get_variant_allele_probability(self.g_v, error_rate)
-
-    def to_dict(self):
-        return {'g_n': self.g_n, 'g_r': self.g_r, 'g_v': self.g_v, 'prior_weight': self.prior_weight}
-
-    def _get_copy_number(self, genotype):
-        if genotype is None:
-            return 0
         else:
-            return len(genotype)
+            print('Samples: {}'.format('\t'.join(self.samples)))
 
-    def _get_variant_allele_probability(self, genotype, error_rate):
-        if genotype is None:
-            return error_rate
+            print('Num mutations: {}'.format(len(self.mutations)))
 
-        num_ref_alleles = genotype.count("A")
-        num_var_alleles = genotype.count("B")
+        if 'error_rate' not in df.columns:
+            print('Error rate column not found. Setting values to 0.001')
 
-        cn = len(genotype)
+            df['error_rate'] = 1e-3
 
-        if cn != num_ref_alleles + num_var_alleles:
-            raise Exception("{0} is not a valid genotype. Only A or B are allowed as alleles.")
+        if 'tumour_content' not in df.columns:
+            print('Tumour content column not found. Setting values to 1.0.')
 
-        if num_ref_alleles == 0:
-            return 1 - error_rate
-        elif num_var_alleles == 0:
-            return error_rate
-        else:
-            return num_var_alleles / cn
+            df['tumour_content'] = 1.0
 
-#=======================================================================================================================
-# Factory functions
-#=======================================================================================================================
+        self.data = {}
+
+        for name, mut_df in df.groupby('mutation'):
+            print(name)
+
+            mut_data = []
+
+            mut_df = mut_df.set_index('sample')
+
+            for sample in self.samples:
+                row = mut_df.loc[sample]
+
+                a = row['ref_counts']
+
+                b = row['alt_counts']
+
+                cn, mu, log_pi = get_major_cn_prior(
+                    row['major_cn'],
+                    row['minor_cn'],
+                    row['normal_cn'],
+                    error_rate=row['error_rate']
+                )
+
+                data_point = pyclone.data.DataPoint(a, b, cn, mu, log_pi, row['tumour_content'])
+
+                if self.discrete_approximation:
+                    mut_data.append(
+                        convert_data_to_discrete_grid(
+                            data_point,
+                            density=self.density,
+                            grid_size=self._config['grid_size'],
+                            precision=self.beta_binomial_precision_value
+                        )
+                    )
+
+                else:
+                    mut_data.append(data_point)
+
+            if self.discrete_approximation:
+                self.data[name] = np.vstack(mut_data)
+
+            else:
+                self.data[name] = OrderedDict(zip(self.samples, mut_data))
 
 
-def load_mutation_from_dict(d):
-    mutation_id = d['id']
+def convert_data_to_discrete_grid(data_point, density='beta-binomial', precision=400, grid_size=1000):
+    log_ll = np.zeros(grid_size)
 
-    ref_counts = int(d['ref_counts'])
-    var_counts = int(d['var_counts'])
+    for i, cellular_prevalence in enumerate(np.linspace(0, 1, grid_size)):
+        if density == 'beta-binomial':
+            log_ll[i] = pyclone.math_utils.log_pyclone_beta_binomial_pdf(data_point, cellular_prevalence, precision)
 
-    mutation = Mutation(mutation_id, ref_counts, var_counts)
+        elif density == 'binomial':
+            log_ll[i] = pyclone.math_utils.log_pyclone_binomial_pdf(data_point, cellular_prevalence)
 
-    for state_dict in d['states']:
-        state = load_state_from_dict(state_dict)
-
-        mutation.add_state(state)
-
-    return mutation
+    return log_ll
 
 
-def load_state_from_dict(d):
-    g_n = d['g_n']
-    g_r = d['g_r']
-    g_v = d['g_v']
+def get_major_cn_prior(major_cn, minor_cn, normal_cn, error_rate=1e-3):
+    print(major_cn, minor_cn, normal_cn, error_rate)
 
-    prior_weight = float(d['prior_weight'])
+    total_cn = major_cn + minor_cn
 
-    return State(g_n, g_r, g_v, prior_weight)
+    cn = []
 
+    mu = []
 
-def load_yaml_file(file_name):
-    with open(file_name) as fh:
-        config = yaml.load(fh, Loader=Loader)
+    log_pi = []
 
-    return config
+    # Consider all possible mutational genotypes consistent with mutation before CN change
+    for x in range(1, major_cn + 1):
+        cn.append((normal_cn, normal_cn, total_cn))
+
+        mu.append((error_rate, error_rate, min(1 - error_rate, x / total_cn)))
+
+        log_pi.append(0)
+
+    # Consider mutational genotype of mutation before CN change if not already added
+    mutation_after_cn = (normal_cn, total_cn, total_cn)
+
+    if mutation_after_cn not in cn:
+        cn.append(mutation_after_cn)
+
+        mu.append((error_rate, error_rate, min(1 - error_rate, 1 / total_cn)))
+
+        log_pi.append(0)
+
+        assert len(set(cn)) == 2
+
+    cn = np.array(cn, dtype=int)
+
+    mu = np.array(mu, dtype=float)
+
+    log_pi = pyclone.math_utils.log_normalize(np.array(log_pi, dtype=float))
+
+    return cn, mu, log_pi

@@ -28,6 +28,9 @@ class DiskTrace(object):
     def __getitem__(self, key):
         return self._store[key]
 
+    def __setitem__(self, key, value):
+        self._store[key] = value
+
     @property
     def cancer_cell_fractions(self):
         result = {}
@@ -40,24 +43,32 @@ class DiskTrace(object):
         return result
 
     @property
+    def config(self):
+        return self['config'].iloc[0]
+
+    @config.setter
+    def config(self, value):
+        self['config'] = pd.Series([value])
+
+    @property
     def labels(self):
         return self['labels'].pivot(values='value', columns='mutation_id', index='idx')
 
     @property
     def mutations(self):
-        return self._store['mutations']
+        return self['mutations']
 
     @mutations.setter
     def mutations(self, value):
-        self._store['mutations'] = pd.Series(value)
+        self['mutations'] = pd.Series(value)
 
     @property
     def samples(self):
-        return self._store['samples']
+        return self['samples']
 
     @samples.setter
     def samples(self, value):
-        self._store['samples'] = pd.Series(value)
+        self['samples'] = pd.Series(value)
 
     def close(self):
         self._store.close()
@@ -85,8 +96,8 @@ class DiskTrace(object):
 
             self._store.append('params/{}'.format(sample), sample_params)
 
-        self._store['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
+        self['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
 
-        self._store['/state/params'] = pd.Series(state['params'], index=self.mutations)
+        self['/state/params'] = pd.Series(state['params'], index=self.mutations)
 
         self._idx += 1

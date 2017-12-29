@@ -7,20 +7,71 @@ from math import lgamma as log_gamma
 
 import numpy as np
 
-try:
-    from numba import jit
+from pyclone.numba import jit
 
-except ImportError:
-    def identity_decorator(*args, **kwargs):
-        if len(args) == 1 and hasattr(args[0], '__call__'):
-            return args[0]
 
-        else:
-            def _f(f):
-                return f
-            return _f
+@jit(nopython=True)
+def log_pyclone_beta_binomial_pdf(data, f, s):
+    t = data.t
 
-    jit = identity_decorator
+    C = len(data.cn)
+
+    population_prior = np.zeros(3)
+    population_prior[0] = (1 - t)
+    population_prior[1] = t * (1 - f)
+    population_prior[2] = t * f
+
+    ll = np.ones(C, dtype=np.float64) * np.inf * -1
+
+    for c in range(C):
+        e_vaf = 0
+
+        norm_const = 0
+
+        for i in range(3):
+            e_cn = population_prior[i] * data.cn[c, i]
+
+            e_vaf += e_cn * data.mu[c, i]
+
+            norm_const += e_cn
+
+        e_vaf /= norm_const
+
+        ll[c] = data.log_pi[c] + log_beta_binomial_pdf(data.a + data.b, data.b, e_vaf, s)
+
+    return log_sum_exp(ll)
+
+
+@jit(nopython=True)
+def log_pyclone_binomial_pdf(data, f):
+    t = data.t
+
+    C = len(data.cn)
+
+    population_prior = np.zeros(3)
+    population_prior[0] = (1 - t)
+    population_prior[1] = t * (1 - f)
+    population_prior[2] = t * f
+
+    ll = np.ones(C, dtype=np.float64) * np.inf * -1
+
+    for c in range(C):
+        e_vaf = 0
+
+        norm_const = 0
+
+        for i in range(3):
+            e_cn = population_prior[i] * data.cn[c, i]
+
+            e_vaf += e_cn * data.mu[c, i]
+
+            norm_const += e_cn
+
+        e_vaf /= norm_const
+
+        ll[c] = data.log_pi[c] + log_binomial_pdf(data.a + data.b, data.b, e_vaf)
+
+    return log_sum_exp(ll)
 
 
 @jit(cache=True, nopython=True)
@@ -32,12 +83,27 @@ def log_beta(a, b):
 
 
 @jit(cache=True, nopython=True)
-def log_beta_binomial_likelihood(x, n, a, b):
-    return log_beta(a + x, b + n - x) - log_beta(a, b)
+def log_factorial(x):
+    return log_gamma(x + 1)
 
 
 @jit(cache=True, nopython=True)
-def log_binomial_likelihood(x, n, p):
+def log_binomial_coefficient(n, x):
+    return log_factorial(n) - log_factorial(x) - log_factorial(n - x)
+
+
+@jit(cache=True, nopython=True)
+def log_beta_binomial_likelihood(n, x, a, b):
+    return log_beta(a + x, b + n - x) - log_beta(a, b)
+
+
+@jit(nopython=True)
+def log_beta_binomial_pdf(n, x, a, b):
+    return log_binomial_coefficient(n, x) + log_beta_binomial_likelihood(n, x, a, b)
+
+
+@jit(cache=True, nopython=True)
+def log_binomial_likelihood(n, x, p):
     if p == 0:
         if x == 0:
             return 0
@@ -51,6 +117,11 @@ def log_binomial_likelihood(x, n, p):
             return -np.inf
 
     return x * np.log(p) + (n - x) * np.log(1 - p)
+
+
+@jit(nopython=True)
+def log_binomial_pdf(n, x, p):
+    return log_binomial_coefficient(n, x) + log_binomial_likelihood(n, x, p)
 
 
 @jit(cache=True, nopython=True)
@@ -71,3 +142,8 @@ def log_sum_exp(log_X):
         total += np.exp(x - max_exp)
 
     return np.log(total) + max_exp
+
+
+@jit(cache=True, nopython=True)
+def log_normalize(log_p):
+    return log_p - log_sum_exp(log_p)

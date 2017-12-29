@@ -4,14 +4,13 @@ Created on Nov 29, 2015
 @author: Andrew Roth
 '''
 from pydp.cluster import cluster_with_mpear
-from pydp.data import BetaData, GammaData
+from pydp.data import BetaData
 from pydp.utils import log_space_normalise
 
 import numpy as np
 import pandas as pd
 
-from pyclone.pyclone_beta_binomial import PyCloneBetaBinomialDensity
-from pyclone.pyclone_binomial import PyCloneBinomialDensity
+import pyclone.densities
 
 
 def cluster_pyclone_trace(trace, burnin=0, thin=1, max_clusters=None):
@@ -66,10 +65,10 @@ def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_si
 
         precision = precision.iloc[burnin::thin].mean()
 
-        density = PyCloneBetaBinomialDensity(GammaData(precision))
+        density = pyclone.densities.PyCloneBetaBinomialDensity(precision)
 
     elif config.density == 'pyclone_binomial':
-        density = PyCloneBinomialDensity()
+        density = pyclone.densities.PyCloneBinomialDensity()
 
     else:
         raise Exception('Only pyclone_binomial and pyclone_beta_binomial density are supported.')

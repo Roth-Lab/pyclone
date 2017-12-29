@@ -8,8 +8,7 @@ import pyclone.run as run
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='build-table',
-    help='Build a summary table of a PyClone analysis.'
+    name='table'
 )
 @click.option(
     '-c', '--config-file',
@@ -64,16 +63,17 @@ import pyclone.run as run
     Default is 101.'''
 )
 def build_table(**kwargs):
+    """ Build a summary table of a PyClone analysis.
+    """
     run.build_table(**kwargs)
 
 
 #=======================================================================================================================
-# Plot clusters
+# Plotting
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='plot-clusters',
-    help='Plot results by cluster.'
+    name='clusters'
 )
 @click.option(
     '-c', '--config-file',
@@ -141,16 +141,14 @@ def build_table(**kwargs):
     Default is 101.'''
 )
 def plot_clusters(**kwargs):
+    """ Plot results by cluster.
+    """
     run.plot_clusters(**kwargs)
 
 
-#=======================================================================================================================
-# Plot loci
-#=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='plot-loci',
-    help='Plot results by loci.'
+    name='plot-loci'
 )
 @click.option(
     '-c', '--config-file',
@@ -211,59 +209,24 @@ def plot_clusters(**kwargs):
     for inference. Default is 1.'''
 )
 def plot_loci(**kwargs):
+    """ Plot results by loci.
+    """
     run.plot_loci(**kwargs)
 
-#=======================================================================================================================
-# Resume analysis
-#=======================================================================================================================
-
-
-@click.command(
-    context_settings={'max_content_width': 120},
-    name='resume-analysis',
-    help='Resume a previous PyClone analysis.'
-)
-@click.option(
-    '-c', '--config-file',
-    required=True,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
-)
-@click.option(
-    '-n', '--num-iters',
-    default=int(1e4),
-    type=int,
-    help='''Number of iterations of the MCMC sampler to perform. Default is 10,000.'''
-)
-@click.option(
-    '-t', '--trace-file',
-    required=True,
-    type=click.Path(resolve_path=True),
-    help='''Path to trace file will be written in HDF5 format.'''
-)
-def resume_analysis(**kwargs):
-    run.resume_analysis(**kwargs)
-
 
 #=======================================================================================================================
-# Run analysis
+# Analysis
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='run-analysis',
-    help='Run an PyClone analysis.'
+    name='new'
 )
 @click.option(
-    '-c', '--config-file',
+    '-i', '--in-file',
     required=True,
     type=click.Path(exists=True, resolve_path=True),
-    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
-)
-@click.option(
-    '-n', '--num-iters',
-    default=int(1e4),
-    type=int,
-    help='''Number of iterations of the MCMC sampler to perform. Default is 10,000.'''
+    help='''Path to TSV format file with copy number and allele count information for all samples. See the examples
+    directory in the GitHub repository for format.'''
 )
 @click.option(
     '-t', '--trace-file',
@@ -272,78 +235,81 @@ def resume_analysis(**kwargs):
     help='''Path to where trace file will be written in HDF5 format.'''
 )
 @click.option(
+    '-d', '--density',
+    default='beta-binomial',
+    type=click.Choice(['binomial', 'beta-binomial']),
+    help='''Allele count density in the PyClone model. Use beta-binomial for most cases. Default beta-binomial.'''
+)
+@click.option(
+    '-n', '--num-iters',
+    default=int(1e4),
+    type=int,
+    help='''Number of iterations of the MCMC sampler to perform. Default is 10,000.'''
+)
+@click.option(
+    '--concentration-value',
+    default=1.0,
+    type=float,
+    help='''The (initial) concentration of the Dirichlet process. Higher values will encourage more clusters, lower
+    values have the opposite effect. Default is 1.0.'''
+)
+@click.option(
+    '--config-file',
+    type=click.Path(exists=True, resolve_path=True),
+    help='''Path to configuration file. Entries in this file will override the values set on the command line. See the
+    examples directory in the GitHub repository for format.'''
+)
+@click.option(
+    '--no-concentration-update',
+    is_flag=True,
+    help='''Set this to disable updating the concentration parameter of the Dirichlet process. Has not effect when the
+    Binomial is used.'''
+)
+@click.option(
+    '--no-precision-update',
+    is_flag=True,
+    help='''Set this to disable updating the precision parameter of the Beta-Binomial density. Has not effect when the
+    Binomial is used.'''
+)
+@click.option(
+    '--precision-value',
+    default=400,
+    type=float,
+    help='''The (initial) precision parameter of the Beta-Binomial density. The higher the value the more similar the
+    Beta-Binomial is to a Binomial. Default is 400.'''
+)
+@click.option(
     '--seed',
     default=None,
     type=int,
     help='''Set random seed so results can be reproduced. By default a random seed is chosen.'''
 )
-def run_analysis(**kwargs):
+def new_analysis(**kwargs):
+    """ Run a new PyClone analysis.
+    """
     run.run_analysis(**kwargs)
 
 
-#=======================================================================================================================
-# Setup analysis
-#=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='setup-analysis',
-    help='Build a PyClone analysis configuration file.'
+    name='resume'
 )
 @click.option(
-    '-i', '--in-files',
-    multiple=True,
-    required=True,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path of TSV format file with copy number and allele count information. See build_mutations_file command
-    for information. Maybe specified multiple times for multiple inputs.'''
-)
-@click.option(
-    '-o', '--out-dir',
+    '-t', '--trace-file',
     required=True,
     type=click.Path(resolve_path=True),
-    help='''Path of directory where config files will be placed.'''
+    help='''Path to trace file will be written in HDF5 format.'''
 )
 @click.option(
-    '-s', '--samples',
-    multiple=True,
-    help='''Sample name. Can be specified multiple times for multiple inputs. Should be in the same order as --in_files.
-    If not set sample name will be inferred from file names and ordering in plots will be arbitrary.'''
+    '-n', '--num-iters',
+    default=int(1e4),
+    type=int,
+    help='''Number of iterations of the MCMC sampler to perform. Default is 10,000.'''
 )
-@click.option(
-    '-t', '--tumour-contents',
-    multiple=True,
-    type=float,
-    help='''Tumour contents. Can be specified multiple times for multiple inputs. Should be in the same order as
-    --in_files. If not set tumour content will be assumed to be 1.0.'''
-)
-@click.option(
-    '-d', '--density',
-    default='pyclone_beta_binomial',
-    type=click.Choice(['pyclone_binomial', 'pyclone_beta_binomial']),
-    help='''Tumour contents. Can be specified multiple times for multiple inputs. Should be in the same order as
-    --in_files. If not set tumour content will be assumed to be 1.0.'''
-)
-@click.option(
-    '--init-method',
-    default='connected',
-    type=click.Choice(['connected', 'disconnected']),
-    help='''How to initialise the DP clustering algorithm. `connected` places all data points in one cluster, preferred
-    for large datasets. `disconnected` places each data point in a separate cluster. Default `connected`.'''
-)
-@click.option(
-    '--prior',
-    default='major',
-    type=click.Choice(['major', 'parental', 'total']),
-    help='''Method used to set the possible genotypes. See online help for description. Default is major_copy_number.'''
-)
-@click.option(
-    '--config-extras-file',
-    default=None,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path to YAML format file with additional or override config parameters. For advanced usage only.'''
-)
-def setup_analyis(**kwargs):
-    run.setup_analysis(**kwargs)
+def resume_analysis(**kwargs):
+    """ Resume a previous PyClone analysis from last MCMC iteration.
+    """
+    run.resume_analysis(**kwargs)
 
 
 #=======================================================================================================================
@@ -354,9 +320,33 @@ def pyclone():
     pass
 
 
-pyclone.add_command(build_table)
-pyclone.add_command(plot_clusters)
-pyclone.add_command(plot_loci)
-pyclone.add_command(resume_analysis)
-pyclone.add_command(run_analysis)
-pyclone.add_command(setup_analyis)
+@click.group()
+def analysis():
+    pass
+
+
+@click.group(name='post-process')
+def post_process():
+    """ Post process results of a PyClone analysis.
+    """
+    pass
+
+
+@click.group()
+def plot():
+    """ Plot the results of a PyClone analysis.
+    """
+    pass
+
+
+pyclone.add_command(analysis)
+pyclone.add_command(post_process)
+
+analysis.add_command(new_analysis)
+analysis.add_command(resume_analysis)
+
+post_process.add_command(build_table)
+post_process.add_command(plot)
+
+plot.add_command(plot_clusters)
+plot.add_command(plot_loci)
