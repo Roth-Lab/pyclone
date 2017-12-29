@@ -89,7 +89,7 @@ def _load_sample_variant_allele_frequencies(config, sample):
         mutation = config.data[mutation_id][sample]
 
         try:
-            data[mutation_id] = mutation.b / mutation.d
+            data[mutation_id] = mutation.b / (mutation.a + mutation.b)
 
         except ZeroDivisionError:
             data[mutation_id] = pd.np.nan

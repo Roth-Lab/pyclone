@@ -56,7 +56,6 @@ def build_table(trace_file, out_file, table_format, burnin=0, grid_size=101, max
 
 
 def plot_clusters(
-        config_file,
         trace_file,
         out_file,
         burnin=0,
@@ -67,9 +66,9 @@ def plot_clusters(
         samples=[],
         thin=1):
 
-    config = pyclone.config.PyCloneConfig(config_file)
-
     trace = pyclone.trace.DiskTrace(trace_file)
+
+    config = _load_config_from_trace(trace)
 
     kwargs = {
         'burnin': burnin,
@@ -97,7 +96,6 @@ def plot_clusters(
 
 
 def plot_loci(
-        config_file,
         trace_file,
         out_file,
         plot_format,
@@ -107,9 +105,9 @@ def plot_loci(
         samples=None,
         thin=1):
 
-    config = pyclone.config.PyCloneConfig(config_file)
-
     trace = pyclone.trace.DiskTrace(trace_file)
+
+    config = _load_config_from_trace(trace)
 
     kwargs = {
         'burnin': burnin,
@@ -125,7 +123,7 @@ def plot_loci(
     elif plot_format.startswith('vaf'):
         kwargs['value'] = 'vaf'
 
-    if plot_format == 'ccf_density':
+    if plot_format == 'ccf-density':
         [kwargs.pop(x) for x in list(kwargs.keys()) if 'cluster' in x]
 
         kwargs.pop('value')
@@ -136,7 +134,7 @@ def plot_loci(
             **kwargs
         )
 
-    elif plot_format in ['ccf_line', 'vaf_line']:
+    elif plot_format in ['ccf-line', 'vaf-line']:
         pyclone.post_process.plot.loci.parallel_coordinates_plot(
             config,
             trace,
@@ -144,7 +142,7 @@ def plot_loci(
             **kwargs
         )
 
-    elif plot_format in ['ccf_scatter', 'vaf_scatter']:
+    elif plot_format in ['ccf-scatter', 'vaf-scatter']:
         pyclone.post_process.plot.loci.scatter_plot(
             config,
             trace,
@@ -152,7 +150,7 @@ def plot_loci(
             **kwargs
         )
 
-    elif plot_format == 'similarity_matrix':
+    elif plot_format == 'similarity-matrix':
         kwargs.pop('samples')
 
         pyclone.post_process.plot.loci.similarity_matrix_plot(

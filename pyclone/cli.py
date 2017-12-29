@@ -70,12 +70,6 @@ def build_table(**kwargs):
     name='clusters'
 )
 @click.option(
-    '-c', '--config-file',
-    required=True,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
-)
-@click.option(
     '-t', '--trace-file',
     required=True,
     type=click.Path(exists=True, resolve_path=True),
@@ -142,13 +136,7 @@ def plot_clusters(**kwargs):
 
 @click.command(
     context_settings={'max_content_width': 120},
-    name='plot-loci'
-)
-@click.option(
-    '-c', '--config-file',
-    required=True,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
+    name='loci'
 )
 @click.option(
     '-t', '--trace-file',
@@ -166,7 +154,7 @@ def plot_clusters(**kwargs):
     '-f', '--plot-format',
     required=True,
     type=click.Choice([
-        'ccf_density', 'ccf_line', 'ccf_scatter', 'similarity_matrix', 'vaf_line', 'vaf_scatter'
+        'ccf-density', 'ccf-line', 'ccf-scatter', 'similarity-matrix', 'vaf-line', 'vaf-scatter'
     ]),
     help='''Determines which style of plot will be done.'''
 )
