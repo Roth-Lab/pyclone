@@ -34,12 +34,12 @@ def density_plot(
     df = _load_density_df(trace, burnin, thin)
 
     if len(samples) == 0:
-        samples = sorted(df['sample_id'].unique())
+        samples = sorted(df['sample'].unique())
 
     else:
-        df = df[df['sample_id'].isin(samples)]
+        df = df[df['sample'].isin(samples)]
 
-    loci = df['mutation_id'].unique()
+    loci = df['mutation'].unique()
 
     num_loci = len(loci)
 
@@ -56,12 +56,12 @@ def density_plot(
 
         utils.setup_axes(ax)
 
-        plot_df = df[df['mutation_id'] == locus]
+        plot_df = df[df['mutation'] == locus]
 
         sb.violinplot(
             ax=ax,
             data=plot_df,
-            x='sample_id',
+            x='sample',
             y='cellular_prevalence',
 
             inner=None,
@@ -108,16 +108,16 @@ def density_plot(
 def _load_density_df(trace, burnin=0, thin=1):
     df = []
 
-    for sample_id, sample_df in trace.cancer_cell_fractions.items():
+    for sample, sample_df in trace.cancer_cell_fractions.items():
         sample_df = sample_df[burnin::thin]
 
         sample_df = sample_df.unstack().reset_index()
 
-        sample_df.columns = 'mutation_id', 'iter', 'cellular_prevalence'
+        sample_df.columns = 'mutation', 'iter', 'cellular_prevalence'
 
-        sample_df['sample_id'] = sample_id
+        sample_df['sample'] = sample
 
-        sample_df = sample_df[['mutation_id', 'sample_id', 'cellular_prevalence']]
+        sample_df = sample_df[['mutation', 'sample', 'cellular_prevalence']]
 
         df.append(sample_df)
 
@@ -152,15 +152,15 @@ def parallel_coordinates_plot(
         min_cluster_size=min_cluster_size
     )
 
-    color_map = utils.get_clusters_color_map(df['cluster_id'])
+    color_map = utils.get_clusters_color_map(df['cluster'])
 
     if len(samples) == 0:
-        samples = sorted(df['sample_id'].unique())
+        samples = sorted(df['sample'].unique())
 
     else:
-        df = df[df['sample_id'].isin(samples)]
+        df = df[df['sample'].isin(samples)]
 
-    df['sample_index'] = df['sample_id'].apply(lambda x: samples.index(x))
+    df['sample_index'] = df['sample'].apply(lambda x: samples.index(x))
 
     df = df.sort_values(by='sample_index')
 
@@ -170,8 +170,8 @@ def parallel_coordinates_plot(
 
     utils.setup_axes(ax)
 
-    for cluster_id, cluster_df in df.groupby('cluster_id'):
-        for _, locus_df in cluster_df.groupby('mutation_id'):
+    for cluster, cluster_df in df.groupby('cluster'):
+        for _, locus_df in cluster_df.groupby('mutation'):
             x = locus_df['sample_index']
 
             y = locus_df[value]
@@ -180,7 +180,7 @@ def parallel_coordinates_plot(
                 x,
                 y,
                 alpha=0.75,
-                c=color_map[cluster_id],
+                c=color_map[cluster],
                 marker=defaults.line_plot_marker,
                 markersize=defaults.line_plot_marker_size
             )
@@ -214,6 +214,8 @@ def parallel_coordinates_plot(
 
     legend.get_title().set_fontsize(defaults.legend_title_font_size)
 
+    fig.set_size_inches(*utils.get_parallel_coordinates_figure_size(samples))
+
     utils.save_figure(fig, out_file)
 
 #=======================================================================================================================
@@ -244,15 +246,15 @@ def scatter_plot(
     )
 
     if len(samples) == 0:
-        samples = sorted(df['sample_id'].unique())
+        samples = sorted(df['sample'].unique())
 
-    color_map = utils.get_clusters_color_map(df['cluster_id'])
+    color_map = utils.get_clusters_color_map(df['cluster'])
 
-    cluster_df = df[['mutation_id', 'cluster_id']].drop_duplicates().set_index('mutation_id')
+    cluster_df = df[['mutation', 'cluster']].drop_duplicates().set_index('mutation')
 
-    loci_color_map = cluster_df['cluster_id'].map(color_map).to_dict()
+    loci_color_map = cluster_df['cluster'].map(color_map).to_dict()
 
-    mean_df = df.pivot(index='mutation_id', columns='sample_id', values=value)
+    mean_df = df.pivot(index='mutation', columns='sample', values=value)
 
     scatter.plot_all_pairs(
         loci_color_map,
@@ -279,9 +281,9 @@ def similarity_matrix_plot(
 
     labels = post_process.cluster_pyclone_trace(trace, burnin, thin, max_clusters=max_clusters)
 
-    labels = labels.set_index('mutation_id')
+    labels = labels.set_index('mutation')
 
-    labels = labels['cluster_id']
+    labels = labels['cluster']
 
     color_map = utils.get_clusters_color_map(labels)
 

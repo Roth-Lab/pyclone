@@ -29,17 +29,17 @@ def density_plot(
         thin=thin
     )
 
-    sizes = df[['cluster_id', 'size']].drop_duplicates().set_index('cluster_id').to_dict()['size']
+    sizes = df[['cluster', 'size']].drop_duplicates().set_index('cluster').to_dict()['size']
 
     if len(samples) == 0:
-        samples = sorted(df['sample_id'].unique())
+        samples = sorted(df['sample'].unique())
 
     else:
-        df = df[df['sample_id'].isin(samples)]
+        df = df[df['sample'].isin(samples)]
 
     num_samples = len(samples)
 
-    clusters = df['cluster_id'].unique()
+    clusters = df['cluster'].unique()
 
     postions = list(range(1, len(clusters) + 1))
 
@@ -55,23 +55,23 @@ def density_plot(
 
     colors = utils.get_clusters_color_map(pd.Series(clusters))
 
-    for ax_index, sample_id in enumerate(samples):
-        plot_df = df[df['sample_id'] == sample_id]
+    for ax_index, sample in enumerate(samples):
+        plot_df = df[df['sample'] == sample]
 
-        plot_df = plot_df.drop(['sample_id', 'size'], axis=1).set_index('cluster_id')
+        plot_df = plot_df.drop(['sample', 'size'], axis=1).set_index('cluster')
 
         ax = fig.add_subplot(grid[ax_index])
 
         utils.setup_axes(ax)
 
         ax.annotate(
-            sample_id,
+            sample,
             xy=(1.01, 0.5),
             xycoords='axes fraction',
             fontsize=defaults.axis_label_font_size
         )
 
-        for i, (cluster_id, log_pdf) in enumerate(plot_df.iterrows()):
+        for i, (cluster, log_pdf) in enumerate(plot_df.iterrows()):
             pos = postions[i]
 
             y = log_pdf.index.astype(float)
@@ -80,7 +80,7 @@ def density_plot(
 
             x = (x / x.max()) * 0.3
 
-            ax.fill_betweenx(y, pos - x, pos + x, color=colors[cluster_id], where=(x > 1e-6))
+            ax.fill_betweenx(y, pos - x, pos + x, color=colors[cluster], where=(x > 1e-6))
 
         ax.set_xticks(postions)
 
@@ -154,20 +154,20 @@ def parallel_coordinates_plot(
     )
 
     if len(samples) == 0:
-        samples = sorted(plot_df['sample_id'].unique())
+        samples = sorted(plot_df['sample'].unique())
 
     else:
-        plot_df = plot_df[plot_df['sample_id'].isin(samples)]
+        plot_df = plot_df[plot_df['sample'].isin(samples)]
 
-    clusters = sorted(plot_df['cluster_id'].unique())
+    clusters = sorted(plot_df['cluster'].unique())
 
-    plot_df['sample_index'] = plot_df['sample_id'].apply(lambda x: samples.index(x))
+    plot_df['sample_index'] = plot_df['sample'].apply(lambda x: samples.index(x))
 
     plot_df = plot_df.sort_values(by='sample_index')
 
     grid = sb.FacetGrid(
         plot_df,
-        hue='cluster_id',
+        hue='cluster',
         hue_order=clusters,
         palette='husl'
     )
@@ -242,14 +242,14 @@ def scatter_plot(
         thin=thin
     )
 
-    mean_df = df.pivot(index='cluster_id', columns='sample_id', values='mean')
+    mean_df = df.pivot(index='cluster', columns='sample', values='mean')
 
-    error_df = df.pivot(index='cluster_id', columns='sample_id', values='std')
+    error_df = df.pivot(index='cluster', columns='sample', values='std')
 
     if len(samples) == 0:
-        samples = sorted(df['sample_id'].unique())
+        samples = sorted(df['sample'].unique())
 
-    color_map = utils.get_clusters_color_map(pd.Series(df['cluster_id']))
+    color_map = utils.get_clusters_color_map(pd.Series(df['cluster']))
 
     scatter.plot_all_pairs(
         color_map,

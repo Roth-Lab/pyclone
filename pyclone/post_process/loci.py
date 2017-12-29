@@ -30,15 +30,14 @@ def load_table(config, trace, burnin, thin, max_clusters=None, min_cluster_size=
 
     data = pd.merge(data, labels, on='mutation', how='inner')
 
-    if config.discrete_approximation:
-        cols = ['mutation', 'sample', 'cluster', 'vaf']
+    cols = ['mutation', 'sample', 'cluster', 'ref_counts', 'alt_counts', 'major_cn', 'minor_cn', 'normal_cn', 'vaf']
 
-    else:
+    if not config.discrete_approximation:
         ccf = _load_cancer_cell_fractions(trace, burnin, thin)
 
         data = pd.merge(data, ccf, how='inner', on=['mutation', 'sample'])
 
-        cols = ['mutation', 'sample', 'cluster', 'ccf', 'ccf_std', 'vaf']
+        cols = cols + ['ccf', 'ccf_std']
 
     data = data[cols]
 
@@ -75,7 +74,7 @@ def _load_variant_allele_frequencies(trace):
 
     data['vaf'] = data['alt_counts'] / (data['ref_counts'] + data['alt_counts'])
 
-    return data[['mutation', 'sample', 'vaf']]
+    return data[['mutation', 'sample', 'ref_counts', 'alt_counts', 'major_cn', 'minor_cn', 'normal_cn', 'vaf']]
 
 
 def _load_cancer_cell_fractions(trace, burnin, thin):
@@ -86,14 +85,14 @@ def _load_cancer_cell_fractions(trace, burnin, thin):
 
         sample_data = _load_sample_cancer_cell_fractions(sample_data)
 
-        sample_data['sample_id'] = sample_id
+        sample_data['sample'] = sample_id
 
         data.append(sample_data)
 
     data = pd.concat(data, axis=0)
 
     # Filter for mutations in all samples
-    data = data[data['mutation_id'].isin(trace.mutations)]
+    data = data[data['mutation'].isin(trace.mutations)]
 
     return data
 
@@ -103,7 +102,7 @@ def _load_sample_cancer_cell_fractions(data):
 
     data.columns = 'ccf', 'ccf_std'
 
-    data.index.name = 'mutation_id'
+    data.index.name = 'mutation'
 
     data = data.reset_index()
 

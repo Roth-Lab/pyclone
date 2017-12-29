@@ -20,7 +20,7 @@ tick_label_font_size = 8
 #=======================================================================================================================
 # Labels
 #=======================================================================================================================
-cellular_prevalence_label = 'Cellular prevalence'
+cellular_prevalence_label = 'CCF'
 
 variant_allele_frequency_label = 'VAF'
 
