@@ -242,6 +242,14 @@ def plot_loci(**kwargs):
     examples directory in the GitHub repository for format.'''
 )
 @click.option(
+    '--grid-size',
+    default=None,
+    type=int,
+    help='''Grid size for discrete approximation. This will numerically marginalise the cancer cell fraction. Higher
+    values lead to more accurate approximations at the expense of run time. By default this off and cancer cell
+    fractions are sampled exactly. '''
+)
+@click.option(
     '--no-concentration-update',
     is_flag=True,
     help='''Set this to disable updating the concentration parameter of the Dirichlet process. Has not effect when the

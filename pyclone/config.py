@@ -58,6 +58,16 @@ class PyCloneConfig(object):
 
         self._init_data(data_df)
 
+    @staticmethod
+    def from_trace(trace):
+        new = PyCloneConfig.__new__(PyCloneConfig)
+
+        new._config = trace.config
+
+        new._init_data(trace['data'])
+
+        return new
+
     @property
     def base_measure_params(self):
         """ The parameters for the DP Beta base measure.
@@ -83,7 +93,7 @@ class PyCloneConfig(object):
         return self._config['beta_binomial_precision']['value']
 
     @property
-    def concetration_prior(self):
+    def concentration_prior(self):
         """ The prior for the DP concentration parameter.
 
         Return None if not prior specified.
@@ -91,7 +101,7 @@ class PyCloneConfig(object):
         return self._config['concentration'].get('prior', None)
 
     @property
-    def concetration_value(self):
+    def concentration_value(self):
         """ The (initial) value of the DP concentration parameter.
         """
         return self._config['concentration']['value']

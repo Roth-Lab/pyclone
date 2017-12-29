@@ -3,8 +3,6 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
-from pydp.data import GammaData
-
 import pandas as pd
 import random
 
@@ -169,19 +167,7 @@ def resume_analysis(num_iters, trace_file):
 
     sampler = pyclone.mcmc.get_sampler(config)
 
-    state = {
-        'alpha': trace['alpha'].iloc[-1],
-        'labels': trace['/state/labels'],
-        'params': trace['/state/params']
-    }
-
-    if config.density == 'binomial':
-        state['global_params'] = None
-
-    else:
-        state['global_params'] = GammaData(trace['beta_binomial_precision'].iloc[-1])
-
-    sampler.state = state
+    sampler.state = trace.state
 
     pyclone.mcmc.run_mcmc(config, num_iters, sampler, trace)
 
@@ -196,6 +182,7 @@ def run_analysis(
         concentration_value=1.0,
         config_file=None,
         density='beta-binomial',
+        grid_size=None,
         no_concentration_update=False,
         no_precision_update=False,
         num_iters=int(1e4),
@@ -210,6 +197,7 @@ def run_analysis(
     config = pyclone.config.PyCloneConfig(
         data_df,
         density=density,
+        grid_size=grid_size,
         init_concentration=concentration_value,
         init_precision=precision_value,
         over_ride_file=config_file,
@@ -239,8 +227,6 @@ def run_analysis(
 
 
 def _load_config_from_trace(trace):
-    config = pyclone.config.PyCloneConfig(trace['data'])
-
-    config.update(trace.config)
+    config = pyclone.config.PyCloneConfig.from_trace(trace)
 
     return config
