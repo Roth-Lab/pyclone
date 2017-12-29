@@ -132,13 +132,11 @@ class PyCloneConfig(object):
             )))
 
         else:
-            print('Samples: {}'.format('\t'.join(self.samples)))
+            print('Samples: {}'.format(' '.join(self.samples)))
 
             print('Num mutations: {}'.format(len(self.mutations)))
 
         if 'error_rate' not in df.columns:
-            print('Error rate column not found. Setting values to 0.001')
-
             df['error_rate'] = 1e-3
 
         if 'tumour_content' not in df.columns:
@@ -149,8 +147,6 @@ class PyCloneConfig(object):
         self.data = {}
 
         for name, mut_df in df.groupby('mutation'):
-            print(name)
-
             mut_data = []
 
             mut_df = mut_df.set_index('sample')
@@ -205,8 +201,6 @@ def convert_data_to_discrete_grid(data_point, density='beta-binomial', precision
 
 
 def get_major_cn_prior(major_cn, minor_cn, normal_cn, error_rate=1e-3):
-    print(major_cn, minor_cn, normal_cn, error_rate)
-
     total_cn = major_cn + minor_cn
 
     cn = []

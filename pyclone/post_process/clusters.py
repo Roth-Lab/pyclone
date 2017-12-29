@@ -60,14 +60,14 @@ def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None
 
 
 def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_size=0, thin=1):
-    if config.density == 'pyclone_beta_binomial':
+    if config.density == 'beta-binomial':
         precision = trace['beta_binomial_precision']
 
         precision = precision.iloc[burnin::thin].mean()
 
         density = pyclone.densities.PyCloneBetaBinomialDensity(precision)
 
-    elif config.density == 'pyclone_binomial':
+    elif config.density == 'binomial':
         density = pyclone.densities.PyCloneBinomialDensity()
 
     else:

@@ -11,12 +11,6 @@ import pyclone.run as run
     name='table'
 )
 @click.option(
-    '-c', '--config-file',
-    required=True,
-    type=click.Path(exists=True, resolve_path=True),
-    help='''Path to configuration file used for analysis. Use pyclone setup-analysis to build this file.'''
-)
-@click.option(
     '-t', '--trace-file',
     required=True,
     type=click.Path(exists=True, resolve_path=True),

@@ -15,10 +15,10 @@ import pyclone.post_process.plot
 import pyclone.trace
 
 
-def build_table(config_file, trace_file, out_file, table_format, burnin=0, grid_size=101, max_clusters=100, thin=1):
-    config = pyclone.config.PyCloneConfig(config_file)
-
+def build_table(trace_file, out_file, table_format, burnin=0, grid_size=101, max_clusters=100, thin=1):
     trace = pyclone.trace.DiskTrace(trace_file)
+
+    config = _load_config_from_trace(trace)
 
     if table_format == 'cluster':
         df = pyclone.post_process.clusters.load_summary_table(
@@ -167,9 +167,7 @@ def plot_loci(
 def resume_analysis(num_iters, trace_file):
     trace = pyclone.trace.DiskTrace(trace_file, mode='a')
 
-    config = pyclone.config.PyCloneConfig(trace['data'])
-
-    config.update(trace.config)
+    config = _load_config_from_trace(trace)
 
     sampler = pyclone.mcmc.get_sampler(config)
 
@@ -240,3 +238,11 @@ def run_analysis(
     print(trace.labels.iloc[-1])
 
     trace.close()
+
+
+def _load_config_from_trace(trace):
+    config = pyclone.config.PyCloneConfig(trace['data'])
+
+    config.update(trace.config)
+
+    return config
