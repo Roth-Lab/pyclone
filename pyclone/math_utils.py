@@ -36,7 +36,11 @@ def log_pyclone_beta_binomial_pdf(data, f, s):
 
         e_vaf /= norm_const
 
-        ll[c] = data.log_pi[c] + log_beta_binomial_pdf(data.a + data.b, data.b, e_vaf, s)
+        a = e_vaf * s
+
+        b = s - a
+
+        ll[c] = data.log_pi[c] + log_beta_binomial_pdf(data.a + data.b, data.b, a, b)
 
     return log_sum_exp(ll)
 
