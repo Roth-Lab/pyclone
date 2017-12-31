@@ -6,10 +6,10 @@ import pyclone.pgsm
 
 def get_sampler(config):
     if config.discrete_approximation:
-        sampler = pyclone.pgsm.load_marginal_sampler(config)
+        sampler = pyclone.pgsm.MarginalSampler(config)
 
     else:
-        sampler = pyclone.pydp.load_sampler(config)
+        sampler = pyclone.pydp.InstantiatedSampler(config)
 
     return sampler
 
@@ -21,7 +21,7 @@ def run_mcmc(config, num_iters, sampler, trace):
     print()
 
     for i in range(1, num_iters + 1):
-        sampler.interactive_sample(list(config.data.values()))
+        sampler.interactive_sample()
 
         state = sampler.state
 

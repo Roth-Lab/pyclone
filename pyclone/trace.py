@@ -112,16 +112,13 @@ class DiskTrace(object):
 
         self['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
 
-        if 'params' in state:
-            for sample in self.samples:
-                sample_params = [data_point_param[sample].x for data_point_param in state['params']]
+        for sample in self.samples:
+            sample_params = pd.DataFrame({'mutation_id': self.mutations, 'value': state['params'][sample]})
 
-                sample_params = pd.DataFrame({'mutation_id': self.mutations, 'value': sample_params})
+            sample_params['idx'] = self._idx
 
-                sample_params['idx'] = self._idx
+            self._store.append('params/{}'.format(sample), sample_params)
 
-                self._store.append('params/{}'.format(sample), sample_params)
-
-            self['/state/params'] = pd.Series(state['params'], index=self.mutations)
+        self['/state/params'] = pd.Series(state['params'], index=self.mutations)
 
         self._idx += 1

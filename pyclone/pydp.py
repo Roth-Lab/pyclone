@@ -1,6 +1,5 @@
 from collections import OrderedDict, namedtuple
 
-import pyclone.math_utils
 from pydp.base_measures import BaseMeasure, BetaBaseMeasure, GammaBaseMeasure
 from pydp.data import GammaData
 from pydp.densities import Density
@@ -12,53 +11,89 @@ from pydp.samplers.dp import DirichletProcessSampler
 from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
 
+import pyclone.math_utils
 
-def load_sampler(config):
-    base_measure = pyclone.pydp.MultiSampleBaseMeasure.from_samples(
-        BetaBaseMeasure, config.base_measure_params, config.samples
-    )
 
-    if config.density == 'binomial':
-        density_cls = pyclone.pydp.PyCloneBinomialDensity
+class InstantiatedSampler(object):
+    def __init__(self, config):
+        self.config = config
 
-        density_params = {}
+        self._init_data(config)
 
-    elif config.density == 'beta-binomial':
-        density_cls = pyclone.densities.PyCloneBetaBinomialDensity
+        self._sampler = self._init_sampler(config)
 
-        density_params = {'params': config.beta_binomial_precision_value}
+    @property
+    def state(self):
+        state = self._sampler.state
 
-    cluster_density = pyclone.pydp.MultiSampleDensity.from_samples(
-        density_cls, density_params, config.samples
-    )
+        params = OrderedDict()
 
-    atom_sampler = pyclone.pydp.MultiSampleAtomSampler.from_samples(
-        BaseMeasureAtomSampler, base_measure, cluster_density, config.samples
-    )
+        for sample in self.config.samples:
+            params[sample] = [data_point_param[sample].x for data_point_param in state['params']]
 
-    partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
+        state['params'] = params
 
-    if (config.density == 'binomial') or (config.beta_binomial_precision_prior is None):
-        global_params_sampler = None
+        return state
 
-    else:
-        global_params_sampler = MetropolisHastingsGlobalParameterSampler(
-            GammaBaseMeasure(**config.beta_binomial_precision_prior),
-            cluster_density,
-            GammaProposal(config.beta_binomial_precision_proposal_precision)
+    @state.setter
+    def state(self, value):
+        self._sampler.state = value
+
+    def interactive_sample(self):
+        self._sampler.interactive_sample(self.data)
+
+    def _init_data(self, config):
+        self.data = []
+
+        for data_point in config.data.values():
+            self.data.append(data_point.to_dict())
+
+    def _init_sampler(self, config):
+        base_measure = pyclone.pydp.MultiSampleBaseMeasure.from_samples(
+            BetaBaseMeasure, config.base_measure_params, config.samples
         )
 
-    sampler = DirichletProcessSampler(
-        atom_sampler,
-        partition_sampler,
-        config.concentration_value,
-        config.concentration_prior,
-        global_params_sampler,
-    )
+        if config.density == 'binomial':
+            density_cls = pyclone.pydp.PyCloneBinomialDensity
 
-    sampler.initialise_partition(config.init_method, len(config.data))
+            density_params = {}
 
-    return sampler
+        elif config.density == 'beta-binomial':
+            density_cls = pyclone.densities.PyCloneBetaBinomialDensity
+
+            density_params = {'params': config.beta_binomial_precision_value}
+
+        cluster_density = pyclone.pydp.MultiSampleDensity.from_samples(
+            density_cls, density_params, config.samples
+        )
+
+        atom_sampler = pyclone.pydp.MultiSampleAtomSampler.from_samples(
+            BaseMeasureAtomSampler, base_measure, cluster_density, config.samples
+        )
+
+        partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
+
+        if (config.density == 'binomial') or (config.beta_binomial_precision_prior is None):
+            global_params_sampler = None
+
+        else:
+            global_params_sampler = MetropolisHastingsGlobalParameterSampler(
+                GammaBaseMeasure(**config.beta_binomial_precision_prior),
+                cluster_density,
+                GammaProposal(config.beta_binomial_precision_proposal_precision)
+            )
+
+        sampler = DirichletProcessSampler(
+            atom_sampler,
+            partition_sampler,
+            config.concentration_value,
+            config.concentration_prior,
+            global_params_sampler,
+        )
+
+        sampler.initialise_partition(config.init_method, len(config.data))
+
+        return sampler
 
 
 class MultiSampleAtomSampler(AtomSampler):

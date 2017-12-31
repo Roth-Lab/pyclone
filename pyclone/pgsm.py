@@ -1,50 +1,36 @@
+from collections import defaultdict, OrderedDict
 from scipy.special import logsumexp as log_sum_exp
+
+from pgsm.math_utils import discrete_rvs
 from pgsm.mcmc.collapsed_gibbs import CollapsedGibbsSampler
 from pgsm.mcmc.concentration import GammaPriorConcentrationSampler
 from pgsm.mcmc.particle_gibbs_split_merge import ParticleGibbsSplitMergeSampler
-from pgsm.partition_priors import DirichletProcessPartitionPrior
 from pgsm.mcmc.split_merge_setup import UniformSplitMergeSetupKernel
+from pgsm.partition_priors import DirichletProcessPartitionPrior
 
 import numpy as np
 
 import pyclone.math_utils
 
 
-def load_marginal_sampler(config):
-    return MarginalSampler(
-        list(config.data.values()),
-        concetration_prior=config.concentration_prior,
-        init_concentration=config.concentration_value
-    )
-
-
 class MarginalSampler(object):
-    def __init__(self, data, concetration_prior={'rate': 1.0, 'shape': 1.0}, init_concentration=1.0):
-        self.dist = PyCloneDistribution(data[0].shape)
+    def __init__(self, config):
+        self.config = config
 
-        self.partition_prior = DirichletProcessPartitionPrior(init_concentration)
+        self._init_data(config)
 
-        self.gibbs_sampler = CollapsedGibbsSampler(self.dist, self.partition_prior)
+        self._sampler = self._init_sampler(config)
 
-        self.setup_kernel = UniformSplitMergeSetupKernel(data, self.dist, self.partition_prior)
-
-        self.pgsm_sampler = ParticleGibbsSplitMergeSampler.create_from_dist(
-            self.dist, self.partition_prior, self.setup_kernel, num_anchors=2
-        )
-
-        if concetration_prior is None:
-            self.conc_sampler = None
-
-        else:
-            self.conc_sampler = GammaPriorConcentrationSampler(concetration_prior['shape'], concetration_prior['rate'])
-
-        self.pred_clustering = np.zeros(len(data))
+    @property
+    def ccfs(self):
+        pass
 
     @property
     def state(self):
         return {
             'alpha': self.partition_prior.alpha,
             'labels': self.pred_clustering,
+            'params': self._sample_data_params()
         }
 
     @state.setter
@@ -53,20 +39,94 @@ class MarginalSampler(object):
 
         self.pred_clustering = value['labels']
 
-    def interactive_sample(self, data):
-        data = np.array(data)
+    def interactive_sample(self):
+        self.pred_clustering = self.pgsm_sampler.sample(self.pred_clustering, self.data)
 
-        self.pred_clustering = self.pgsm_sampler.sample(self.pred_clustering, data)
-
-        self.pred_clustering = self.gibbs_sampler.sample(self.pred_clustering, data)
+        self.pred_clustering = self.gibbs_sampler.sample(self.pred_clustering, self.data)
 
         num_clusters = len(np.unique(self.pred_clustering))
 
-        num_data_points = len(data)
+        num_data_points = len(self.data)
 
         if self.conc_sampler is not None:
             self.partition_prior.alpha = self.conc_sampler.sample(
-                self.partition_prior.alpha, num_clusters, num_data_points)
+                self.partition_prior.alpha, num_clusters, num_data_points
+            )
+
+    def _init_data(self, config):
+        data = []
+
+        for data_point in config.data.values():
+            data.append(
+                data_point.to_likelihood_grid(
+                    config.density,
+                    config.grid_size,
+                    precision=config.beta_binomial_precision_value
+                )
+            )
+
+        self.data = np.array(data)
+
+    def _init_sampler(self, config):
+        self.dist = PyCloneDistribution(self.data[0].shape)
+
+        self.partition_prior = DirichletProcessPartitionPrior(config.concentration_value)
+
+        self.gibbs_sampler = CollapsedGibbsSampler(self.dist, self.partition_prior)
+
+        self.setup_kernel = UniformSplitMergeSetupKernel(self.data, self.dist, self.partition_prior)
+
+        self.pgsm_sampler = ParticleGibbsSplitMergeSampler.create_from_dist(
+            self.dist, self.partition_prior, self.setup_kernel, num_anchors=2
+        )
+
+        if config.concentration_prior is None:
+            self.conc_sampler = None
+
+        else:
+            self.conc_sampler = GammaPriorConcentrationSampler(
+                config.concentration_prior['shape'], config.concentration_prior['rate']
+            )
+
+        if config.init_method == 'connected':
+            self.pred_clustering = np.zeros(len(self.data))
+
+        elif config.init_method == 'disconnected':
+            self.pred_clustering = np.arange(len(self.data))
+
+        else:
+            raise Exception('Unknown initialisation method {}.'.format(config.init_method))
+
+    def _sample_cluster_params(self):
+        result = defaultdict(OrderedDict)
+
+        ccfs = np.linspace(0, 1, self.data[0].shape[1])
+
+        dist = PyCloneDistribution(self.data[0].shape)
+
+        for cluster_idx in np.unique(self.pred_clustering):
+            cluster_data = self.data[self.pred_clustering == cluster_idx]
+
+            cluster_params = dist.create_params_from_data(cluster_data)
+
+            log_posterior = cluster_params.normalized_log_pdf_grid
+
+            for s_idx, sample in enumerate(self.config.samples):
+                ccf_idx = discrete_rvs(log_posterior[s_idx, :])
+
+                result[cluster_idx][sample] = ccfs[ccf_idx]
+
+        return result
+
+    def _sample_data_params(self):
+        cluster_params = self._sample_cluster_params()
+
+        params = OrderedDict()
+
+        for sample in self.config.samples:
+            params[sample] = [cluster_params[cluster_idx][sample] for cluster_idx in self.pred_clustering]
+
+        return params
 
 
 class PycloneParameters(object):
@@ -78,7 +138,12 @@ class PycloneParameters(object):
 
     @property
     def normalized_log_pdf_grid(self):
-        return pyclone.math_utils.log_normalize(self.log_pdf_grid)
+        result = []
+
+        for i in range(self.log_pdf_grid.shape[0]):
+            result.append(pyclone.math_utils.log_normalize(self.log_pdf_grid[i, :]))
+
+        return np.array(result)
 
     def copy(self):
         return PycloneParameters(self.log_pdf_grid.copy(), self.N)

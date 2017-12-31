@@ -115,6 +115,10 @@ class PyCloneConfig(object):
         return self._config['density']
 
     @property
+    def grid_size(self):
+        return self._config['grid_size']
+
+    @property
     def init_method(self):
         """ Initialisation method for DP sampler.
         """
@@ -154,10 +158,10 @@ class PyCloneConfig(object):
 
             df.loc[:, 'tumour_content'] = 1.0
 
-        self.data = {}
+        self.data = OrderedDict()
 
         for name, mut_df in df.groupby('mutation'):
-            mut_data = []
+            sample_data_points = []
 
             mut_df = mut_df.set_index('sample')
 
@@ -175,39 +179,9 @@ class PyCloneConfig(object):
                     error_rate=row['error_rate']
                 )
 
-                data_point = pyclone.data.DataPoint(a, b, cn, mu, log_pi, row['tumour_content'])
+                sample_data_points.append(pyclone.data.SampleDataPoint(a, b, cn, mu, log_pi, row['tumour_content']))
 
-                if self.discrete_approximation:
-                    mut_data.append(
-                        convert_data_to_discrete_grid(
-                            data_point,
-                            density=self.density,
-                            grid_size=self._config['grid_size'],
-                            precision=self.beta_binomial_precision_value
-                        )
-                    )
-
-                else:
-                    mut_data.append(data_point)
-
-            if self.discrete_approximation:
-                self.data[name] = np.vstack(mut_data)
-
-            else:
-                self.data[name] = OrderedDict(zip(self.samples, mut_data))
-
-
-def convert_data_to_discrete_grid(data_point, density='beta-binomial', precision=400, grid_size=1000):
-    log_ll = np.zeros(grid_size)
-
-    for i, cellular_prevalence in enumerate(np.linspace(0, 1, grid_size)):
-        if density == 'beta-binomial':
-            log_ll[i] = pyclone.math_utils.log_pyclone_beta_binomial_pdf(data_point, cellular_prevalence, precision)
-
-        elif density == 'binomial':
-            log_ll[i] = pyclone.math_utils.log_pyclone_binomial_pdf(data_point, cellular_prevalence)
-
-    return log_ll
+            self.data[name] = pyclone.data.DataPoint(self.samples, sample_data_points)
 
 
 def get_major_cn_prior(major_cn, minor_cn, normal_cn, error_rate=1e-3):
