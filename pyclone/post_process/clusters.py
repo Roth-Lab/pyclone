@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 import pyclone.densities
+import pyclone.math_utils
 
 
 def cluster_pyclone_trace(trace, burnin=0, thin=1, max_clusters=None):
@@ -61,51 +62,45 @@ def load_summary_table(config, trace, burnin=0, grid_size=101, max_clusters=None
 
 def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_size=0, thin=1):
     if config.density == 'beta-binomial':
-        if config.beta_binomial_precision_prior is None:
-            precision = config.beta_binomial_precision_value
-
-        else:
+        if config.update_precision:
             precision = trace['beta_binomial_precision']
 
             precision = precision.iloc[burnin::thin].mean()
 
-        density = pyclone.densities.PyCloneBetaBinomialDensity(precision)
+        else:
+            precision = config.beta_binomial_precision_value
 
     elif config.density == 'binomial':
-        density = pyclone.densities.PyCloneBinomialDensity()
+        precision = None
 
     else:
         raise Exception('Only pyclone_binomial and pyclone_beta_binomial density are supported.')
 
-    data = config.data
-
     labels = cluster_pyclone_trace(trace, burnin=burnin, max_clusters=max_clusters, thin=thin)
 
     labels = labels.set_index('mutation')
+
+    ccfs = list(config.data.values())[0].get_ccf_grid(grid_size)
 
     posteriors = []
 
     for cluster_id, cluster_df in labels.groupby('cluster'):
         mutation_ids = list(cluster_df.index)
 
-        cluster_data = [data[x] for x in mutation_ids]
+        cluster_data = [
+            config.data[x].to_likelihood_grid(config.density, grid_size, precision=precision) for x in mutation_ids
+        ]
 
-        for sample_id in config.samples:
-            if not config.discrete_approximation:
-                cluster_sample_data = [x[sample_id] for x in cluster_data]
+        for s_idx, sample in enumerate(config.samples):
+            cluster_sample_data = np.array([x[s_idx] for x in cluster_data])
 
-                cluster_sample_posterior = _compute_posterior(cluster_sample_data, density, grid_size)
+            cluster_sample_posterior = pyclone.math_utils.log_normalize(cluster_sample_data.sum(axis=0))
 
-            else:
-                cluster_sample_data = np.array([x[config.samples.index(sample_id)] for x in cluster_data])
+            cluster_sample_posterior = dict(
+                zip(ccfs, cluster_sample_posterior)
+            )
 
-                cluster_sample_posterior = log_space_normalise(cluster_sample_data.sum(axis=0))
-
-                cluster_sample_posterior = dict(
-                    zip(np.linspace(0, 1, len(cluster_sample_posterior)), cluster_sample_posterior)
-                )
-
-            cluster_sample_posterior['sample'] = sample_id
+            cluster_sample_posterior['sample'] = sample
 
             cluster_sample_posterior['cluster'] = cluster_id
 

@@ -35,22 +35,18 @@ class PyCloneConfig(object):
             'beta_binomial_precision': {
                 'prior': {'rate': 0.001, 'shape': 1.0},
                 'proposal': {'precision': 0.01},
-                'value': init_precision
+                'value': init_precision,
+                'update': update_precision
             },
             'concentration': {
                 'prior': {'rate': 0.1, 'shape': 0.1},
-                'value': init_concentration
+                'value': init_concentration,
+                'update': update_concentration
             },
             'density': density,
             'grid_size': grid_size,
             'init_method': 'connected'
         }
-
-        if not update_concentration:
-            del self._config['concentration']['prior']
-
-        if (not update_precision) or (grid_size is not None):
-            del self._config['beta_binomial_precision']['prior']
 
         if over_ride_file is not None:
             with open(over_ride_file, 'r') as fh:
@@ -78,13 +74,13 @@ class PyCloneConfig(object):
     def beta_binomial_precision_prior(self):
         """ Precision parameter for the Beta-Binomial distribution.
         """
-        return self._config['beta_binomial_precision'].get('prior', None)
+        return self._config['beta_binomial_precision']['prior']
 
     @property
     def beta_binomial_precision_proposal_precision(self):
         """ Precision of Beta proposal distribution for Metropolis-Hastings updates of Beta-Binomial precision.
         """
-        return self._config['beta_binomial_precision'].get('proposal', {'precision': 0.1})['precision']
+        return self._config['beta_binomial_precision']['proposal']['precision']
 
     @property
     def beta_binomial_precision_value(self):
@@ -98,7 +94,7 @@ class PyCloneConfig(object):
 
         Return None if not prior specified.
         """
-        return self._config['concentration'].get('prior', None)
+        return self._config['concentration']['prior']
 
     @property
     def concentration_value(self):
@@ -123,6 +119,14 @@ class PyCloneConfig(object):
         """ Initialisation method for DP sampler.
         """
         return self._config['init_method']
+
+    @property
+    def update_concentration(self):
+        return self._concentration['concentration']['update']
+
+    @property
+    def update_precision(self):
+        return self._config['beta_binomial_precision']['update']
 
     def to_dict(self):
         return self._config.copy()

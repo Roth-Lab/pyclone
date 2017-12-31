@@ -9,9 +9,6 @@ import pyclone.post_process.clusters
 
 
 def load_table(config, trace, burnin, thin, max_clusters=None, min_cluster_size=0, old_style=False):
-    if old_style and config.discrete_approximation:
-        raise Exception('Cannot generate old style loci table from marginal sampler trace.')
-
     data = _load_variant_allele_frequencies(trace)
 
     labels = pyclone.post_process.clusters.cluster_pyclone_trace(
@@ -30,14 +27,16 @@ def load_table(config, trace, burnin, thin, max_clusters=None, min_cluster_size=
 
     data = pd.merge(data, labels, on='mutation', how='inner')
 
-    cols = ['mutation', 'sample', 'cluster', 'ref_counts', 'alt_counts', 'major_cn', 'minor_cn', 'normal_cn', 'vaf']
+    cols = [
+        'mutation', 'sample', 'cluster',
+        'ref_counts', 'alt_counts',
+        'major_cn', 'minor_cn', 'normal_cn',
+        'ccf', 'ccf_std', 'vaf'
+    ]
 
-    if not config.discrete_approximation:
-        ccf = _load_cancer_cell_fractions(trace, burnin, thin)
+    ccf = _load_cancer_cell_fractions(trace, burnin, thin)
 
-        data = pd.merge(data, ccf, how='inner', on=['mutation', 'sample'])
-
-        cols = cols + ['ccf', 'ccf_std']
+    data = pd.merge(data, ccf, how='inner', on=['mutation', 'sample'])
 
     data = data[cols]
 
@@ -50,7 +49,9 @@ def load_table(config, trace, burnin, thin, max_clusters=None, min_cluster_size=
 
 
 def _reformat_multi_sample_table(df):
-    df = df.rename(columns={'mutation': 'mutation_id', 'sample': 'sample_id'})
+    df = df.rename(
+        columns={'cluster': 'cluster_id', 'mutation': 'mutation_id', 'sample': 'sample_id'}
+    )
 
     mean_df = df[['mutation_id', 'sample_id', 'ccf']]
 
