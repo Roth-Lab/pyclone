@@ -52,12 +52,12 @@ class Test(unittest.TestCase):
         self._test_table_commands()
 
     def _run_instantiated_sampler(self):
-        cmd = ['analysis', 'new', '-i', self.data_file, '-t', self.trace_file, '-n', 1]
+        cmd = ['start-analysis', '-i', self.data_file, '-t', self.trace_file, '-n', 1]
 
         self._run_pyclone_cmd(cmd)
 
     def _run_marginal_sampler(self):
-        cmd = ['analysis', 'new', '-i', self.data_file, '-t', self.trace_file, '-n', 1, '--grid-size', 10]
+        cmd = ['start-analysis', '-i', self.data_file, '-t', self.trace_file, '-n', 1, '--grid-size', 10]
 
         self._run_pyclone_cmd(cmd)
 
@@ -84,7 +84,7 @@ class Test(unittest.TestCase):
 
         for plot_type in ['density', 'line', 'scatter']:
             cmd = [
-                'post-process', 'plot', 'clusters',
+                'plot-clusters',
                 '-t', self.trace_file, '-o', out_file, '-f', plot_type, '--grid-size', 10
             ]
 
@@ -96,7 +96,7 @@ class Test(unittest.TestCase):
 
         for plot_type in ['ccf-density', 'ccf-line', 'ccf-scatter', 'similarity-matrix', 'vaf-line', 'vaf-scatter']:
             cmd = [
-                'post-process', 'plot', 'loci',
+                'plot-loci',
                 '-t', self.trace_file, '-o', out_file, '-f', plot_type
             ]
 
@@ -111,7 +111,7 @@ class Test(unittest.TestCase):
 
         for table_type in ['cluster', 'loci', 'old']:
             cmd = [
-                'post-process', 'table',
+                'build-table',
                 '-t', self.trace_file, '-o', out_file, '-f', table_type, '--grid-size', 10
             ]
 

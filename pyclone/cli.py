@@ -8,7 +8,7 @@ import pyclone.run as run
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='table'
+    name='build-table'
 )
 @click.option(
     '-t', '--trace-file',
@@ -67,7 +67,7 @@ def build_table(**kwargs):
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='clusters'
+    name='plot-clusters'
 )
 @click.option(
     '-t', '--trace-file',
@@ -136,7 +136,7 @@ def plot_clusters(**kwargs):
 
 @click.command(
     context_settings={'max_content_width': 120},
-    name='loci'
+    name='plot-loci'
 )
 @click.option(
     '-t', '--trace-file',
@@ -201,7 +201,7 @@ def plot_loci(**kwargs):
 #=======================================================================================================================
 @click.command(
     context_settings={'max_content_width': 120},
-    name='new'
+    name='start-analysis'
 )
 @click.option(
     '-i', '--in-file',
@@ -282,7 +282,7 @@ def new_analysis(**kwargs):
 
 @click.command(
     context_settings={'max_content_width': 120},
-    name='resume'
+    name='resume-analysis'
 )
 @click.option(
     '-t', '--trace-file',
@@ -310,33 +310,8 @@ def pyclone():
     pass
 
 
-@click.group()
-def analysis():
-    pass
-
-
-@click.group(name='post-process')
-def post_process():
-    """ Post process results of a PyClone analysis.
-    """
-    pass
-
-
-@click.group()
-def plot():
-    """ Plot the results of a PyClone analysis.
-    """
-    pass
-
-
-pyclone.add_command(analysis)
-pyclone.add_command(post_process)
-
-analysis.add_command(new_analysis)
-analysis.add_command(resume_analysis)
-
-post_process.add_command(build_table)
-post_process.add_command(plot)
-
-plot.add_command(plot_clusters)
-plot.add_command(plot_loci)
+pyclone.add_command(new_analysis)
+pyclone.add_command(resume_analysis)
+pyclone.add_command(build_table)
+pyclone.add_command(plot_clusters)
+pyclone.add_command(plot_loci)
