@@ -43,7 +43,7 @@ class DiskTrace(object):
         for sample in self.samples:
             key = 'params/{}'.format(sample)
 
-            result[sample] = self[key].pivot(values='value', columns='mutation_id', index='idx')
+            result[sample] = self[key].pivot(values='value', columns='mutation', index='idx')
 
         return result
 
@@ -57,7 +57,7 @@ class DiskTrace(object):
 
     @property
     def labels(self):
-        return self['labels'].pivot(values='value', columns='mutation_id', index='idx')
+        return self['labels'].pivot(values='value', columns='mutation', index='idx')
 
     @property
     def mutations(self):
@@ -102,7 +102,7 @@ class DiskTrace(object):
 
             self._store.append('beta_binomial_precision', pd.Series({self._idx: precision}))
 
-        labels = pd.DataFrame({'mutation_id': self.mutations, 'value': state['labels']})
+        labels = pd.DataFrame({'mutation': self.mutations, 'value': state['labels']})
 
         labels['idx'] = self._idx
 
