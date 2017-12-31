@@ -9,6 +9,7 @@ from pgsm.mcmc.split_merge_setup import UniformSplitMergeSetupKernel
 from pgsm.partition_priors import DirichletProcessPartitionPrior
 
 import numpy as np
+import pandas as pd
 
 import pyclone.math_utils
 
@@ -125,6 +126,8 @@ class MarginalSampler(object):
 
         for sample in self.config.samples:
             params[sample] = [cluster_params[cluster_idx][sample] for cluster_idx in self.pred_clustering]
+
+        params = pd.DataFrame(params, index=self.config.mutations)
 
         return params
 

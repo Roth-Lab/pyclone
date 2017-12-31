@@ -1,7 +1,7 @@
 from collections import OrderedDict, namedtuple
 
 from pydp.base_measures import BaseMeasure, BetaBaseMeasure, GammaBaseMeasure
-from pydp.data import GammaData
+from pydp.data import BetaData, GammaData
 from pydp.densities import Density
 from pydp.partition import PartitionCell
 from pydp.proposal_functions import GammaProposal
@@ -10,6 +10,8 @@ from pydp.samplers.atom import AtomSampler, BaseMeasureAtomSampler
 from pydp.samplers.dp import DirichletProcessSampler
 from pydp.samplers.global_params import MetropolisHastingsGlobalParameterSampler
 from pydp.samplers.partition import AuxillaryParameterPartitionSampler
+
+import pandas as pd
 
 import pyclone.math_utils
 
@@ -31,12 +33,21 @@ class InstantiatedSampler(object):
         for sample in self.config.samples:
             params[sample] = [data_point_param[sample].x for data_point_param in state['params']]
 
-        state['params'] = params
+        state['params'] = pd.DataFrame(params, index=self.config.mutations)
 
         return state
 
     @state.setter
     def state(self, value):
+        params = []
+
+        for _, row in value['params'].iterrows():
+            row = row.apply(lambda x: BetaData(x))
+
+            params.append(row.to_dict())
+
+        value['params'] = params
+
         self._sampler.state = value
 
     def interactive_sample(self):

@@ -80,16 +80,14 @@ class DiskTrace(object):
         state = {
             'alpha': self['alpha'].iloc[-1],
             'labels': self['/state/labels'],
+            'params': self['/state/params']
         }
 
-        if '/state/params' in self._store.keys():
-            state['params'] = self['/state/params']
+        if '/beta_binomial_precision' in self._store.keys():
+            state['global_params'] = GammaData(self['beta_binomial_precision'].iloc[-1])
 
-            if '/beta_binomial_precision' in self._store.keys():
-                state['global_params'] = GammaData(self['beta_binomial_precision'].iloc[-1])
-
-            else:
-                state['global_params'] = None
+        else:
+            state['global_params'] = None
 
         return state
 
@@ -113,12 +111,14 @@ class DiskTrace(object):
         self['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
 
         for sample in self.samples:
-            sample_params = pd.DataFrame({'mutation_id': self.mutations, 'value': state['params'][sample]})
+            sample_params = state['params'][sample].reset_index()
+
+            sample_params.columns = 'mutation', 'value'
 
             sample_params['idx'] = self._idx
 
             self._store.append('params/{}'.format(sample), sample_params)
 
-        self['/state/params'] = pd.Series(state['params'], index=self.mutations)
+        self['/state/params'] = state['params']
 
         self._idx += 1
