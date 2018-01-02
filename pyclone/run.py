@@ -172,8 +172,6 @@ def resume_analysis(num_iters, trace_file):
 
     pyclone.mcmc.run_mcmc(config, num_iters, sampler, trace)
 
-    print(trace['alpha'])
-
     trace.close()
 
 
@@ -224,10 +222,6 @@ def run_analysis(
     sampler = pyclone.mcmc.get_sampler(config)
 
     pyclone.mcmc.run_mcmc(config, num_iters, sampler, trace)
-
-    print(trace['alpha'])
-
-    print(trace.labels.iloc[-1])
 
     trace.close()
 
