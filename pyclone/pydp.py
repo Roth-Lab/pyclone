@@ -20,27 +20,26 @@ class InstantiatedSampler(object):
     def __init__(self, config):
         self.config = config
 
-        self._init_data(config)
+        self._init_data()
 
-        self._sampler = self._init_sampler(config)
+        self._sampler = self._init_sampler()
 
     @property
     def state(self):
-        state = self._sampler.state.copy()
+        state = {
+            'alpha': self._sampler.state['alpha'],
+            'labels': self._sampler.state['labels']
+        }
 
         params = OrderedDict()
 
         for sample in self.config.samples:
-            params[sample] = [data_point_param[sample].x for data_point_param in state['params']]
+            params[sample] = [data_point_param[sample].x for data_point_param in self._sampler.state['params']]
 
         state['ccfs'] = pd.DataFrame(params, index=self.config.mutations)
 
-        del state['params']
-
-        if 'global_params' in state:
-            state['beta_binomial_precision'] = float(state['global_params'].x)
-
-            del state['global_params']
+        if self.config.update_precision:
+            state['beta_binomial_precision'] = float(self._sampler.state['global_params'].x)
 
         return state
 
@@ -68,56 +67,56 @@ class InstantiatedSampler(object):
     def interactive_sample(self):
         self._sampler.interactive_sample(self.data)
 
-    def _init_data(self, config):
+    def _init_data(self):
         self.data = []
 
-        for data_point in config.data.values():
-            self.data.append(data_point.to_dict())
+        for mutation in self.config.mutations:
+            self.data.append(self.config.data[mutation].to_dict())
 
-    def _init_sampler(self, config):
+    def _init_sampler(self):
         base_measure = pyclone.pydp.MultiSampleBaseMeasure.from_samples(
-            config.base_measure, config.samples
+            self.config.base_measure, self.config.samples
         )
 
-        if config.density == 'binomial':
+        if self.config.density == 'binomial':
             density_cls = PyCloneBinomialDensity
 
             density_params = {}
 
-        elif config.density == 'beta-binomial':
+        elif self.config.density == 'beta-binomial':
             density_cls = PyCloneBetaBinomialDensity
 
-            density_params = {'params': config.beta_binomial_precision_value}
+            density_params = {'params': self.config.beta_binomial_precision_value}
 
         cluster_density = pyclone.pydp.MultiSampleDensity.from_samples(
-            density_cls, density_params, config.samples
+            density_cls, density_params, self.config.samples
         )
 
         atom_sampler = pyclone.pydp.MultiSampleAtomSampler.from_samples(
-            BaseMeasureAtomSampler, base_measure, cluster_density, config.samples
+            BaseMeasureAtomSampler, base_measure, cluster_density, self.config.samples
         )
 
         partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
 
-        if (config.density == 'binomial') or (config.update_precision is None):
-            global_params_sampler = None
+        if self.config.update_precision:
+            global_params_sampler = MetropolisHastingsGlobalParameterSampler(
+                GammaBaseMeasure(**self.config.beta_binomial_precision_prior),
+                cluster_density,
+                GammaProposal(self.config.beta_binomial_precision_proposal_precision)
+            )
 
         else:
-            global_params_sampler = MetropolisHastingsGlobalParameterSampler(
-                GammaBaseMeasure(**config.beta_binomial_precision_prior),
-                cluster_density,
-                GammaProposal(config.beta_binomial_precision_proposal_precision)
-            )
+            global_params_sampler = None
 
         sampler = DirichletProcessSampler(
             atom_sampler,
             partition_sampler,
-            config.concentration_value,
-            config.concentration_prior,
+            self.config.concentration_value,
+            self.config.concentration_prior,
             global_params_sampler,
         )
 
-        sampler.initialise_partition(config.init_method, len(config.data))
+        sampler.initialise_partition(self.config.init_method, len(self.config.data))
 
         return sampler
 
