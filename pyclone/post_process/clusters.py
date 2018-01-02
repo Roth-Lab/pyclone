@@ -4,13 +4,10 @@ Created on Nov 29, 2015
 @author: Andrew Roth
 '''
 from pydp.cluster import cluster_with_mpear
-from pydp.data import BetaData
-from pydp.utils import log_space_normalise
 
 import numpy as np
 import pandas as pd
 
-import pyclone.densities
 import pyclone.math_utils
 
 
@@ -117,17 +114,3 @@ def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_si
     df = df[df['size'] >= min_size]
 
     return df
-
-
-def _compute_posterior(data, density, grid_size):
-    posterior = {}
-
-    for cellular_prevalence in np.linspace(0, 1, grid_size):
-        posterior[cellular_prevalence] = 0
-
-        for data_point in data:
-            posterior[cellular_prevalence] += density.log_p(data_point, BetaData(cellular_prevalence))
-
-    posterior = dict(list(zip(list(posterior.keys()), log_space_normalise(list(posterior.values())))))
-
-    return posterior
