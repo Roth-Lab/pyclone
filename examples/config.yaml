@@ -1,0 +1,54 @@
+base_measure:
+    # Parameters for Beta base measure distribution.
+    beta_params: 
+        a: 1.0 
+        b: 1.0
+    # Weights for point mass base measure.
+    # First two entries are the weights of the point masses at 0 and 1. Third entry is the weight of the Beta.
+    weights: [1, 1, 1]
+
+# Configuration parameters related to Beta-Binomial precsion.
+# If the density is set to `binomial` this section has no effect.
+beta_binomial_precision:
+    # Parameters for Gamma prior.
+    # Parameterization is the shape/rate version described on the wikipedia Gamma distribution page.
+    prior:
+        rate: 0.001
+        shape: 1.0
+    # Precision of Gamma proposal for updating during MCMC sampling.
+    # NOTE: This should not need to be modified.
+    proposal : 
+        precision: 0.01
+    # Initial value (or fixed value if update is False).
+    value: 1.0
+    # Boolean indicating whether to update during MCMC sampling.
+    update: True
+
+# Configuration parameters related to the DP concentration.
+concentration:
+    # Parameters for Gamma prior.
+    # Parameterization is the shape/rate version described on the wikipedia Gamma distribution page.
+    prior: 
+        rate: 0.1
+        shape: 0.1
+    # Initial value (or fixed value if update is False).
+    value: 1.0
+    # Boolean indicating whether to update during MCMC sampling.
+    update: True
+
+# Density to use.
+# Choices are binomial and beta-binomial.
+# NOTE: In general beta-binomial should be used.
+density: beta-binomial
+
+# Grid size to use when marginalizing CCFs during sampling.
+# Leave blank if the CCFs are to be instantiated during sampling.
+# NOTE: Experimental feature. Do not touch unless you understand what is going on.
+grid_size:
+
+# How to initialize the sampler.
+# Choices are `connected` which starts everything in one cluster and `disconnected` which starts everything in separate
+# clusters.
+# NOTE: The `disconnected` initialization will lead to extremely slow initial iterations. Only use it if the data set
+# is small. 
+init_method: connected
