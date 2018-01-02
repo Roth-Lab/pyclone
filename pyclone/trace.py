@@ -3,8 +3,6 @@ Created on 2013-04-23
 
 @author: Andrew Roth
 '''
-from pydp.data import GammaData
-
 import os
 import pandas as pd
 import tables
@@ -84,7 +82,7 @@ class DiskTrace(object):
         }
 
         if '/beta_binomial_precision' in self._store.keys():
-            state['beta_binomial_precision'] = GammaData(self['beta_binomial_precision'].iloc[-1])
+            state['beta_binomial_precision'] = self['beta_binomial_precision'].iloc[-1]
 
         else:
             state['beta_binomial_precision'] = None

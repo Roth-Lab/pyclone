@@ -60,8 +60,8 @@ class InstantiatedSampler(object):
 
         state['params'] = params
 
-        if 'beta_binomial_precsion' in value:
-            state['global_params'] = GammaData(value['beta_binomial_precsion'])
+        if 'beta_binomial_precision' in value:
+            state['global_params'] = GammaData(value['beta_binomial_precision'])
 
         self._sampler.state = state
 
