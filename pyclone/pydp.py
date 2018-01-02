@@ -1,6 +1,6 @@
 from collections import OrderedDict, namedtuple
 
-from pydp.base_measures import BaseMeasure, BetaBaseMeasure, GammaBaseMeasure
+from pydp.base_measures import BaseMeasure, GammaBaseMeasure
 from pydp.data import BetaData, GammaData
 from pydp.densities import Density
 from pydp.partition import PartitionCell
@@ -61,7 +61,7 @@ class InstantiatedSampler(object):
 
     def _init_sampler(self, config):
         base_measure = pyclone.pydp.MultiSampleBaseMeasure.from_samples(
-            BetaBaseMeasure, config.base_measure_params, config.samples
+            config.base_measure, config.samples
         )
 
         if config.density == 'binomial':
@@ -150,11 +150,11 @@ class MultiSampleBaseMeasure(BaseMeasure):
         self.base_measures = base_measures
 
     @staticmethod
-    def from_samples(base_measure_cls, base_measure_params, samples):
+    def from_samples(base_measure, samples):
         base_measures = OrderedDict()
 
         for sample in samples:
-            base_measures[sample] = base_measure_cls(**base_measure_params)
+            base_measures[sample] = base_measure.as_pydp()
 
         return MultiSampleBaseMeasure(base_measures)
 

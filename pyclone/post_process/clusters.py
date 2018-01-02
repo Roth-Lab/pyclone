@@ -91,7 +91,9 @@ def load_table(config, trace, burnin=0, grid_size=101, max_clusters=None, min_si
         for s_idx, sample in enumerate(config.samples):
             cluster_sample_data = np.array([x[s_idx] for x in cluster_data])
 
-            cluster_sample_posterior = pyclone.math_utils.log_normalize(cluster_sample_data.sum(axis=0))
+            cluster_sample_posterior = pyclone.math_utils.log_normalize(
+                cluster_sample_data.sum(axis=0) + config.base_measure.as_pgsm(grid_size)
+            )
 
             cluster_sample_posterior = dict(
                 zip(ccfs, cluster_sample_posterior)

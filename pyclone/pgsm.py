@@ -69,7 +69,9 @@ class MarginalSampler(object):
         self.data = np.array(data)
 
     def _init_sampler(self, config):
-        self.dist = PyCloneDistribution(self.data[0].shape)
+        grid_size = self.data[0].shape
+
+        self.dist = PyCloneDistribution(grid_size, self.config.base_measure.as_pgsm(grid_size[1]))
 
         self.partition_prior = DirichletProcessPartitionPrior(config.concentration_value)
 
@@ -103,12 +105,10 @@ class MarginalSampler(object):
 
         ccfs = np.linspace(0, 1, self.data[0].shape[1])
 
-        dist = PyCloneDistribution(self.data[0].shape)
-
         for cluster_idx in np.unique(self.pred_clustering):
             cluster_data = self.data[self.pred_clustering == cluster_idx]
 
-            cluster_params = dist.create_params_from_data(cluster_data)
+            cluster_params = self.dist.create_params_from_data(cluster_data)
 
             log_posterior = cluster_params.normalized_log_pdf_grid
 
@@ -164,8 +164,10 @@ class PycloneParameters(object):
 
 class PyCloneDistribution(object):
 
-    def __init__(self, grid_size):
+    def __init__(self, grid_size, prior_grid):
         self.grid_size = grid_size
+
+        self.prior_grid = prior_grid
 
     def create_params(self):
         return PycloneParameters(np.zeros(self.grid_size), 0)
@@ -177,7 +179,7 @@ class PyCloneDistribution(object):
 
     def log_marginal_likelihood(self, params):
         log_p = np.sum(
-            log_sum_exp(params.log_pdf_grid - np.log(self.grid_size[1]), axis=1)
+            log_sum_exp(params.log_pdf_grid + self.prior_grid, axis=1)
         )
 
         return log_p

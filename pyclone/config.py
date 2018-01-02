@@ -14,6 +14,7 @@ try:
 except ImportError:
     from yaml import Loader
 
+import pyclone.base_mesures
 import pyclone.data
 import pyclone.math_utils
 
@@ -31,7 +32,10 @@ class PyCloneConfig(object):
             update_precision=True):
 
         self._config = {
-            'base_measure_params': {'a': 1.0, 'b': 1.0},
+            'base_measure': {
+                'beta_params': {'a': 1.0, 'b': 1.0},
+                'weights': [1000, 1000, 1]
+            },
             'beta_binomial_precision': {
                 'prior': {'rate': 0.001, 'shape': 1.0},
                 'proposal': {'precision': 0.01},
@@ -65,10 +69,20 @@ class PyCloneConfig(object):
         return new
 
     @property
-    def base_measure_params(self):
+    def base_measure(self):
         """ The parameters for the DP Beta base measure.
         """
-        return self._config['base_measure_params']
+        beta_params = self._config['base_measure']['beta_params']
+
+        weights = self._config['base_measure']['weights']
+
+        if (weights[0] == 0) and (weights[1] == 0):
+            base_measure = pyclone.base_mesures.BetaPyCloneBaseMeasure(beta_params['a'], beta_params['b'])
+
+        else:
+            base_measure = pyclone.base_mesures.PointMassPyCloneBaseMeasure(beta_params['a'], beta_params['b'], weights)
+
+        return base_measure
 
     @property
     def beta_binomial_precision_prior(self):
