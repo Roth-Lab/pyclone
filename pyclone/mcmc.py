@@ -31,6 +31,6 @@ def run_mcmc(config, num_iters, sampler, trace):
             print('Iteration: {}'.format(i))
             print('Number of clusters: {}'.format(len(np.unique(state['labels']))))
             print('DP concentration: {}'.format(state['alpha']))
-            if state.get('global_params', None) is not None:
-                print('Beta-Binomial precision: {}'.format(state['global_params'][0]))
+            if config.update_precision:
+                print('Beta-Binomial precision: {}'.format(state['beta_binomial_precision']))
             print()
