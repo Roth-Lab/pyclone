@@ -7,6 +7,7 @@ import shutil
 import unittest
 
 import pyclone.cli
+import pyclone.trace
 
 
 class Test(unittest.TestCase):
@@ -31,6 +32,15 @@ class Test(unittest.TestCase):
 
         self._test_plot_commands()
 
+    def test_instantiated_resume(self):
+        self._run_instantiated_sampler()
+
+        self.assertEqual(self._get_trace_length(), 1)
+
+        self._resume_analysis()
+
+        self.assertEqual(self._get_trace_length(), 2)
+
     def test_instantiated_table(self):
         self._run_instantiated_sampler()
 
@@ -46,10 +56,33 @@ class Test(unittest.TestCase):
 
         self._test_plot_commands()
 
+    def test_marginal_resume(self):
+        self._run_marginal_sampler()
+
+        self.assertEqual(self._get_trace_length(), 1)
+
+        self._resume_analysis()
+
+        self.assertEqual(self._get_trace_length(), 2)
+
     def test_marginal_table(self):
         self._run_marginal_sampler()
 
         self._test_table_commands()
+
+    def _get_trace_length(self):
+        trace = pyclone.trace.DiskTrace(self.trace_file)
+
+        trace_len = len(trace['alpha'])
+
+        trace.close()
+
+        return trace_len
+
+    def _resume_analysis(self):
+        cmd = ['resume-analysis', '-t', self.trace_file, '-n', 1]
+
+        self._run_pyclone_cmd(cmd)
 
     def _run_instantiated_sampler(self):
         cmd = ['start-analysis', '-i', self.data_file, '-t', self.trace_file, '-n', 1]
