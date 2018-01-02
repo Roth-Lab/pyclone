@@ -5,6 +5,7 @@ from scipy.misc import logsumexp as log_sum_exp
 import numpy as np
 import scipy.stats
 from pgsm.math_utils import discrete_rvs
+from pydp.utils import log_space_normalise
 
 
 class PyCloneBaseMeasure(object):
@@ -22,7 +23,7 @@ class BetaPyCloneBaseMeasure(PyCloneBaseMeasure):
         self.b = b
 
     def as_pgsm(self, grid_size):
-        return scipy.stats.beta.logpdf(np.linspace(0, 1, grid_size), self.a, self.b)
+        return log_space_normalise(scipy.stats.beta.logpdf(np.linspace(0, 1, grid_size), self.a, self.b))
 
     def as_pydp(self):
         return BetaBaseMeasure(self.a, self.b)
@@ -47,7 +48,7 @@ class PointMassPyCloneBaseMeasure(PyCloneBaseMeasure):
 
         p_sc = self.log_pi[2] + scipy.stats.beta.logpdf(np.linspace(0, 1, grid_size), self.a, self.b)
 
-        return log_sum_exp([p_0, p_1, p_sc], axis=0)
+        return log_space_normalise(log_sum_exp([p_0, p_1, p_sc], axis=0))
 
     def as_pydp(self):
         return PointMassBaseMeasure(self.a, self.b, self.log_pi)
