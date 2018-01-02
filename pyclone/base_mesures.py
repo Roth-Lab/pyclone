@@ -75,14 +75,16 @@ class PointMassBaseMeasure(BaseMeasure):
         elif data.x == 1:
             log_p += self.log_pi[1]
 
+        return log_p
+
     def random(self):
         idx = discrete_rvs(self.pi)
 
         if idx == 0:
-            x = 0
+            x = 0.0
 
         elif idx == 1:
-            x = 1
+            x = 1.0
 
         else:
             x = scipy.stats.beta.rvs(self.a, self.b)

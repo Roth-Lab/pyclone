@@ -115,6 +115,8 @@ class DiskTrace(object):
 
             sample_params.columns = 'mutation', 'value'
 
+            sample_params['value'] = sample_params['value'].astype(float)
+
             sample_params['idx'] = self._idx
 
             self._store.append('params/{}'.format(sample), sample_params)

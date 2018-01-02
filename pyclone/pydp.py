@@ -65,12 +65,12 @@ class InstantiatedSampler(object):
         )
 
         if config.density == 'binomial':
-            density_cls = pyclone.pydp.PyCloneBinomialDensity
+            density_cls = PyCloneBinomialDensity
 
             density_params = {}
 
         elif config.density == 'beta-binomial':
-            density_cls = pyclone.densities.PyCloneBetaBinomialDensity
+            density_cls = PyCloneBetaBinomialDensity
 
             density_params = {'params': config.beta_binomial_precision_value}
 
