@@ -22,7 +22,7 @@ class BetaPyCloneBaseMeasure(PyCloneBaseMeasure):
         self.b = b
 
     def as_pgsm(self, grid_size):
-        return scipy.stats.beta.logpdf(np.linspace(0, 1, grid_size))
+        return scipy.stats.beta.logpdf(np.linspace(0, 1, grid_size), self.a, self.b)
 
     def as_pydp(self):
         return BetaBaseMeasure(self.a, self.b)
