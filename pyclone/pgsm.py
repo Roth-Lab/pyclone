@@ -7,6 +7,10 @@ from pgsm.mcmc.concentration import GammaPriorConcentrationSampler
 from pgsm.mcmc.particle_gibbs_split_merge import ParticleGibbsSplitMergeSampler
 from pgsm.mcmc.split_merge_setup import UniformSplitMergeSetupKernel
 from pgsm.partition_priors import DirichletProcessPartitionPrior
+from pgsm.utils import log_joint_probability
+
+from pydp.data import GammaData
+from pydp.proposal_functions import GammaProposal
 
 import numpy as np
 import pandas as pd
@@ -18,23 +22,33 @@ class MarginalSampler(object):
     def __init__(self, config):
         self.config = config
 
-        self._init_data(config)
+        self.precision = config.beta_binomial_precision_value
+
+        self.data = self._get_data(config, precision=self.precision)
 
         self._sampler = self._init_sampler(config)
 
     @property
     def state(self):
-        return {
+        state = {
             'alpha': self.partition_prior.alpha,
             'labels': self.pred_clustering,
             'ccfs': self._sample_data_params()
         }
+
+        if self.config.update_precision:
+            state['beta_binomial_precision'] = self.precision
+
+        return state
 
     @state.setter
     def state(self, value):
         self.partition_prior.alpha = value['alpha']
 
         self.pred_clustering = value['labels']
+
+        if 'beta_binomial_precision' in value:
+            self.precision = value['beta_binomial_precision']
 
     def interactive_sample(self):
         self.pred_clustering = self.pgsm_sampler.sample(self.pred_clustering, self.data)
@@ -45,12 +59,15 @@ class MarginalSampler(object):
 
         num_data_points = len(self.data)
 
-        if self.conc_sampler is not None:
+        if self.config.update_concentration:
             self.partition_prior.alpha = self.conc_sampler.sample(
                 self.partition_prior.alpha, num_clusters, num_data_points
             )
 
-    def _init_data(self, config):
+        if self.config.update_precision:
+            self._update_beta_binomial_precision()
+
+    def _get_data(self, config, precision=None):
         data = []
 
         for data_point in config.data.values():
@@ -58,11 +75,11 @@ class MarginalSampler(object):
                 data_point.to_likelihood_grid(
                     config.density,
                     config.grid_size,
-                    precision=config.beta_binomial_precision_value
+                    precision=precision
                 )
             )
 
-        self.data = np.array(data)
+        return np.array(data)
 
     def _init_sampler(self, config):
         grid_size = self.data[0].shape
@@ -79,10 +96,7 @@ class MarginalSampler(object):
             self.dist, self.partition_prior, self.setup_kernel, num_anchors=2
         )
 
-        if config.concentration_prior is None:
-            self.conc_sampler = None
-
-        else:
+        if config.update_concentration:
             self.conc_sampler = GammaPriorConcentrationSampler(
                 config.concentration_prior['shape'], config.concentration_prior['rate']
             )
@@ -126,6 +140,32 @@ class MarginalSampler(object):
         params = pd.DataFrame(params, index=self.config.mutations)
 
         return params
+
+    def _update_beta_binomial_precision(self):
+        proposoal = GammaProposal(self.config.beta_binomial_precision_proposal_precision)
+
+        old_precision = self.precision
+
+        new_precision = proposoal.random(GammaData(self.precision)).x
+
+        old_data = self.data
+
+        new_data = self._get_data(self.config, precision=new_precision)
+
+        old_log_p = log_joint_probability(self.pred_clustering, old_data, self.dist, self.partition_prior)
+
+        new_log_p = log_joint_probability(self.pred_clustering, new_data, self.dist, self.partition_prior)
+
+        new_log_q = proposoal.log_p(GammaData(new_precision), GammaData(old_precision))
+
+        old_log_q = proposoal.log_p(GammaData(old_precision), GammaData(new_precision))
+
+        u = np.random.random()
+
+        if (new_log_p - new_log_q) - (old_log_p - old_log_q) >= np.log(u):
+            self.data = new_data
+
+            self.precision = new_precision
 
 
 class PycloneParameters(object):

@@ -197,9 +197,6 @@ def run_analysis(
 
     data_df = pd.read_csv(in_file, sep='\t')
 
-    if grid_size is not None:
-        no_precision_update = True
-
     config = pyclone.config.PyCloneConfig(
         data_df,
         density=density,

@@ -33,8 +33,8 @@ class PyCloneConfig(object):
 
         self._config = {
             'base_measure': {
-                'beta_params': {'a': 1.0, 'b': 1.0},
-                'weights': [1000, 1000, 1]
+                'beta_params': {'a': 1, 'b': 1},
+                'weights': [0, 0, 1]
             },
             'beta_binomial_precision': {
                 'prior': {'rate': 0.001, 'shape': 1.0},
@@ -135,12 +135,16 @@ class PyCloneConfig(object):
         return self._config['init_method']
 
     @property
+    def mutations(self):
+        return list(self.data.keys())
+
+    @property
     def update_concentration(self):
         return self._config['concentration']['update']
 
     @property
     def update_precision(self):
-        return self._config['beta_binomial_precision']['update']
+        return (self._config['beta_binomial_precision']['update']) and (self.density == 'beta-binomial')
 
     def to_dict(self):
         return self._config.copy()
@@ -154,9 +158,9 @@ class PyCloneConfig(object):
         # Filter for mutations present in all samples
         df = df.groupby(by='mutation').filter(lambda x: sorted(x['sample'].unique()) == self.samples)
 
-        self.mutations = df['mutation'].unique()
+        mutations = sorted(df['mutation'].unique())
 
-        if len(self.mutations) == 0:
+        if len(mutations) == 0:
             raise Exception(' '.join((
                 ('No mutations found in common across samples.'),
                 ('This commonly occurs when the muation_id field does not match for mutations in the input files.'),
@@ -166,7 +170,7 @@ class PyCloneConfig(object):
         else:
             print('Samples: {}'.format(' '.join(self.samples)))
 
-            print('Num mutations: {}'.format(len(self.mutations)))
+            print('Num mutations: {}'.format(len(mutations)))
 
         if 'error_rate' not in df.columns:
             df.loc[:, 'error_rate'] = 1e-3
@@ -178,7 +182,9 @@ class PyCloneConfig(object):
 
         self.data = OrderedDict()
 
-        for name, mut_df in df.groupby('mutation'):
+        for name in mutations:
+            mut_df = df[df['mutation'] == name]
+
             sample_data_points = []
 
             mut_df = mut_df.set_index('sample')
