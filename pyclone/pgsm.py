@@ -23,15 +23,11 @@ class MarginalSampler(object):
         self._sampler = self._init_sampler(config)
 
     @property
-    def ccfs(self):
-        pass
-
-    @property
     def state(self):
         return {
             'alpha': self.partition_prior.alpha,
             'labels': self.pred_clustering,
-            'params': self._sample_data_params()
+            'ccfs': self._sample_data_params()
         }
 
     @state.setter

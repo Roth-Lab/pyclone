@@ -41,7 +41,7 @@ class DiskTrace(object):
         result = {}
 
         for sample in self.samples:
-            key = 'params/{}'.format(sample)
+            key = 'ccfs/{}'.format(sample)
 
             result[sample] = self[key].pivot(values='value', columns='mutation', index='idx')
 
@@ -79,15 +79,15 @@ class DiskTrace(object):
     def state(self):
         state = {
             'alpha': self['alpha'].iloc[-1],
-            'labels': self['/state/labels'],
-            'params': self['/state/params']
+            'ccfs': self['/state/ccfs'],
+            'labels': self['/state/labels'].values
         }
 
         if '/beta_binomial_precision' in self._store.keys():
-            state['global_params'] = GammaData(self['beta_binomial_precision'].iloc[-1])
+            state['beta_binomial_precision'] = GammaData(self['beta_binomial_precision'].iloc[-1])
 
         else:
-            state['global_params'] = None
+            state['beta_binomial_precision'] = None
 
         return state
 
@@ -97,10 +97,8 @@ class DiskTrace(object):
     def update(self, state):
         self._store.append('alpha', pd.Series({self._idx: state['alpha']}))
 
-        if state.get('global_params', None) is not None:
-            precision = float(state['global_params'].x)
-
-            self._store.append('beta_binomial_precision', pd.Series({self._idx: precision}))
+        if state.get('beta_binomial_precision', None) is not None:
+            self._store.append('beta_binomial_precision', pd.Series({self._idx: state['beta_binomial_precision']}))
 
         labels = pd.DataFrame({'mutation': self.mutations, 'value': state['labels']})
 
@@ -111,16 +109,16 @@ class DiskTrace(object):
         self['/state/labels'] = pd.Series(state['labels'], index=self.mutations)
 
         for sample in self.samples:
-            sample_params = state['params'][sample].reset_index()
+            sample_ccfs = state['ccfs'][sample].reset_index()
 
-            sample_params.columns = 'mutation', 'value'
+            sample_ccfs.columns = 'mutation', 'value'
 
-            sample_params['value'] = sample_params['value'].astype(float)
+            sample_ccfs['value'] = sample_ccfs['value'].astype(float)
 
-            sample_params['idx'] = self._idx
+            sample_ccfs['idx'] = self._idx
 
-            self._store.append('params/{}'.format(sample), sample_params)
+            self._store.append('ccfs/{}'.format(sample), sample_ccfs)
 
-        self['/state/params'] = state['params']
+        self['/state/ccfs'] = state['ccfs']
 
         self._idx += 1

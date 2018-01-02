@@ -26,29 +26,44 @@ class InstantiatedSampler(object):
 
     @property
     def state(self):
-        state = self._sampler.state
+        state = self._sampler.state.copy()
 
         params = OrderedDict()
 
         for sample in self.config.samples:
             params[sample] = [data_point_param[sample].x for data_point_param in state['params']]
 
-        state['params'] = pd.DataFrame(params, index=self.config.mutations)
+        state['ccfs'] = pd.DataFrame(params, index=self.config.mutations)
+
+        del state['params']
+
+        if 'global_params' in state:
+            state['beta_binomial_precision'] = float(state['global_params'].x)
+
+            del state['global_params']
 
         return state
 
     @state.setter
     def state(self, value):
+        state = {
+            'alpha': value['alpha'],
+            'labels': value['labels']
+        }
+
         params = []
 
-        for _, row in value['params'].iterrows():
+        for _, row in value['ccfs'].iterrows():
             row = row.apply(lambda x: BetaData(x))
 
             params.append(row.to_dict())
 
-        value['params'] = params
+        state['params'] = params
 
-        self._sampler.state = value
+        if 'beta_binomial_precsion' in value:
+            state['global_params'] = GammaData(value['beta_binomial_precsion'])
+
+        self._sampler.state = state
 
     def interactive_sample(self):
         self._sampler.interactive_sample(self.data)
