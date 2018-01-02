@@ -264,11 +264,10 @@ def scatter_plot(
         legend_color_map=color_map
     )
 
+
 #=======================================================================================================================
 # Similarity matrix
 #=======================================================================================================================
-
-
 def similarity_matrix_plot(
         trace,
         out_file,
@@ -309,7 +308,9 @@ def similarity_matrix_plot(
 
     cluster_colors = labels.map(color_map)
 
-    size = 0.12 * N
+    cluster_colors.name = 'Cluster'
+
+    size = max(0.25 * N, 5)
 
     g = sb.clustermap(
         sim_mat,
