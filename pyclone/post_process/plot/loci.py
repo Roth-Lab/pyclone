@@ -10,6 +10,7 @@ import matplotlib.gridspec as gs
 import matplotlib.pyplot as pp
 import pandas as pd
 import seaborn as sb
+import warnings
 
 import pyclone.post_process as post_process
 
@@ -17,11 +18,12 @@ from pyclone.post_process.plot import defaults
 from pyclone.post_process.plot import scatter
 from pyclone.post_process.plot import utils
 
+warnings.filterwarnings('ignore', category=UserWarning)
+
+
 #=======================================================================================================================
 # Density
 #=======================================================================================================================
-
-
 def density_plot(
         trace,
         out_file,
@@ -125,11 +127,10 @@ def _load_density_df(trace, burnin=0, thin=1):
 
     return df
 
+
 #=======================================================================================================================
 # Parallel coordinates
 #=======================================================================================================================
-
-
 def parallel_coordinates_plot(
         config,
         trace,
@@ -218,11 +219,10 @@ def parallel_coordinates_plot(
 
     utils.save_figure(fig, out_file)
 
+
 #=======================================================================================================================
 # Scatter
 #=======================================================================================================================
-
-
 def scatter_plot(
         config,
         trace,

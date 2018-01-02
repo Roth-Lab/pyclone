@@ -8,6 +8,7 @@ import matplotlib.pyplot as pp
 import numpy as np
 import pandas as pd
 import seaborn as sb
+import warnings
 
 import pyclone.post_process
 
@@ -15,7 +16,12 @@ from pyclone.post_process.plot import defaults
 from pyclone.post_process.plot import utils
 from pyclone.post_process.plot import scatter
 
+warnings.filterwarnings('ignore', category=UserWarning)
 
+
+#=======================================================================================================================
+# Density
+#=======================================================================================================================
 def density_plot(
         config, trace, out_file, burnin=0, grid_size=101, max_clusters=None, min_cluster_size=0, samples=[], thin=1):
 
@@ -130,6 +136,9 @@ def density_plot(
     utils.save_figure(fig, out_file)
 
 
+#=======================================================================================================================
+# Parallel coordinates
+#=======================================================================================================================
 def parallel_coordinates_plot(
         config,
         trace,
@@ -219,6 +228,9 @@ def parallel_coordinates_plot(
     utils.save_figure(fig, out_file)
 
 
+#=======================================================================================================================
+# Scatter
+#=======================================================================================================================
 def scatter_plot(
         config,
         trace,
