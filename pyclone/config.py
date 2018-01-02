@@ -136,7 +136,7 @@ class PyCloneConfig(object):
 
     @property
     def update_concentration(self):
-        return self._concentration['concentration']['update']
+        return self._config['concentration']['update']
 
     @property
     def update_precision(self):
