@@ -3,6 +3,7 @@ Created on 2012-02-08
 
 @author: Andrew Roth
 '''
+import numpy as np
 import pandas as pd
 import random
 
@@ -190,7 +191,11 @@ def run_analysis(
         seed=None):
 
     if seed is not None:
+        np.random.seed(seed)
+
         random.seed(seed)
+
+    trace = pyclone.trace.DiskTrace(trace_file, mode='w')
 
     data_df = pd.read_csv(in_file, sep='\t')
 
@@ -207,8 +212,6 @@ def run_analysis(
         update_concentration=(not no_concentration_update),
         update_precision=(not no_precision_update)
     )
-
-    trace = pyclone.trace.DiskTrace(trace_file, mode='w')
 
     trace.config = config.to_dict()
 
