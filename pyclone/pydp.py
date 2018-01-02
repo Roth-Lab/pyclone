@@ -84,7 +84,7 @@ class InstantiatedSampler(object):
 
         partition_sampler = AuxillaryParameterPartitionSampler(base_measure, cluster_density)
 
-        if (config.density == 'binomial') or (config.beta_binomial_precision_prior is None):
+        if (config.density == 'binomial') or (config.update_precision is None):
             global_params_sampler = None
 
         else:
