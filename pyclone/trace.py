@@ -96,7 +96,10 @@ class DiskTrace(object):
         self._store.append('alpha', pd.Series({self._idx: state['alpha']}))
 
         if state.get('beta_binomial_precision', None) is not None:
-            self._store.append('beta_binomial_precision', pd.Series({self._idx: state['beta_binomial_precision']}))
+            self._store.append(
+                'beta_binomial_precision',
+                pd.Series({self._idx: float(state['beta_binomial_precision'])})
+            )
 
         labels = pd.DataFrame({'mutation': self.mutations, 'value': state['labels']})
 
