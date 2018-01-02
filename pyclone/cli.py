@@ -40,13 +40,13 @@ import pyclone.run as run
     '--burnin',
     default=0,
     type=int,
-    help='''Number of samples to discard as burning for the MCMC chain. Default is 0.'''
+    help='''Number of samples to discard as burnin for the MCMC chain. Default is 0.'''
 )
 @click.option(
     '--thin',
     default=1,
     type=int,
-    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be used
+    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burnin will be used
     for inference. Default is 1.'''
 )
 @click.option(
@@ -106,7 +106,7 @@ def build_table(**kwargs):
     '--burnin',
     default=0,
     type=int,
-    help='''Number of samples to discard as burning for the MCMC chain. Default is 0.'''
+    help='''Number of samples to discard as burnin for the MCMC chain. Default is 0.'''
 )
 @click.option(
     '--min-cluster-size',
@@ -118,7 +118,7 @@ def build_table(**kwargs):
     '--thin',
     default=1,
     type=int,
-    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be used
+    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burnin will be used
     for inference. Default is 1.'''
 )
 @click.option(
@@ -175,7 +175,7 @@ def plot_clusters(**kwargs):
     '--burnin',
     default=0,
     type=int,
-    help='''Number of samples to discard as burning for the MCMC chain. Default is 0.'''
+    help='''Number of samples to discard as burnin for the MCMC chain. Default is 0.'''
 )
 @click.option(
     '--min-cluster-size',
@@ -187,7 +187,7 @@ def plot_clusters(**kwargs):
     '--thin',
     default=1,
     type=int,
-    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burning will be used
+    help='''Number of samples to thin MCMC trace. For example if thin=10 every tenth sample after burnin will be used
     for inference. Default is 1.'''
 )
 def plot_loci(**kwargs):
