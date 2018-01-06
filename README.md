@@ -7,6 +7,16 @@ Please visit https://bitbucket.org/aroth85/pyclone for installation and usage he
 
 # Versions
 
+## 0.13.1
+
+- Added option to control how clusters are initialized with `--init_method` flag.
+Using `--init_method connected` will place all data points in the same cluster leading to faster sampling at the risk of getting stuck in local modes.
+
+- Added option to control the maximum number of clusters considered during post-processing using `--max_clusters` flag.
+For large datasets this should be set to values less than 100 to speed things up.
+
+- Using [numba](https://numba.pydata.org/) to speed up code.
+
 ## 0.13.0
 
 Most changes in this release are internal refactoring of the code and should be invisble to the user.
