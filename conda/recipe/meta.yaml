@@ -1,0 +1,33 @@
+package:
+  name: pyclone
+  version: "0.13.1"
+
+build:
+  number: 0
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+source:
+  git_rev: 0.13.1
+  git_url: git@github.com:aroth85/pyclone.git
+
+requirements:
+  build:
+    - python 2.7*
+
+  run:
+    - python 2.7*
+    - matplotlib
+    - numba
+    - numpy
+    - pandas
+    - pydp
+    - pyyaml
+    - scipy
+    - seaborn
+
+test:
+  commands:
+    - "pyclone --help"
+    
+about:
+  home: https://github.com/aroth85/pyclone
