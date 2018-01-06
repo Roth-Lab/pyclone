@@ -110,7 +110,16 @@ def run_analysis_pipeline(args):
             )
 
 
-def _write_config_file(config_file, density, init_method, mutations_files, num_iters, tumour_contents, working_dir, config_extras_file=None):
+def _write_config_file(
+        config_file,
+        density,
+        init_method,
+        mutations_files,
+        num_iters,
+        tumour_contents,
+        working_dir,
+        config_extras_file=None):
+
     config = {}
 
     config['num_iters'] = num_iters
@@ -204,6 +213,7 @@ def _run_analysis(config_file, seed):
 
 def setup_analysis(args):
     _setup_analysis(
+        config_extras_file=args.config_extras_file,
         density=args.density,
         in_files=args.in_files,
         init_method=args.init_method,
@@ -215,7 +225,16 @@ def setup_analysis(args):
     )
 
 
-def _setup_analysis(density, in_files, init_method, num_iters, samples, prior, tumour_contents, working_dir, config_extras_file):
+def _setup_analysis(
+        config_extras_file,
+        density,
+        in_files,
+        init_method,
+        num_iters,
+        samples, prior,
+        tumour_contents,
+        working_dir):
+
     make_directory(working_dir)
 
     make_directory(os.path.join(working_dir, 'yaml'))

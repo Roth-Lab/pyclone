@@ -108,7 +108,7 @@ def _setup_setup_analysis_parser(parser):
         nargs='+',
         type=float,
         default=None,
-        help='''Space delimited list of tumour contents. Should match the order of --in_files. If not given tumour 
+        help='''Space delimited list of tumour contents. Should match the order of --in_files. If not given tumour
         content is assumed to 1.0 in all samples.'''
     )
 
@@ -116,6 +116,12 @@ def _setup_setup_analysis_parser(parser):
         '--samples',
         nargs='+', default=None, help='''Space delimited list of sample names. Should be in the same order as
         --in_files. If not set sample name will be inferred from file names and ordering in plots will be arbitrary.''')
+
+    parser.add_argument(
+        '--config_extras_file',
+        required=False,
+        help='''Path to configuration file with extra parameters used for analysis.'''
+    )
 
     parser.add_argument(
         '--density',
@@ -139,12 +145,6 @@ def _setup_setup_analysis_parser(parser):
 
 
 def _setup_analysis_pipeline_parser(parser):
-
-    parser.add_argument(
-        '--config_extras_file',
-        required=False,
-        help='''Path to configuration file with extra parameters used for analysis.'''
-    )
 
     _setup_setup_analysis_parser(parser)
 
@@ -378,6 +378,7 @@ def _add_max_clusters_args(parser):
         help='''Maximum number of clusters to consider for post-processing. Note this does not affect the DP sampling
         only the final post-processing steps to get hard cluster assignments.'''
     )
+
 
 if __name__ == '__main__':
     main()
