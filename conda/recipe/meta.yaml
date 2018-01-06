@@ -27,7 +27,7 @@ requirements:
 
 test:
   commands:
-    - "pyclone --help"
+    - "PyClone --help"
     
 about:
   home: https://github.com/aroth85/pyclone
