@@ -8,6 +8,11 @@ from __future__ import division
 import pandas as pd
 import yaml
 
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
+
 from pyclone.config import load_mutation_from_dict
 
 from .clusters import cluster_pyclone_trace
@@ -109,7 +114,7 @@ def _load_sample_variant_allele_frequencies(file_name):
     data = {}
 
     with open(file_name) as fh:
-        config = yaml.load(fh)
+        config = yaml.load(fh, Loader=Loader)
 
     for mutation_dict in config['mutations']:
         mutation = load_mutation_from_dict(mutation_dict)
