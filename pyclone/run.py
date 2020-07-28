@@ -8,9 +8,9 @@ from __future__ import division
 from collections import OrderedDict
 
 try:
-    from yaml import CDumper as Dumper
+    from yaml import CDumper as Dumper, CLoader as Loader
 except ImportError:
-    from yaml import Dumper
+    from yaml import Dumper, Loader
 
 import csv
 import os
@@ -164,7 +164,7 @@ def _write_config_file(
         }
 
     if config_extras_file is not None:
-        config.update(yaml.load(open(config_extras_file)))
+        config.update(yaml.load(open(config_extras_file), Loader=Loader))
 
     with open(config_file, 'w') as fh:
         yaml.dump(config, fh, default_flow_style=False, Dumper=Dumper)
