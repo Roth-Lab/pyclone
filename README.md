@@ -5,11 +5,66 @@ file for more details.
 
 # Installation
 
+## Using conda
+
 You can install PyClone using bioconda.
 
-`conda install pyclone -c bioconda`
+`conda install pyclone -c bioconda -c conda-forge`
 
-Please visit https://bitbucket.org/aroth85/pyclone for more installation and usage help.
+This will install PyClone into your current `conda` environment.
+In some cases it may be better to create a separate `conda` environment for PyClone which be activated when needed.
+This avoids issues due to conflicting libraries.
+To create the environment execute the following command.
+
+`conda create -n pyclone -c bioconda -c conda-forge pyclone`
+
+Once the environment is created it can be activated using the following command.
+
+`conda activate pyclone`
+
+You can check that PyClone was installed correctly by running the following command which will show the help.
+
+`PyClone --help`
+
+## From source
+
+PyClone is standard Python package.
+You can find a list of dependencies in the `conda` recipe [here](https://github.com/Roth-Lab/pyclone/blob/master/conda/recipe/meta.yaml).
+You will need to install PyDP from source as well, which can be found [here](https://github.com/Roth-Lab/pydp).
+
+# Usage
+
+## Input format
+
+The majority of users will use PyClone by creating a set of tab delimited (tsv) input files, one file for each sample from the cancer.
+The mandatory columns of this files are as follows.
+
+- mutation_id: A unique identifier for the mutation. This should be the same across datasets.
+- ref_counts: The number of reads overlapping the locus matching the reference allele.
+- var_counts: The number of reads overlapping the locus matching the variant allele.
+- normal_cn: The copy number of the locus in non-malignant cells. This should generally be 2 except for sex chromosomes in males.
+- minor_cn: The copy number of the minor allele in the malignant cells. This must be less than equal the value in the major_cn column.
+- major_cn: The copy number of the major allele in the malignant cells. This should be greater than equal to the value in the minor_cn column and greater than 0.
+
+Any other columns will be ignored.
+Example files are found [here](https://github.com/Roth-Lab/pyclone/tree/master/examples/mixing/tsv) from the mixing dataset used in the original PyClone paper. 
+
+## Basic usage
+
+The easiest way to run PyClone is using the `PyClone run_analysis_pipeline` pipeline command.
+This will perform the steps to pre-process the input files, run the MCMC analysis and do the post-processing and plotting.
+You will need to generate the input files as specified in the previous section.
+You will need to pass two mandatory arguments.
+
+- `--in_files`: A space delimited set of tsv files formatted as specified in the input format section.
+- `--working_dir`: A directory where the pipeline will run and output results.
+
+Two important optional flags are:
+
+- `--tumour_contents`: A space delimited list of tumour content values between 0 and 1. The order of these should match the order samples were passed to `--in_files`. If this is not set tumour content is assumed to be 1. For most analysis it is important to set this or performance will suffer.
+- `--samples`: A space delimited set of sample names with the order matching the order of `--in_files`. If this is not set the sample names will be inferred from the file names.
+
+Additional arguments are available and can be listed using `PyClone run_analysis_pipeline --help`.
 
 # Versions
 
